@@ -1,0 +1,31 @@
+name: Auto Crawler
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # Run every 30 minutes
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install Dependencies
+      run: |
+        cd server
+        npm ci
+
+    - name: Run Crawler
+      env:
+        MONGO_URI: ${{ secrets.MONGO_URI }}
+      run: |
+        cd server
+        node scripts/run_crawler.js
