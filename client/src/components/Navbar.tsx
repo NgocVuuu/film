@@ -188,7 +188,7 @@ export default function Navbar() {
             <div className="container mx-auto flex h-16 items-center justify-between px-4">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2">
-                    <Film className="h-8 w-8 text-primary" />
+                    <img src="/logo.png" alt="Pchill Logo" className="h-8 w-8 object-contain" />
                     <span className="text-2xl font-bold tracking-tighter text-gold-gradient">
                         PCHILL
                     </span>

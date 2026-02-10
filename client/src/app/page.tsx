@@ -82,39 +82,39 @@ export default function Home() {
       <div className="container mx-auto px-4 space-y-8 -mt-10 relative z-20">
 
         <MovieCarousel
-          title="🔥 Phim Mới Cập Nhật"
+          title="Phim Mới Cập Nhật"
           movies={latestMovies}
           viewAllLink="/phim-moi"
         />
 
         <MovieCarousel
-          title="🇨🇳 C-Drama Đỉnh Cao"
+          title="C-Drama Đỉnh Cao"
           movies={chinaMovies}
         />
 
         <MovieCarousel
-          title="🇰🇷 K-Drama Cực Phẩm"
+          title="K-Drama Cực Phẩm"
           movies={koreaMovies}
         />
 
         <MovieCarousel
-          title="🦄 Thế Giới Tuổi Thơ"
+          title="Thế Giới Tuổi Thơ"
           movies={cartoonMovies}
           viewAllLink="/hoat-hinh"
         />
 
         <MovieCarousel
-          title="🇺🇸 Bom Tấn Hollywood"
+          title="Bom Tấn Hollywood"
           movies={usukMovies}
         />
 
         <MovieCarousel
-          title="👻 Nỗi Ám Ảnh Đêm Khuya"
+          title="Nỗi Ám Ảnh Đêm Khuya"
           movies={horrorMovies}
         />
 
         <MovieCarousel
-          title="👨‍👩‍👧‍👦 Gia Đình Là Số 1"
+          title="Gia Đình Là Số 1"
           movies={familyMovies}
         />
 
