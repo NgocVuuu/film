@@ -211,10 +211,9 @@ export default function LoginPage() {
                     {/* Logo */}
                     <Link href="/" className="flex items-center justify-center gap-2 mb-8">
                         <img
-                            src="/logo.jpg"
+                            src="/logo.png"
                             alt="Pchill Logo"
                             className="h-20 w-auto object-contain rounded-md"
-                            style={{ mixBlendMode: 'screen' }}
                         />
                         <span className="text-4xl font-bold text-gold-gradient ml-2">PCHILL</span>
                     </Link>

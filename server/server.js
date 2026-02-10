@@ -29,7 +29,11 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/pchill';
 
 // Middleware
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: [
+        'http://localhost:3000',
+        'https://film-xt3.pages.dev',
+        process.env.CLIENT_URL
+    ].filter(Boolean),
     credentials: true
 }));
 app.use(express.json());
