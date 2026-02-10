@@ -210,8 +210,13 @@ export default function LoginPage() {
                 <div className="w-full max-w-md">
                     {/* Logo */}
                     <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-                        <Film className="h-10 w-10 text-primary" />
-                        <span className="text-3xl font-bold text-gold-gradient">PCHILL</span>
+                        <img
+                            src="/logo.jpg"
+                            alt="Pchill Logo"
+                            className="h-20 w-auto object-contain rounded-md"
+                            style={{ mixBlendMode: 'screen' }}
+                        />
+                        <span className="text-4xl font-bold text-gold-gradient ml-2">PCHILL</span>
                     </Link>
 
                     {/* Login Card */}

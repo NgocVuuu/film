@@ -8,7 +8,12 @@ export default function Footer() {
                 {/* Branding */}
                 <div className="flex flex-col items-center md:items-start gap-2">
                     <Link href="/" className="flex items-center gap-2">
-                        <Film className="h-6 w-6 text-primary" />
+                        <img
+                            src="/logo.jpg"
+                            alt="Pchill Logo"
+                            className="h-12 w-auto object-contain rounded-md"
+                            style={{ mixBlendMode: 'screen' }}
+                        />
                         <span className="text-xl font-bold tracking-tighter text-gold-gradient">
                             PCHILL
                         </span>

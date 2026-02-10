@@ -188,8 +188,13 @@ export default function Navbar() {
             <div className="container mx-auto flex h-16 items-center justify-between px-4">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2">
-                    <img src="/logo.png" alt="Pchill Logo" className="h-8 w-8 object-contain" />
-                    <span className="text-2xl font-bold tracking-tighter text-gold-gradient">
+                    <img
+                        src="/logo.jpg"
+                        alt="Pchill Logo"
+                        className="h-14 w-auto object-contain rounded-md"
+                        style={{ mixBlendMode: 'screen' }}
+                    />
+                    <span className="text-2xl font-bold tracking-tighter text-gold-gradient hidden sm:block">
                         PCHILL
                     </span>
                 </Link>
