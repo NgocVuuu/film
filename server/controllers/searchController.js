@@ -1,5 +1,6 @@
 const axios = require('axios');
 const Movie = require('../models/Movie');
+const { attachProgressToMovies } = require('../utils/movieUtils');
 
 // Hybrid Search: DB first, then ophim API
 exports.hybridSearch = async (req, res) => {
@@ -8,15 +9,20 @@ exports.hybridSearch = async (req, res) => {
         if (!keyword) return res.json({ success: true, data: [], source: 'none' });
 
         // 1. Search in local DB first
-        const localMovies = await Movie.find({
+        let localMovies = await Movie.find({
             $or: [
                 { name: { $regex: keyword, $options: 'i' } },
                 { origin_name: { $regex: keyword, $options: 'i' } }
             ]
-        }).limit(20).select('name slug thumb_url origin_name year type quality');
+        }).limit(20).select('name slug thumb_url origin_name year type quality episode_current');
 
         // If found in DB, return immediately
         if (localMovies.length > 0) {
+            // Attach progress if logged in
+            if (req.user) {
+                localMovies = await attachProgressToMovies(localMovies, req.user._id);
+            }
+
             return res.json({
                 success: true,
                 data: localMovies,
@@ -43,6 +49,10 @@ exports.hybridSearch = async (req, res) => {
                     year: movie.year,
                     type: movie.type,
                     quality: movie.quality,
+                    year: movie.year,
+                    type: movie.type,
+                    quality: movie.quality,
+                    episode_current: movie.episode_current,
                     fromOphim: true // Flag to indicate it's from ophim
                 }));
 
@@ -67,9 +77,18 @@ exports.hybridSearch = async (req, res) => {
                     });
                 });
 
+                // Attaching progress probably won't find anything for new movies from API, but we try anyway if they exist in our DB by chance
+                let finalMovies = ophimMovies;
+                if (req.user) {
+                    // Since these objects might not be full Mongoose docs or might not be in DB yet, 
+                    // attachProgressToMovies might rely on DB. 
+                    // But attachProgressToMovies queries WatchProgress by 'movieSlug', so it WILL work if we have progress recorded!
+                    finalMovies = await attachProgressToMovies(ophimMovies, req.user._id);
+                }
+
                 return res.json({
                     success: true,
-                    data: ophimMovies,
+                    data: finalMovies,
                     source: 'ophim',
                     total: ophimMovies.length,
                     message: 'Kết quả từ nguồn bên ngoài, đang lưu vào hệ thống...'

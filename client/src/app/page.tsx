@@ -12,6 +12,13 @@ interface Movie {
   thumb_url: string;
   year: number;
   poster_url?: string;
+  progress?: {
+    currentTime: number;
+    duration: number;
+    percentage: number;
+    episodeSlug: string;
+    episodeName: string;
+  };
 }
 
 export default function Home() {

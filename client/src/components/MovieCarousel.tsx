@@ -15,6 +15,13 @@ interface Movie {
     episode_current?: string;
     quality?: string;
     lang?: string;
+    progress?: {
+        currentTime: number;
+        duration: number;
+        percentage: number;
+        episodeSlug: string;
+        episodeName: string;
+    };
 }
 
 interface MovieCarouselProps {
@@ -93,7 +100,7 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
 
                                 {/* Badge */}
                                 <div className="absolute top-2 left-2 bg-primary text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
-                                    {movie.quality || 'HD'}
+                                    {movie.episode_current || movie.quality || 'HD'}
                                 </div>
 
                                 {/* Hover Play */}

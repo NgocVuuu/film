@@ -9,7 +9,15 @@ interface MovieCardProps {
         slug: string;
         thumb_url: string;
         year: number;
-        poster_url?: string;
+        episode_current?: string;
+        quality?: string;
+        progress?: {
+            currentTime: number;
+            duration: number;
+            percentage: number;
+            episodeSlug: string;
+            episodeName: string;
+        };
     };
 }
 
@@ -30,6 +38,23 @@ export function MovieCard({ movie }: MovieCardProps) {
                 {/* Overlay Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
 
+                {/* Progress Bar */}
+                {movie.progress && movie.progress.percentage > 0 && (
+                    <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-700/50 z-20">
+                        <div
+                            className="h-full bg-primary shadow-[0_0_10px_rgba(234,179,8,0.7)]"
+                            style={{ width: `${Math.min(movie.progress.percentage, 100)}%` }}
+                        />
+                    </div>
+                )}
+
+                {/* Episode Badge if Watching */}
+                {movie.progress && (
+                    <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-medium px-1.5 py-0.5 rounded border border-white/10 z-20">
+                        Đang xem: {movie.progress.episodeName}
+                    </div>
+                )}
+
                 {/* Play Button Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
                     <div className="w-12 h-12 rounded-full bg-primary/90 text-black flex items-center justify-center shadow-lg shadow-primary/50 transform group-hover:scale-110 transition-transform">
@@ -37,9 +62,9 @@ export function MovieCard({ movie }: MovieCardProps) {
                     </div>
                 </div>
 
-                {/* Live/Quality Badge (Optional) */}
-                <div className="absolute top-2 right-2 bg-primary text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
-                    HD
+                {/* Episode/Quality Badge */}
+                <div className="absolute top-2 right-2 bg-primary text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow z-20">
+                    {movie.episode_current || movie.quality || 'HD'}
                 </div>
             </div>
 

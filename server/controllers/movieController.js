@@ -1,5 +1,7 @@
 const Movie = require('../models/Movie');
 
+const { attachProgressToMovies } = require('../utils/movieUtils');
+
 // 1. Get Home Data (Aggregated)
 const getHomeData = async (req, res) => {
     try {
@@ -13,43 +15,51 @@ const getHomeData = async (req, res) => {
             horrorMovies,
             familyMovies
         ] = await Promise.all([
-            // Featured (Top 10 Latest for now, or could be a specific 'featured' flag)
-            Movie.find({}).sort({ updatedAt: -1 }).limit(10).select('-content -episodes -director -actor'),
-
-            // Latest (Top 15)
-            Movie.find({}).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-
+            // Featured
+            Movie.find({}).sort({ updatedAt: -1 }).limit(10).select('-content -episodes -director -actor +episode_current'),
+            // Latest
+            Movie.find({}).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
             // China
-            Movie.find({ 'country.slug': 'trung-quoc' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-
+            Movie.find({ 'country.slug': 'trung-quoc' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
             // Korea
-            Movie.find({ 'country.slug': 'han-quoc' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-
+            Movie.find({ 'country.slug': 'han-quoc' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
             // US/UK
-            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] } }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-
+            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] } }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
             // Cartoon
-            Movie.find({ type: 'hoathinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-
+            Movie.find({ type: 'hoathinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
             // Horror
-            Movie.find({ 'category.slug': 'kinh-di' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-
+            Movie.find({ 'category.slug': 'kinh-di' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
             // Family
-            Movie.find({ 'category.slug': 'gia-dinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor')
+            Movie.find({ 'category.slug': 'gia-dinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current')
         ]);
+
+        let responseData = {
+            featuredMovies,
+            latestMovies,
+            chinaMovies,
+            koreaMovies,
+            usukMovies,
+            cartoonMovies,
+            horrorMovies,
+            familyMovies
+        };
+
+        // If user is logged in, attach progress
+        if (req.user) {
+            const userId = req.user._id;
+            responseData.featuredMovies = await attachProgressToMovies(featuredMovies, userId);
+            responseData.latestMovies = await attachProgressToMovies(latestMovies, userId);
+            responseData.chinaMovies = await attachProgressToMovies(chinaMovies, userId);
+            responseData.koreaMovies = await attachProgressToMovies(koreaMovies, userId);
+            responseData.usukMovies = await attachProgressToMovies(usukMovies, userId);
+            responseData.cartoonMovies = await attachProgressToMovies(cartoonMovies, userId);
+            responseData.horrorMovies = await attachProgressToMovies(horrorMovies, userId);
+            responseData.familyMovies = await attachProgressToMovies(familyMovies, userId);
+        }
 
         res.json({
             success: true,
-            data: {
-                featuredMovies,
-                latestMovies,
-                chinaMovies,
-                koreaMovies,
-                usukMovies,
-                cartoonMovies,
-                horrorMovies,
-                familyMovies
-            }
+            data: responseData
         });
     } catch (err) {
         console.error('Home data error:', err);
@@ -87,13 +97,19 @@ const getMovies = async (req, res) => {
             .sort({ updatedAt: -1 })
             .skip(skip)
             .limit(limit)
-            .select('-content -episodes -director -actor'); // Light selection
+            .limit(limit)
+            .select('-content -episodes -director -actor +episode_current'); // Light selection
 
         const total = await Movie.countDocuments(query);
 
+        let moviesData = movies;
+        if (req.user) {
+            moviesData = await attachProgressToMovies(movies, req.user._id);
+        }
+
         res.json({
             success: true,
-            data: movies,
+            data: moviesData,
             pagination: {
                 page,
                 limit,
@@ -113,12 +129,19 @@ const getMovieDetail = async (req, res) => {
         if (!movie) return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
 
         // Get related movies (same category)
-        const related = await Movie.find({
+        let related = await Movie.find({
             'category.slug': { $in: movie.category.map(c => c.slug) },
             slug: { $ne: movie.slug }
-        }).limit(6).select('name slug thumb_url year');
+        }).limit(6).select('name slug thumb_url year episode_current');
 
-        res.json({ success: true, data: movie, related });
+        // Attach progress if logged in
+        let movieData = movie;
+        if (req.user) {
+            movieData = await attachProgressToMovies(movie, req.user._id);
+            related = await attachProgressToMovies(related, req.user._id);
+        }
+
+        res.json({ success: true, data: movieData, related });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

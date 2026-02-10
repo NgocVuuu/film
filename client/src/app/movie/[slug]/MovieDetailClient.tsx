@@ -40,6 +40,13 @@ interface MovieDetail {
     time?: string;
     rating_average?: number;
     rating_count?: number;
+    progress?: {
+        currentTime: number;
+        duration: number;
+        percentage: number;
+        episodeSlug: string;
+        episodeName: string;
+    };
 }
 
 export default function MovieDetailClient({ initialMovie }: { initialMovie: MovieDetail | null }) {
@@ -195,6 +202,12 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
 
     const handleWatchNow = () => {
         if (movie) {
+            // If has progress, maybe we want to direct to specific episode?
+            // For now, let's just go to watch page, it should handle resume or default to first ep
+            // But if we have valid episodeSlug in progress, we can append it? 
+            // The current routing seems to be /movie/:slug/watch. 
+            // If the watch page supports query param or segments like /watch?ep=slug, that would be better.
+            // Assuming default behavior for now.
             router.push(`/movie/${movie.slug}/watch`);
         }
     };
@@ -295,7 +308,10 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                         onClick={handleWatchNow}
                                         className="h-10 md:h-12 px-6 bg-primary hover:bg-gold-400 text-black text-base md:text-lg font-bold rounded-full shadow-[0_0_30px_rgba(255,215,0,0.3)] hover:shadow-[0_0_50px_rgba(255,215,0,0.5)] transition-all transform hover:scale-105"
                                     >
-                                        <Play fill="black" className="mr-2 w-5 h-5 md:w-6 md:h-6" /> XEM NGAY
+                                        <Play fill="black" className="mr-2 w-5 h-5 md:w-6 md:h-6" />
+                                        {movie.progress && movie.progress.percentage > 0 && movie.progress.percentage < 100
+                                            ? `XEM TIẾP (Tập ${movie.progress.episodeName})`
+                                            : 'XEM NGAY'}
                                     </Button>
                                     <Button
                                         variant="outline"

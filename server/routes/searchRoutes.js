@@ -5,7 +5,7 @@ const requestController = require('../controllers/requestController');
 const { authMiddleware, optionalAuthMiddleware } = require('../middleware/authMiddleware');
 
 // Hybrid search (public)
-router.get('/hybrid', searchController.hybridSearch);
+router.get('/', optionalAuthMiddleware, searchController.hybridSearch);
 
 // Movie requests (protected)
 router.post('/request', authMiddleware, requestController.requestMovie);

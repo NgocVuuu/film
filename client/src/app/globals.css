@@ -162,4 +162,11 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Prevent Zoom on Focus (Mobile) */
+  @media screen and (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
 }

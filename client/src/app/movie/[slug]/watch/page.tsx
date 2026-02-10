@@ -142,7 +142,20 @@ export default function WatchPage() {
     };
 
     const getCleanServerName = (rawName: string) => {
-        return rawName.replace(/^(NC|KK|OP) - /, '').replace(/\s*#\d+/, '').trim();
+        const lowerName = rawName.toLowerCase();
+
+        // 1. Detect Type (Priority)
+        if (lowerName.includes('vietsub')) return 'Vietsub';
+        if (lowerName.includes('thuyết minh') || lowerName.includes('thuyet minh')) return 'Thuyết Minh';
+        if (lowerName.includes('lồng tiếng') || lowerName.includes('long tieng')) return 'Lồng Tiếng';
+        if (lowerName.includes('engsub')) return 'Engsub';
+
+        // 2. Clean up if no type detected (Fallback)
+        return rawName
+            .replace(/^(NC|KK|OP|SERVER)[\s-]*#?/i, '')
+            .replace(/#[\w\s\.]+/, '') // Remove #Location
+            .replace(/\(.*\)/, '')      // Remove (...)
+            .trim() || 'Server Dự Phòng';
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-black text-primary animate-pulse">Đang tải phim...</div>;

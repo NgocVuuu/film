@@ -158,6 +158,10 @@ export default function VideoPlayer({
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!touchStartRef.current || !containerRef.current) return;
 
+        // Gestures only active in fullscreen (landscape/zoomed)
+        // as requested: "khi dọc thì không áp dụng"
+        if (!isFullscreen) return;
+
         const deltaY = touchStartRef.current.y - e.touches[0].clientY;
         const deltaX = e.touches[0].clientX - touchStartRef.current.x;
         const rect = containerRef.current.getBoundingClientRect();
@@ -454,19 +458,19 @@ export default function VideoPlayer({
 
                 {/* Main Controls */}
                 <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 md:gap-4">
                         <Button variant="ghost" size="icon" onClick={togglePlay} className="text-white hover:text-primary hover:bg-transparent">
                             {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
                         </Button>
 
-                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime -= 10; }} className="text-white/70 hover:text-white hover:bg-transparent">
+                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime -= 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent">
                             <Rewind className="w-5 h-5" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime += 10; }} className="text-white/70 hover:text-white hover:bg-transparent">
+                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime += 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent">
                             <FastForward className="w-5 h-5" />
                         </Button>
 
-                        <div className="flex items-center gap-2 group/volume">
+                        <div className="hidden md:flex items-center gap-2 group/volume">
                             <Button variant="ghost" size="icon" onClick={toggleMute} className="text-white hover:text-primary hover:bg-transparent">
                                 {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                             </Button>

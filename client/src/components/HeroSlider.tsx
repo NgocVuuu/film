@@ -12,6 +12,15 @@ interface Movie {
     thumb_url: string;
     year: number;
     poster_url?: string;
+    episode_current?: string;
+    quality?: string;
+    progress?: {
+        currentTime: number;
+        duration: number;
+        percentage: number;
+        episodeSlug: string;
+        episodeName: string;
+    };
 }
 
 interface HeroSliderProps {
@@ -44,6 +53,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
     return (
         <div className="relative w-full h-[65vh] md:h-[80vh] group overflow-hidden bg-black">
             {/* Background Slider */}
+            {/* Background Slider */}
             {movies.map((movie, index) => (
                 <div
                     key={movie._id}
@@ -57,6 +67,16 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
                     <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/60 to-transparent"></div>
+
+                    {/* Progress Bar for Hero */}
+                    {movie.progress && movie.progress.percentage > 0 && (
+                        <div className="absolute bottom-0 left-0 w-full h-1.5 bg-gray-700/30 z-20">
+                            <div
+                                className="h-full bg-primary shadow-[0_0_15px_rgba(234,179,8,0.8)]"
+                                style={{ width: `${Math.min(movie.progress.percentage, 100)}%` }}
+                            />
+                        </div>
+                    )}
                 </div>
             ))}
 
@@ -74,6 +94,11 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                     <p className="text-lg md:text-2xl text-gray-200 font-light tracking-wide flex items-center gap-3">
                         {currentMovie.origin_name}
                         <span className="text-primary font-bold text-base md:text-xl">({currentMovie.year})</span>
+                        {currentMovie.episode_current && (
+                            <span className="text-white/80 text-sm md:text-lg border border-white/20 px-2 py-0.5 rounded">
+                                {currentMovie.episode_current}
+                            </span>
+                        )}
                     </p>
 
                     <div className="flex flex-wrap gap-3 pt-4">
