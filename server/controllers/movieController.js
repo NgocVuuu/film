@@ -16,21 +16,21 @@ const getHomeData = async (req, res) => {
             familyMovies
         ] = await Promise.all([
             // Featured
-            Movie.find({}).sort({ updatedAt: -1 }).limit(10).select('-content -episodes -director -actor +episode_current'),
+            Movie.find({}).sort({ updatedAt: -1 }).limit(10).select('-content -episodes -director -actor'),
             // Latest
-            Movie.find({}).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
+            Movie.find({}).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // China
-            Movie.find({ 'country.slug': 'trung-quoc' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
+            Movie.find({ 'country.slug': 'trung-quoc' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Korea
-            Movie.find({ 'country.slug': 'han-quoc' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
+            Movie.find({ 'country.slug': 'han-quoc' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // US/UK
-            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] } }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
+            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] } }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Cartoon
-            Movie.find({ type: 'hoathinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
+            Movie.find({ type: 'hoathinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Horror
-            Movie.find({ 'category.slug': 'kinh-di' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current'),
+            Movie.find({ 'category.slug': 'kinh-di' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Family
-            Movie.find({ 'category.slug': 'gia-dinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor +episode_current')
+            Movie.find({ 'category.slug': 'gia-dinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor')
         ]);
 
         let responseData = {
@@ -103,7 +103,7 @@ const getMovies = async (req, res) => {
             .skip(skip)
             .limit(limit)
             .limit(limit)
-            .select('-content -episodes -director -actor +episode_current'); // Light selection
+            .select('-content -episodes -director -actor'); // Light selection
 
         const total = await Movie.countDocuments(query);
 
