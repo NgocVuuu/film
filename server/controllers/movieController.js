@@ -46,15 +46,20 @@ const getHomeData = async (req, res) => {
 
         // If user is logged in, attach progress
         if (req.user) {
-            const userId = req.user._id;
-            responseData.featuredMovies = await attachProgressToMovies(featuredMovies, userId);
-            responseData.latestMovies = await attachProgressToMovies(latestMovies, userId);
-            responseData.chinaMovies = await attachProgressToMovies(chinaMovies, userId);
-            responseData.koreaMovies = await attachProgressToMovies(koreaMovies, userId);
-            responseData.usukMovies = await attachProgressToMovies(usukMovies, userId);
-            responseData.cartoonMovies = await attachProgressToMovies(cartoonMovies, userId);
-            responseData.horrorMovies = await attachProgressToMovies(horrorMovies, userId);
-            responseData.familyMovies = await attachProgressToMovies(familyMovies, userId);
+            try {
+                const userId = req.user._id;
+                responseData.featuredMovies = await attachProgressToMovies(featuredMovies, userId);
+                responseData.latestMovies = await attachProgressToMovies(latestMovies, userId);
+                responseData.chinaMovies = await attachProgressToMovies(chinaMovies, userId);
+                responseData.koreaMovies = await attachProgressToMovies(koreaMovies, userId);
+                responseData.usukMovies = await attachProgressToMovies(usukMovies, userId);
+                responseData.cartoonMovies = await attachProgressToMovies(cartoonMovies, userId);
+                responseData.horrorMovies = await attachProgressToMovies(horrorMovies, userId);
+                responseData.familyMovies = await attachProgressToMovies(familyMovies, userId);
+            } catch (progressError) {
+                console.error('Error attaching progress in getHomeData:', progressError);
+                // Continue without progress if error occurs
+            }
         }
 
         res.json({
@@ -104,7 +109,11 @@ const getMovies = async (req, res) => {
 
         let moviesData = movies;
         if (req.user) {
-            moviesData = await attachProgressToMovies(movies, req.user._id);
+            try {
+                moviesData = await attachProgressToMovies(movies, req.user._id);
+            } catch (error) {
+                console.error('Error attaching progress in getMovies:', error);
+            }
         }
 
         res.json({
@@ -137,8 +146,12 @@ const getMovieDetail = async (req, res) => {
         // Attach progress if logged in
         let movieData = movie;
         if (req.user) {
-            movieData = await attachProgressToMovies(movie, req.user._id);
-            related = await attachProgressToMovies(related, req.user._id);
+            try {
+                movieData = await attachProgressToMovies(movie, req.user._id);
+                related = await attachProgressToMovies(related, req.user._id);
+            } catch (error) {
+                console.error('Error attaching progress in getMovieDetail:', error);
+            }
         }
 
         res.json({ success: true, data: movieData, related });

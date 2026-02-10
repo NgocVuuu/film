@@ -199,7 +199,7 @@ export default function Navbar() {
                 </Link>
 
                 {/* Desktop Nav */}
-                <nav className="hidden md:flex items-center gap-6">
+                <nav className="hidden lg:flex items-center gap-6">
                     {navLinks.map((link) => (
                         <Link
                             key={link.name}
@@ -212,7 +212,7 @@ export default function Navbar() {
                 </nav>
 
                 {/* Search & Actions */}
-                <div className="hidden md:flex items-center gap-2">
+                <div className="hidden lg:flex items-center gap-2">
                     {/* Expandable Search */}
                     <div
                         ref={searchRef}
@@ -431,7 +431,7 @@ export default function Navbar() {
 
                 {/* Mobile Toggle */}
                 <button
-                    className="md:hidden text-white"
+                    className="lg:hidden text-white"
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 >
                     {isMobileMenuOpen ? <X /> : <Menu />}
@@ -440,7 +440,7 @@ export default function Navbar() {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden bg-deep-black border-t border-gray-800 px-4 py-4 space-y-4">
+                <div className="lg:hidden bg-deep-black border-t border-gray-800 px-4 py-4 space-y-4">
                     <form onSubmit={handleSearch} className="relative">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input

@@ -196,33 +196,66 @@ export default function VideoPlayer({
     };
 
     const toggleFullscreen = async () => {
-        if (!containerRef.current) return;
-
         try {
-            if (!document.fullscreenElement) {
-                await containerRef.current.requestFullscreen();
-                setIsFullscreen(true);
-                // Lock Orientation (Android/Chrome)
-                if (screen.orientation && (screen.orientation as any).lock) {
-                    try {
-                        await (screen.orientation as any).lock('landscape');
-                    } catch (e) {
-                        console.log('Orientation lock not supported');
+            const container = containerRef.current;
+            const video = videoRef.current;
+
+            if (!container || !video) return;
+
+            // Check if standard fullscreen calls are available on container
+            const requestFS = container.requestFullscreen ||
+                (container as any).webkitRequestFullscreen ||
+                (container as any).mozRequestFullScreen ||
+                (container as any).msRequestFullscreen;
+
+            const exitFS = document.exitFullscreen ||
+                (document as any).webkitExitFullscreen ||
+                (document as any).mozCancelFullScreen ||
+                (document as any).msExitFullscreen;
+
+            // iOS Safari often doesn't support container fullscreen, acts on video element
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+
+            if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+                // ENTER FULLSCREEN
+                if (isIOS && (video as any).webkitEnterFullscreen) {
+                    // Use native iOS fullscreen
+                    (video as any).webkitEnterFullscreen();
+                } else if (requestFS) {
+                    // Use standard/standard-ish container fullscreen
+                    await requestFS.call(container);
+                    setIsFullscreen(true);
+
+                    // Attempt Orientation Lock (Android)
+                    if (screen.orientation && (screen.orientation as any).lock) {
+                        try {
+                            await (screen.orientation as any).lock('landscape');
+                        } catch (e) {
+                            console.log('Orientation lock not supported/allowed');
+                        }
                     }
                 }
             } else {
-                await document.exitFullscreen();
+                // EXIT FULLSCREEN
+                if (exitFS) {
+                    await exitFS.call(document);
+                } else if ((video as any).webkitExitFullscreen) {
+                    (video as any).webkitExitFullscreen();
+                }
                 setIsFullscreen(false);
+
                 // Unlock Orientation
                 if (screen.orientation && (screen.orientation as any).unlock) {
-                    (screen.orientation as any).unlock();
+                    try { (screen.orientation as any).unlock(); } catch (e) { }
                 }
             }
+
         } catch (e) {
             console.error('Fullscreen error:', e);
         }
     };
 
+    // ... existing changeSpeed/changeQuality ...
 
     const changeSpeed = (speed: number) => {
         if (videoRef.current) {
@@ -269,6 +302,9 @@ export default function VideoPlayer({
                 video.currentTime = initialProgress;
             }
         };
+        const onFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement || !!(document as any).webkitFullscreenElement);
+        };
 
         video.addEventListener('loadeddata', onVideoLoaded);
         video.addEventListener('waiting', onVideoWaiting);
@@ -276,6 +312,11 @@ export default function VideoPlayer({
         video.addEventListener('pause', onVideoPause);
         video.addEventListener('loadedmetadata', onLoadedMetadata);
         video.addEventListener('timeupdate', handleTimeUpdate);
+
+        // Listen for fullscreen changes to update state correctly
+        document.addEventListener('fullscreenchange', onFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', onFullscreenChange); // iOS/Safari
+        video.addEventListener('webkitendfullscreen', () => setIsFullscreen(false)); // iOS native exit
 
         if (Hls.isSupported()) {
             hls = new Hls({
@@ -343,6 +384,10 @@ export default function VideoPlayer({
             video.removeEventListener('playing', onVideoPlaying);
             video.removeEventListener('pause', onVideoPause);
             video.removeEventListener('timeupdate', handleTimeUpdate);
+            // Cleanup fullscreen listeners
+            document.removeEventListener('fullscreenchange', onFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+            video.removeEventListener('webkitendfullscreen', () => setIsFullscreen(false));
         };
     }, [src, autoPlay]);
 
@@ -394,7 +439,6 @@ export default function VideoPlayer({
                 <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
                     <div className="bg-black/50 backdrop-blur-sm p-4 rounded-xl text-white flex flex-col items-center gap-2">
                         {gestureFeedback.type === 'volume' ? <Volume2 className="w-8 h-8" /> : <Loader2 className="w-8 h-8 animate-spin" />}
-                        {/* Note: Loader2 is temp, usually use Sun icon for brightness but not imported. Using Text instead */}
                         <span className="text-xl font-bold">
                             {gestureFeedback.type === 'brightness' ? 'Độ sáng' : 'Âm lượng'}
                         </span>
@@ -470,7 +514,7 @@ export default function VideoPlayer({
                             <FastForward className="w-5 h-5" />
                         </Button>
 
-                        <div className="hidden md:flex items-center gap-2 group/volume">
+                        <div className="flex items-center gap-2 group/volume">
                             <Button variant="ghost" size="icon" onClick={toggleMute} className="text-white hover:text-primary hover:bg-transparent">
                                 {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                             </Button>
@@ -481,7 +525,7 @@ export default function VideoPlayer({
                                 step={0.1}
                                 value={isMuted ? 0 : volume}
                                 onChange={handleVolumeChange}
-                                className="w-0 overflow-hidden group-hover/volume:w-20 transition-all h-1 bg-white/30 rounded-lg cursor-pointer appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                className="w-20 md:w-0 md:overflow-hidden md:group-hover/volume:w-20 transition-all h-1 bg-white/30 rounded-lg cursor-pointer appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
                             />
                         </div>
 
