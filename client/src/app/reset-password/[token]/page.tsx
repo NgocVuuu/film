@@ -8,6 +8,8 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { API_URL } from '@/lib/config';
 
+export const runtime = 'edge';
+
 export default function ResetPasswordPage() {
     const router = useRouter();
     const { token } = useParams();

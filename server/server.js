@@ -92,6 +92,11 @@ app.use('/api/subscriptions', subscriptionRoutes);
 // Admin Routes
 app.use('/api/admin', adminRoutes);
 
+// Health Check
+app.get('/', (req, res) => {
+    res.send('Server is running...');
+});
+
 // Routes
 
 // 1, 2, 3. Movie Routes (List, Search, Detail, Home)

@@ -3,8 +3,10 @@ import { useEffect, useState } from 'react';
 
 import { MovieCard } from '@/components/MovieCard';
 import { API_URL } from '@/lib/config';
-
 import { use } from 'react';
+
+export const runtime = 'edge';
+
 
 interface CatalogPageProps {
     params: Promise<{ category: string }>; // This captures /phim-bo, /phim-le from URL
