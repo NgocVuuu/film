@@ -20,6 +20,7 @@ interface VideoPlayerProps {
     episodeSlug?: string;
     episodeName?: string;
     serverName?: string;
+    startTime?: number;  // Optional start time from URL param
 }
 
 const formatTime = (seconds: number) => {
@@ -44,7 +45,8 @@ export default function VideoPlayer({
     movieThumb,
     episodeSlug,
     episodeName,
-    serverName
+    serverName,
+    startTime = 0
 }: VideoPlayerProps) {
     const { user } = useAuth();
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -323,8 +325,10 @@ export default function VideoPlayer({
         };
         const onVideoPause = () => setIsPlaying(false);
         const onLoadedMetadata = () => {
-            // Restore progress if available
-            if (initialProgress !== null && initialProgress > 10) {
+            // Priority: 1. startTime from URL param, 2. saved progress
+            if (startTime > 0) {
+                video.currentTime = startTime;
+            } else if (initialProgress !== null && initialProgress > 10) {
                 video.currentTime = initialProgress;
             }
         };

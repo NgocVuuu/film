@@ -1,16 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
-import { Search, Menu, X, Film, Loader2, User, LogOut, Crown, Bell, Check } from 'lucide-react';
+import { Search, Loader2, User, LogOut, Crown, Bell, Check, Heart, Clock } from 'lucide-react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { API_URL } from '@/lib/config';
 
 export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
@@ -90,15 +88,6 @@ export default function Navbar() {
         return `${days} ngày trước`;
     };
 
-    const navLinks = [
-        { name: "Trang Chủ", href: "/" },
-        { name: "Phim Mới", href: "/phim-moi" },
-        { name: "Phim Bộ", href: "/phim-bo" },
-        { name: "Phim Lẻ", href: "/phim-le" },
-        { name: "Danh sách yêu thích", href: "/favorites" },
-        { name: "Đang xem", href: "/history" },
-    ];
-
     useEffect(() => {
         const handleScroll = () => {
             if (window.scrollY > 0) {
@@ -141,7 +130,7 @@ export default function Navbar() {
         return () => clearTimeout(timeoutId);
     }, [searchQuery]);
 
-    // Click outside to close suggestions
+    // Click outside to close menus
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -154,6 +143,7 @@ export default function Navbar() {
                 setShowNotifications(false);
             }
         };
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
@@ -162,9 +152,9 @@ export default function Navbar() {
         e.preventDefault();
         if (searchQuery.trim()) {
             router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
-            setIsMobileMenuOpen(false);
-            setShowSuggestions(false);
             setIsSearchOpen(false);
+            setSearchQuery('');
+            setShowSuggestions(false);
         }
     };
 
@@ -175,8 +165,14 @@ export default function Navbar() {
         setIsSearchOpen(false);
     };
 
-    // Hide Navbar on Watch Page (Theater Mode)
-    if (pathname && pathname.endsWith('/watch')) {
+    const handleLogout = () => {
+        logout();
+        setShowUserMenu(false);
+        router.push('/');
+    };
+
+    // Early return for loading state
+    if (loading) {
         return null;
     }
 
@@ -185,8 +181,8 @@ export default function Navbar() {
             className={`fixed top-0 z-50 w-full transition-all duration-300 ${isScrolled ? 'bg-deep-black/95 backdrop-blur-sm shadow-md shadow-primary/10' : 'bg-transparent'
                 }`}
         >
-            <div className="container mx-auto flex h-16 items-center justify-between px-4">
-                {/* Logo */}
+            <div className="container mx-auto flex h-16 items-center justify-between px-4 gap-4">
+                {/* Logo - Left */}
                 <Link href="/" className="flex items-center gap-2 flex-shrink-0">
                     <img
                         src="/logo.png"
@@ -198,76 +194,28 @@ export default function Navbar() {
                     </span>
                 </Link>
 
-                {/* Desktop Nav */}
-                <nav className="hidden lg:flex items-center gap-6">
-                    {navLinks.map((link) => (
-                        <Link
-                            key={link.name}
-                            href={link.href}
-                            className="text-sm font-medium hover:text-primary transition-colors"
-                        >
-                            {link.name}
-                        </Link>
-                    ))}
-                </nav>
-
-                {/* Search & Actions */}
-                <div className="flex items-center gap-2">
-                    {/* Expandable Search */}
-                    <div
-                        ref={searchRef}
-                        className={`relative flex items-center transition-all duration-300 ${isSearchOpen ? 'w-48 sm:w-80 bg-white/10' : 'w-10 bg-transparent'} rounded-full overflow-visible border border-transparent ${isSearchOpen ? 'border-white/10' : ''}`}
-                    >
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-gray-300 hover:text-white hover:bg-transparent flex-shrink-0 hidden lg:block"
-                            onClick={() => {
-                                setIsSearchOpen(!isSearchOpen);
-                            }}
-                        >
-                            <Search className="h-5 w-5" />
-                        </Button>
-                        <form
-                            onSubmit={handleSearch}
-                            className={`flex-1 ${isSearchOpen ? 'block' : 'hidden'}`}
-                        >
+                {/* Search - Center */}
+                <div ref={searchRef} className="flex-1 max-w-2xl mx-auto relative">
+                    <form onSubmit={handleSearch} className="relative">
+                        <div className="relative flex items-center bg-white/10 rounded-full border border-white/10 hover:border-white/20 transition-colors">
+                            <Search className="absolute left-3 h-4 w-4 text-gray-400" />
                             <input
                                 type="text"
                                 placeholder="Tìm kiếm phim..."
-                                className="w-full bg-transparent border-none outline-none text-white text-sm px-2 placeholder-gray-500 h-10"
+                                className="w-full bg-transparent border-none outline-none text-white text-sm pl-10 pr-4 py-2.5 placeholder-gray-500"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                autoFocus
                                 onFocus={() => {
                                     if (searchSuggestions.length > 0) setShowSuggestions(true);
                                 }}
                             />
-                        </form>
-                        {isSearchOpen && (
-                            <>
-                                {isSearching && (
-                                    <Loader2 className="h-4 w-4 text-gray-400 animate-spin mr-2" />
-                                )}
-                                {searchQuery && !isSearching && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-gray-400 hover:text-white flex-shrink-0"
-                                        onClick={() => {
-                                            setSearchQuery('');
-                                            setSearchSuggestions([]);
-                                            setShowSuggestions(false);
-                                        }}
-                                    >
-                                        <X className="h-3 w-3" />
-                                    </Button>
-                                )}
-                            </>
-                        )}
+                            {isSearching && (
+                                <Loader2 className="absolute right-3 h-4 w-4 text-gray-400 animate-spin" />
+                            )}
+                        </div>
 
-                        {/* Search Suggestions Dropdown */}
-                        {showSuggestions && searchSuggestions.length > 0 && isSearchOpen && (
+                        {/* Search Suggestions */}
+                        {showSuggestions && searchSuggestions.length > 0 && (
                             <div className="absolute top-full left-0 right-0 mt-2 bg-black/95 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden shadow-2xl z-50">
                                 {searchSuggestions.map((movie) => (
                                     <button
@@ -294,11 +242,14 @@ export default function Navbar() {
                                 </button>
                             </div>
                         )}
-                    </div>
+                    </form>
+                </div>
 
+                {/* Actions - Right */}
+                <div className="flex items-center gap-2 flex-shrink-0">
                     {/* Notifications */}
                     {user && (
-                        <div ref={notificationRef} className="relative mr-2">
+                        <div ref={notificationRef} className="relative">
                             <button
                                 onClick={() => setShowNotifications(!showNotifications)}
                                 className="relative p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
@@ -310,7 +261,7 @@ export default function Navbar() {
                             </button>
 
                             {showNotifications && (
-                                <div className="absolute right-0 top-full mt-2 w-80 bg-black/95 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden shadow-2xl z-50">
+                                <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-black/95 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden shadow-2xl z-50">
                                     <div className="p-3 border-b border-white/10 flex justify-between items-center bg-white/5">
                                         <h3 className="text-sm font-bold text-white">Thông báo</h3>
                                         {unreadCount > 0 && (
@@ -351,126 +302,78 @@ export default function Navbar() {
                         </div>
                     )}
 
-                    {/* User Menu */}
-                    {!loading && (
-                        <div ref={userMenuRef} className="relative hidden lg:block">
-                            {user ? (
-                                <>
-                                    <button
-                                        onClick={() => setShowUserMenu(!showUserMenu)}
-                                        className="flex items-center gap-2 hover:bg-white/10 px-3 py-2 rounded-full transition-colors"
+                    {/* User Menu / Login */}
+                    {user ? (
+                        <div ref={userMenuRef} className="relative">
+                            <button
+                                onClick={() => setShowUserMenu(!showUserMenu)}
+                                className="flex items-center gap-2 p-1 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                            >
+                                {user.avatar ? (
+                                    <img src={user.avatar} alt={user.name || user.email} className="w-8 h-8 rounded-full object-cover" />
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                                        <User className="w-4 h-4 text-primary" />
+                                    </div>
+                                )}
+                            </button>
+
+                            {showUserMenu && (
+                                <div className="absolute right-0 top-full mt-2 w-48 bg-black/95 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden shadow-2xl z-50">
+                                    <div className="p-3 border-b border-white/10 bg-white/5">
+                                        <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
+                                        <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                                    </div>
+
+                                    {/* Favorites & History Links - Desktop only (mobile has bottom nav) */}
+                                    <Link
+                                        href="/favorites"
+                                        onClick={() => setShowUserMenu(false)}
+                                        className="hidden lg:flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5"
                                     >
-                                        <img
-                                            src={user.avatar}
-                                            alt={user.displayName}
-                                            className="w-8 h-8 rounded-full"
-                                        />
-                                        <Crown className="w-4 h-4 text-primary" />
-                                    </button>
+                                        <Heart className="w-4 h-4" />
+                                        Danh sách yêu thích
+                                    </Link>
 
-                                    {/* User Dropdown */}
-                                    {showUserMenu && (
-                                        <div className="absolute right-0 top-full mt-2 w-64 bg-black/95 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden shadow-2xl z-50">
-                                            <div className="p-4 border-b border-white/10">
-                                                <p className="text-white font-medium truncate">{user.displayName}</p>
-                                                <p className="text-xs text-gray-400 truncate">{user.email || user.phoneNumber}</p>
-                                                <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-primary/20 text-primary text-xs font-bold rounded border border-primary/20">
-                                                    <Crown className="w-3 h-3" />
-                                                    Premium
-                                                </div>
-                                            </div>
-                                            <div className="p-2">
-                                                <Link
-                                                    href="/profile"
-                                                    className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-white/10 hover:text-white rounded transition-colors"
-                                                    onClick={() => setShowUserMenu(false)}
-                                                >
-                                                    <User className="w-4 h-4" />
-                                                    Tài khoản
-                                                </Link>
+                                    <Link
+                                        href="/history"
+                                        onClick={() => setShowUserMenu(false)}
+                                        className="hidden lg:flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5"
+                                    >
+                                        <Clock className="w-4 h-4" />
+                                        Đang xem
+                                    </Link>
 
-                                                <button
-                                                    onClick={() => {
-                                                        logout();
-                                                        setShowUserMenu(false);
-                                                        router.push('/');
-                                                    }}
-                                                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-white/10 hover:text-white rounded transition-colors"
-                                                >
-                                                    <LogOut className="w-4 h-4" />
-                                                    Đăng xuất
-                                                </button>
+                                    {user.isPremium && (
+                                        <div className="px-3 py-2.5 border-b border-white/5 bg-yellow-500/10">
+                                            <div className="flex items-center gap-2 text-yellow-500">
+                                                <Crown className="w-4 h-4" />
+                                                <span className="text-xs font-semibold">Premium</span>
                                             </div>
                                         </div>
                                     )}
-                                </>
-                            ) : (
-                                <>
-                                    <Button
-                                        onClick={() => router.push('/login')}
-                                        className="hidden lg:flex bg-primary hover:bg-primary/90 text-black font-bold"
+
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-white/10 transition-colors"
                                     >
-                                        Đăng nhập
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => router.push('/login')}
-                                        className="lg:hidden text-white hover:text-primary hover:bg-transparent"
-                                    >
-                                        <User className="w-6 h-6" />
-                                    </Button>
-                                </>
+                                        <LogOut className="w-4 h-4" />
+                                        Đăng xuất
+                                    </button>
+                                </div>
                             )}
                         </div>
+                    ) : (
+                        <Button
+                            onClick={() => router.push('/login')}
+                            variant="outline"
+                            className="border-primary/50 text-primary hover:bg-primary hover:text-black transition-colors text-sm"
+                        >
+                            Đăng nhập
+                        </Button>
                     )}
                 </div>
-
-                {/* Mobile Toggle */}
-                <button
-                    className="lg:hidden text-white"
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                >
-                    {isMobileMenuOpen ? <X /> : <Menu />}
-                </button>
             </div>
-
-            {/* Mobile Menu & Backdrop */}
-            {isMobileMenuOpen && (
-                <>
-                    {/* Backdrop - Click outside to close */}
-                    <div
-                        className="fixed inset-0 top-16 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                    />
-
-                    {/* Menu Content - Positioned below navbar */}
-                    <div className="absolute top-16 left-0 w-full bg-deep-black border-y border-gray-800 px-4 py-6 space-y-4 shadow-2xl animate-in slide-in-from-top-2 duration-200 z-50 lg:hidden">
-                        <nav className="flex flex-col space-y-4">
-                            {navLinks.filter(link => !['/', '/favorites', '/history'].includes(link.href)).map((link) => (
-                                <Link
-                                    key={link.name}
-                                    href={link.href}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className="text-white hover:text-primary block py-2 text-sm font-medium border-b border-white/5 last:border-0"
-                                >
-                                    {link.name}
-                                </Link>
-                            ))}
-                        </nav>
-
-                        {/* Mobile User actions if not logged in - Logged in user has BottomNav Profile */}
-                        {!user && (
-                            <Button
-                                onClick={() => router.push('/login')}
-                                className="w-full bg-primary text-black font-bold"
-                            >
-                                Đăng nhập
-                            </Button>
-                        )}
-                    </div>
-                </>
-            )}
         </header>
     );
 }

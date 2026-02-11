@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Search, Heart, User, Film } from 'lucide-react';
+import { Home, Clock, Heart, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -14,9 +14,9 @@ export function BottomNav() {
             icon: Home
         },
         {
-            name: 'Tìm kiếm',
-            href: '/search',
-            icon: Search
+            name: 'Đang xem',
+            href: '/history',
+            icon: Clock
         },
         {
             name: 'Yêu thích',

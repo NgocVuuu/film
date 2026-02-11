@@ -8,7 +8,7 @@ const watchProgressSchema = new mongoose.Schema({
     },
     movieId: {
         type: String,
-        required: true
+        required: false  // Optional - movieSlug is the primary identifier
     },
     movieSlug: {
         type: String,

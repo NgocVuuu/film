@@ -69,11 +69,19 @@ export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName }: 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 text-yellow-500 border-yellow-500/50 hover:bg-yellow-500/10">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-yellow-500 border-yellow-500/50 hover:bg-yellow-500/10"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}
+                >
                     <Flag className="w-4 h-4" /> Báo lỗi
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] bg-surface-900 border-white/10 text-white">
+            <DialogContent className="sm:max-w-[425px] max-w-[90vw] bg-surface-900 border-white/10 text-white">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-yellow-500">
                         <AlertTriangle className="w-5 h-5" /> Báo lỗi phim

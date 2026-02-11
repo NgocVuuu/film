@@ -5,8 +5,8 @@ const movieController = require('../controllers/movieController');
 const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 const { optionalAuthMiddleware } = require('../middleware/authMiddleware');
 
-// Home Data (New) - Cache for 5 minutes (300s)
-router.get('/movies/home', cacheMiddleware(300), optionalAuthMiddleware, movieController.getHomeData);
+// Home Data (New) - Auth first, then cache for 5 minutes (300s)
+router.get('/movies/home', optionalAuthMiddleware, cacheMiddleware(300), movieController.getHomeData);
 
 // List Movies (Existing: /api/movies) - Cache for 2 minutes
 router.get('/movies', cacheMiddleware(120), optionalAuthMiddleware, movieController.getMovies);

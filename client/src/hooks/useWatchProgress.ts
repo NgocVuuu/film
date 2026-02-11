@@ -121,7 +121,7 @@ export function useWatchProgress({
         // 2. Save to API (if user logged in)
         if (user && serverName) {
             try {
-                await fetch(`${API_URL}/api/progress/save`, {
+                const response = await fetch(`${API_URL}/api/progress/save`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -138,8 +138,15 @@ export function useWatchProgress({
                         duration
                     })
                 });
+
+                const data = await response.json();
+                console.log('[saveProgress] API Response:', { status: response.status, data });
+
+                if (!response.ok) {
+                    console.error('[saveProgress] API Error:', data);
+                }
             } catch (error) {
-                console.error('Error saving progress:', error);
+                console.error('[saveProgress] Network error:', error);
             }
         }
     };

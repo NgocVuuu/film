@@ -18,11 +18,14 @@ exports.saveProgress = async (req, res) => {
 
         // Validate required fields
         if (!movieSlug || !episodeSlug || !serverName) {
+            console.error('[saveProgress] Validation failed:', { movieSlug, episodeSlug, serverName });
             return res.status(400).json({
                 success: false,
                 message: 'Thiếu thông tin cần thiết'
             });
         }
+
+        console.log('[saveProgress] Request:', { userId, movieSlug, episodeSlug, currentTime, duration });
 
         // Check if progress already exists
         let progress = await WatchProgress.findOne({
@@ -80,10 +83,16 @@ exports.saveProgress = async (req, res) => {
             message: 'Đã lưu tiến độ xem'
         });
     } catch (error) {
-        console.error('Save progress error:', error);
+        console.error('[saveProgress] ERROR:', error);
+        console.error('[saveProgress] Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
         res.status(500).json({
             success: false,
-            message: 'Lỗi khi lưu tiến độ xem'
+            message: 'Lỗi khi lưu tiến độ xem',
+            error: error.message
         });
     }
 };

@@ -14,9 +14,12 @@ const cacheMiddleware = (duration) => (req, res, next) => {
         return next();
     }
 
-    // Generate a unique key based on the request URL
-    // e.g., /api/movies/home or /api/movies/slug-name
-    const key = req.originalUrl || req.url;
+    // Generate a unique key based on the request URL and user
+    // For logged-in users: include userId to cache separately with their progress
+    // For guests: use 'guest' to share cache among all non-authenticated users
+    const baseKey = req.originalUrl || req.url;
+    const userId = req.user?._id?.toString() || 'guest';
+    const key = `${baseKey}-${userId}`;
 
     const cachedResponse = cache.get(key);
 

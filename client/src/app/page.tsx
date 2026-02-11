@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { HeroSlider } from '@/components/HeroSlider';
 import { MovieCarousel } from '@/components/MovieCarousel';
+import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
+import { LazyMovieSection } from '@/components/LazyMovieSection';
 import { TrendingCarousel } from '@/components/TrendingCarousel';
 import LoadingScreen from '@/components/LoadingScreen';
 import { API_URL } from '@/lib/config';
@@ -71,6 +73,11 @@ export default function Home() {
           setTrendingMovies(trendingMovies || []);
           setFeaturedMovies(featuredMovies || []);
           setContinueWatchingMovies(continueWatching || []);
+
+          // DEBUG: Log continue watching data
+          console.log('[Homepage] Continue Watching Data:', continueWatching);
+          console.log('[Homepage] Continue Watching Count:', continueWatching?.length || 0);
+
           setLatestMovies(latestMovies || []);
           setChinaMovies(chinaMovies || []);
           setKoreaMovies(koreaMovies || []);
@@ -116,12 +123,30 @@ export default function Home() {
           <div className="container mx-auto px-4 mt-8">
             <h2 className="text-xl md:text-2xl font-bold text-white mb-6 flex items-center gap-2">
               <span className="w-1 h-6 bg-primary rounded-full"></span>
-              Tiếp tục xem
+              Tiếp tục xem ({continueWatchingMovies.length})
             </h2>
-            <MovieCarousel title="Tiếp tục xem" movies={continueWatchingMovies} />
+            <div className="relative">
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
+                {continueWatchingMovies.filter(m => m.progress).map((movie) => (
+                  <div key={movie._id} className="flex-shrink-0 w-40 snap-start">
+                    <ContinueWatchingCard movie={movie as any} />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
+        {/* DEBUG: Show when no continue watching */}
+        {continueWatchingMovies.length === 0 && (
+          <div className="container mx-auto px-4 mt-8 border border-yellow-500/50 bg-yellow-500/10 p-4 rounded">
+            <p className="text-yellow-500 text-sm">
+              [DEBUG] Không có phim "Tiếp tục xem". Hãy xem một phim để test.
+            </p>
+          </div>
+        )}
+
+        {/* Eager-loaded sections */}
         <MovieCarousel
           title="Phim Mới Cập Nhật"
           movies={latestMovies}
@@ -133,60 +158,61 @@ export default function Home() {
           movies={trendingMovies.slice().reverse()}
         />
 
-        <MovieCarousel
+        {/* Lazy-loaded sections - only load when scrolled into view */}
+        <LazyMovieSection
           title="C-Drama Đỉnh Cao"
           movies={chinaMovies}
           viewAllLink="/quoc-gia/trung-quoc"
         />
 
-        <MovieCarousel
+        <LazyMovieSection
           title="K-Drama Cực Phẩm"
           movies={koreaMovies}
           viewAllLink="/quoc-gia/han-quoc"
         />
 
-        <MovieCarousel
+        <LazyMovieSection
           title="Phim Thái Lan Đặc Sắc"
           movies={thailandMovies}
           viewAllLink="/quoc-gia/thai-lan"
         />
 
-        <MovieCarousel
+        <LazyMovieSection
           title="Phim Nhật Bản Hấp Dẫn"
           movies={japanMovies}
           viewAllLink="/quoc-gia/nhat-ban"
         />
 
-        <MovieCarousel
+        <LazyMovieSection
           title="Phim Hành Động Kịch Tính"
           movies={actionMovies}
           viewAllLink="/the-loai/hanh-dong"
         />
 
-        <MovieCarousel
+        <LazyMovieSection
           title="Phim Tình Cảm Lãng Mạn"
           movies={romanceMovies}
           viewAllLink="/the-loai/tinh-cam"
         />
 
-        <MovieCarousel
+        <LazyMovieSection
           title="Thế Giới Tuổi Thơ"
           movies={cartoonMovies}
           viewAllLink="/hoat-hinh"
         />
 
-        <MovieCarousel
+        <LazyMovieSection
           title="Bom Tấn Hollywood"
           movies={usukMovies}
         />
 
-        <MovieCarousel
+        <LazyMovieSection
           title="Nỗi Ám Ảnh Đêm Khuya"
           movies={horrorMovies}
           viewAllLink="/the-loai/kinh-di"
         />
 
-        <MovieCarousel
+        <LazyMovieSection
           title="Gia Đình Là Số 1"
           movies={familyMovies}
           viewAllLink="/the-loai/gia-dinh"

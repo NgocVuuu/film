@@ -355,7 +355,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                     Nội dung chi tiết
                                 </h3>
                                 <div
-                                    className="prose prose-invert prose-lg max-w-none text-gray-300 leading-relaxed"
+                                    className="prose prose-invert prose-lg max-w-none text-gray-300 leading-relaxed text-justify"
                                     dangerouslySetInnerHTML={{ __html: movie.content }}
                                 />
                             </div>
@@ -432,20 +432,6 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                             ))}
                                         </div>
                                     ) : 'Đang cập nhật'}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-2"
-                                        onClick={toggleWatchLater}
-                                    >
-                                        <Bookmark className={`w-4 h-4 ${isWatchLater ? 'fill-current' : ''}`} />
-                                        {isWatchLater ? 'Đã lưu' : 'Xem sau'}
-                                    </Button>
-
-                                    <ReportModal
-                                        movieSlug={movie.slug}
-                                        movieName={movie.name}
-                                    />
                                 </div>
                             </div>
 

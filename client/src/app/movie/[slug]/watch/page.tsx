@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
 import { Play, ArrowLeft, Star, Clock, AlertTriangle, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,7 @@ export default function WatchPage() {
     const { user } = useAuth();
     const { slug } = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [movie, setMovie] = useState<MovieDetail | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -55,11 +56,16 @@ export default function WatchPage() {
     const [currentEpisode, setCurrentEpisode] = useState<any>(null);
     const [currentServerName, setCurrentServerName] = useState<string>('');
     const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+    const [startTime, setStartTime] = useState<number>(0);
 
     // Source State
     const [availableSources, setAvailableSources] = useState<string[]>([]);
     const [currentSource, setCurrentSource] = useState<string>('');
     const [filteredServers, setFilteredServers] = useState<any[]>([]);
+
+    // Get query params
+    const episodeParam = searchParams.get('episode');
+    const timestampParam = searchParams.get('t');
 
     useEffect(() => {
         if (!slug) return;
@@ -106,7 +112,7 @@ export default function WatchPage() {
             setCurrentSource(activeSource);
         }
 
-        // 3. Filter Servers and Auto-Select First Episode
+        // 3. Filter Servers
         if (activeSource) {
             const prefixMap: Record<string, string> = {
                 'NguonC': 'NC -',
@@ -126,15 +132,46 @@ export default function WatchPage() {
             });
             setFilteredServers(filtered);
 
-            // Auto-select first episode if not yet selected
-            if (!currentEpisode && filtered.length > 0 && filtered[0].server_data.length > 0) {
-                setCurrentEpisode(filtered[0].server_data[0]);
-                setCurrentServerName(filtered[0].server_name);
-                setShouldAutoPlay(true); // Auto play when entering watch page
+            // 4. Auto-select episode from URL or first episode
+            if (!currentEpisode && filtered.length > 0) {
+                let selectedEpisode = null;
+                let selectedServer = null;
+
+                // Try to find episode from URL param
+                if (episodeParam) {
+                    for (const server of filtered) {
+                        const found = server.server_data.find((ep: any) => ep.slug === episodeParam);
+                        if (found) {
+                            selectedEpisode = found;
+                            selectedServer = server.server_name;
+                            break;
+                        }
+                    }
+                }
+
+                // If not found or no param, use first episode
+                if (!selectedEpisode && filtered[0].server_data.length > 0) {
+                    selectedEpisode = filtered[0].server_data[0];
+                    selectedServer = filtered[0].server_name;
+                }
+
+                if (selectedEpisode && selectedServer) {
+                    setCurrentEpisode(selectedEpisode);
+                    setCurrentServerName(selectedServer);
+                    setShouldAutoPlay(true);
+
+                    // Set start time from URL param
+                    if (timestampParam) {
+                        const time = parseInt(timestampParam);
+                        if (!isNaN(time)) {
+                            setStartTime(time);
+                        }
+                    }
+                }
             }
         }
 
-    }, [movie, currentSource]);
+    }, [movie, currentSource, episodeParam, timestampParam]);
 
     const handleEpisodeClick = (serverName: string, episode: any) => {
         setCurrentServerName(serverName);
@@ -228,6 +265,7 @@ export default function WatchPage() {
                                 episodeSlug={currentEpisode.slug}
                                 episodeName={currentEpisode.name}
                                 serverName={currentServerName}
+                                startTime={startTime}
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-surface-900">

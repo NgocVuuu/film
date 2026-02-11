@@ -294,28 +294,32 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
                     </div>
                 ) : (
                     <form onSubmit={(e) => handleSubmit(e, null)} className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <span className="text-gray-300 font-medium mr-2">Đánh giá của bạn:</span>
-                            <div className="flex gap-1">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
-                                    <button
-                                        key={star}
-                                        type="button"
-                                        onClick={() => setRating(star)}
-                                        onMouseEnter={() => setHoverRating(star)}
-                                        onMouseLeave={() => setHoverRating(0)}
-                                        className="focus:outline-none transition-transform hover:scale-110"
-                                    >
-                                        <Star
-                                            className={`w-5 h-5 ${(hoverRating || rating) >= star ? 'text-yellow-500 fill-current' : 'text-gray-600'
-                                                }`}
-                                        />
-                                    </button>
-                                ))}
+                        <div className="space-y-3">
+                            <span className="block text-gray-300 font-medium text-sm md:text-base">Đánh giá của bạn:</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <div className="flex gap-1.5 md:gap-2">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setRating(star)}
+                                            onMouseEnter={() => setHoverRating(star)}
+                                            onMouseLeave={() => setHoverRating(0)}
+                                            className="focus:outline-none transition-transform hover:scale-110 active:scale-95"
+                                        >
+                                            <Star
+                                                className={`w-6 h-6 md:w-7 md:h-7 ${(hoverRating || rating) >= star ? 'text-yellow-500 fill-current' : 'text-gray-600'
+                                                    }`}
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                                {(hoverRating || rating) > 0 && (
+                                    <span className="text-base md:text-lg font-bold text-yellow-500">
+                                        {hoverRating || rating}/10
+                                    </span>
+                                )}
                             </div>
-                            <span className="text-sm font-bold text-yellow-500 ml-2">
-                                {hoverRating || rating > 0 ? `${hoverRating || rating}/10` : ''}
-                            </span>
                         </div>
 
                         <div className="relative">
