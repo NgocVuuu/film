@@ -12,6 +12,7 @@ interface User {
     avatar: string;
     role: string;
     hasPassword?: boolean;
+    isPremium?: boolean; // Computed from subscription
     subscription: {
         tier: string;
         status: string;
