@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -30,7 +31,7 @@ export default function Navbar() {
     const fetchNotifications = async () => {
         if (!user) return;
         try {
-            const res = await fetch(`${API_URL}/api/notifications?limit=5`, { credentials: 'include' });
+            const res = await customFetch(`/api/notifications?limit=5`, { credentials: 'include' });
             const data = await res.json();
             if (data.success) {
                 setNotifications(data.data);
@@ -52,7 +53,7 @@ export default function Navbar() {
     const handleNotificationClick = async (notification: any) => {
         if (!notification.isRead) {
             try {
-                await fetch(`${API_URL}/api/notifications/${notification._id}/read`, {
+                await customFetch(`/api/notifications/${notification._id}/read`, {
                     method: 'PUT',
                     credentials: 'include'
                 });
@@ -66,7 +67,7 @@ export default function Navbar() {
 
     const handleMarkAllRead = async () => {
         try {
-            await fetch(`${API_URL}/api/notifications/read-all`, {
+            await customFetch(`/api/notifications/read-all`, {
                 method: 'PUT',
                 credentials: 'include'
             });
@@ -183,7 +184,7 @@ export default function Navbar() {
         >
             <div className="container mx-auto flex h-16 items-center justify-between px-4 gap-4">
                 {/* Logo - Left */}
-                <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+                <Link href="/" className="flex items-center gap-2 shrink-0">
                     <img
                         src="/logo.png"
                         alt="Pchill Logo"
@@ -246,7 +247,7 @@ export default function Navbar() {
                 </div>
 
                 {/* Actions - Right */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                     {/* Notifications */}
                     {user && (
                         <div ref={notificationRef} className="relative">
@@ -281,7 +282,7 @@ export default function Navbar() {
                                                     onClick={() => handleNotificationClick(notif)}
                                                     className={`p-3 border-b border-white/5 cursor-pointer hover:bg-white/10 transition-colors flex gap-3 ${!notif.isRead ? 'bg-white/5' : ''}`}
                                                 >
-                                                    <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${!notif.isRead ? 'bg-primary' : 'bg-transparent'}`}></div>
+                                                    <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${!notif.isRead ? 'bg-primary' : 'bg-transparent'}`}></div>
                                                     <div className="flex-1">
                                                         <p className="text-sm text-gray-200 line-clamp-2">{notif.content}</p>
                                                         <p className="text-xs text-gray-500 mt-1">{timeAgo(notif.createdAt)}</p>

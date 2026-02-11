@@ -43,7 +43,7 @@ function LoginContent() {
             });
             const data = await response.json();
             if (data.success) {
-                login(data.data.user);
+                login(data.data.user, data.data.token);
                 if (data.data.user.role === 'admin') {
                     router.push('/admin');
                 } else {
@@ -74,7 +74,7 @@ function LoginContent() {
             const data = await response.json();
 
             if (data.success) {
-                login(data.data.user);
+                login(data.data.user, data.data.token);
                 if (data.data.user.role === 'admin') {
                     router.push('/admin');
                 } else {

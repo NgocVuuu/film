@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 interface Plan {
     id: string;
@@ -60,9 +61,7 @@ export default function PricingPage() {
 
         pollingRef.current = setInterval(async () => {
             try {
-                const res = await fetch(`${API_URL}/api/subscriptions/status`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
+                const res = await customFetch(`/api/subscriptions/status`);
                 const data = await res.json();
 
                 if (data.success && data.data.status === 'active' && data.data.tier === 'premium') {
@@ -122,15 +121,8 @@ export default function PricingPage() {
 
             // Get token for auth header if using manual fetch wrapper or rely on cookies if setup
             const token = localStorage.getItem('token');
-
-            const response = await fetch(`${API_URL}/api/subscriptions/create-payment`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': token ? `Bearer ${token}` : ''
-                },
-                body: JSON.stringify({
-                    planId: plan.id,
+const response = await customFetch(`/api/subscriptions/create-payment`, {
+                method: 'POST'   planId: plan.id,
                     duration: plan.duration,
                     amount: plan.price
                 })
@@ -221,7 +213,7 @@ export default function PricingPage() {
                                 <ul className="space-y-3 mb-8">
                                     {plan.features.map((feature, index) => (
                                         <li key={index} className="flex items-start gap-3">
-                                            <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                                            <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                                             <span className="text-gray-300 text-sm">{feature}</span>
                                         </li>
                                     ))}
@@ -276,7 +268,7 @@ export default function PricingPage() {
                                 <img
                                     src={paymentData.qrUrl}
                                     alt="VietQR Payment"
-                                    className="w-full max-w-[250px] aspect-square object-contain"
+                                    className="w-full max-w-62.5 aspect-square object-contain"
                                 />
                             </div>
                             <p className="text-gray-600 text-sm mb-4">
@@ -309,7 +301,7 @@ export default function PricingPage() {
                                     <p className="text-gray-400 text-xs uppercase mb-1">Chủ tài khoản</p>
                                     <p className="font-mono font-bold text-lg">{paymentData.bankInfo.accountName}</p>
                                 </div>
-                                <div className="bg-black/30 p-4 rounded-lg border border-white/5 border-primary/30 relative group cursor-pointer" onClick={() => copyToClipboard(paymentData.content)}>
+                                <div className="bg-black/30 p-4 rounded-lg border border-primary/30 relative group cursor-pointer" onClick={() => copyToClipboard(paymentData.content)}>
                                     <p className="text-gray-400 text-xs uppercase mb-1">Nội dung chuyển khoản (Bắt buộc)</p>
                                     <p className="font-mono font-bold text-lg text-yellow-400">{paymentData.content}</p>
                                     <p className="text-xs text-red-400 mt-1">* Nhập chính xác nội dung này</p>

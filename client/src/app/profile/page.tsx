@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'react-hot-toast';
 import { User, Lock, Save, Loader2, Camera, LogOut } from 'lucide-react';
 import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 export default function ProfilePage() {
     const { user, loading: authLoading, refresh, logout } = useAuth(); // Changed checkAuth to refresh
@@ -47,9 +48,8 @@ export default function ProfilePage() {
         e.preventDefault();
         setUpdatingProfile(true);
         try {
-            const res = await fetch(`${API_URL}/api/auth/update-profile`, {
+            const res = await customFetch(`/api/auth/update-profile`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({ displayName, avatar })
             });
@@ -81,9 +81,8 @@ export default function ProfilePage() {
         setChangingPassword(true);
         try {
             const res = await fetch(`${API_URL}/api/auth/change-password`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
+                method: 'PUT',customFetch(`/api/auth/change-password`, {
+                method: 'PUT'
                 body: JSON.stringify({ currentPassword, newPassword })
             });
             const data = await res.json();
@@ -116,7 +115,7 @@ export default function ProfilePage() {
 
                 <div className="flex flex-col md:flex-row gap-8">
                     {/* Sidebar / Tabs */}
-                    <div className="w-full md:w-64 flex-shrink-0">
+                    <div className="w-full md:w-64 shrink-0">
                         <div className="bg-surface-900 border border-white/10 rounded-xl overflow-hidden sticky top-24">
                             <div className="p-6 text-center border-b border-white/10 bg-surface-800">
                                 <div className="relative inline-block">

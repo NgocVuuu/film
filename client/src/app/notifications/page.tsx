@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Check, Trash2, Bell, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -24,7 +25,7 @@ export default function NotificationsPage() {
 
     const fetchNotifications = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/notifications?limit=50`, { credentials: 'include' });
+            const res = await customFetch(`/api/notifications?limit=50`, { credentials: 'include' });
             const data = await res.json();
             if (data.success) {
                 setNotifications(data.data);
@@ -38,7 +39,7 @@ export default function NotificationsPage() {
 
     const handleRead = async (id: string, link?: string) => {
         try {
-            await fetch(`${API_URL}/api/notifications/${id}/read`, { method: 'PUT', credentials: 'include' });
+            await customFetch(`/api/notifications/${id}/read`, { method: 'PUT', credentials: 'include' });
             setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
             if (link) router.push(link);
         } catch (e) {
@@ -49,7 +50,7 @@ export default function NotificationsPage() {
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         try {
-            await fetch(`${API_URL}/api/notifications/${id}`, { method: 'DELETE', credentials: 'include' });
+            await customFetch(`/api/notifications/${id}`, { method: 'DELETE', credentials: 'include' });
             setNotifications(prev => prev.filter(n => n._id !== id));
         } catch (error) {
             console.error(error);
@@ -58,7 +59,7 @@ export default function NotificationsPage() {
 
     const handleMarkAllRead = async () => {
         try {
-            await fetch(`${API_URL}/api/notifications/read-all`, { method: 'PUT', credentials: 'include' });
+            await customFetch(`/api/notifications/read-all`, { method: 'PUT', credentials: 'include' });
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
         } catch (e) {
             console.error(e);
@@ -108,7 +109,7 @@ export default function NotificationsPage() {
                                 className={`relative p-4 rounded-xl border border-white/5 cursor-pointer transition-all hover:bg-white/5 group ${!notif.isRead ? 'bg-surface-800 border-primary/20' : 'bg-transparent'}`}
                             >
                                 <div className="flex gap-4">
-                                    <div className={`mt-1.5 w-3 h-3 rounded-full flex-shrink-0 ${!notif.isRead ? 'bg-primary shadow-[0_0_10px_rgba(255,215,0,0.5)]' : 'bg-gray-600'}`}></div>
+                                    <div className={`mt-1.5 w-3 h-3 rounded-full shrink-0 ${!notif.isRead ? 'bg-primary shadow-[0_0_10px_rgba(255,215,0,0.5)]' : 'bg-gray-600'}`}></div>
                                     <div className="flex-1">
                                         <p className={`text-sm md:text-base ${!notif.isRead ? 'text-white font-medium' : 'text-gray-400'}`}>
                                             {notif.content}

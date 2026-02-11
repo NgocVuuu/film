@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 interface WatchProgressProps {
     movieSlug?: string;
@@ -30,10 +31,7 @@ export function useWatchProgress({
 
         const loadProgress = async () => {
             try {
-                const response = await fetch(`${API_URL}/api/progress/movie/${movieSlug}`, {
-                    headers: {
-                        // Cookie sent automatically
-                    },
+                const response = await customFetch(`/api/progress/movie/${movieSlug}`, {
                     credentials: 'include'
                 });
 
@@ -121,11 +119,8 @@ export function useWatchProgress({
         // 2. Save to API (if user logged in)
         if (user && serverName) {
             try {
-                const response = await fetch(`${API_URL}/api/progress/save`, {
+                const response = await customFetch(`/api/progress/save`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
                     credentials: 'include',
                     body: JSON.stringify({
                         movieSlug,

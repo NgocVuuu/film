@@ -6,6 +6,7 @@ import { Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 export default function HistoryPage() {
@@ -29,7 +30,7 @@ export default function HistoryPage() {
         setMovies([]);
 
         try {
-            const response = await fetch(`${API_URL}/api/progress/continue-watching?limit=100`, {
+            const response = await customFetch(`/api/progress/continue-watching?limit=100`, {
                 credentials: 'include'
             });
 

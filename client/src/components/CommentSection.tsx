@@ -187,7 +187,7 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
 
         return (
             <div className={`p-4 rounded-lg bg-surface-900/50 border border-white/5 flex gap-4 group hover:border-white/10 transition-colors ${isReply ? 'ml-12 border-l-2 border-l-white/10' : ''}`}>
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                     <img
                         src={comment.user?.avatar || 'https://ui-avatars.com/api/?name=' + (comment.user?.displayName || 'User')}
                         alt={comment.user?.displayName}
@@ -217,7 +217,7 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
                         )}
                     </div>
 
-                    <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line break-words mb-3">
+                    <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line wrap-break-word mb-3">
                         {comment.content}
                     </p>
 
@@ -253,7 +253,7 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
                     {/* Reply Form */}
                     {replyingTo === comment._id && (
                         <div className="mt-4 flex gap-3 animate-in fade-in slide-in-from-top-2">
-                            <div className="flex-shrink-0">
+                            <div className="shrink-0">
                                 <CornerDownRight className="w-5 h-5 text-gray-500 ml-2" />
                             </div>
                             <div className="flex-1">
@@ -327,7 +327,7 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
                                 value={newComment}
                                 onChange={(e) => setNewComment(e.target.value)}
                                 placeholder="Chia sẻ cảm nghĩ của bạn về bộ phim này..."
-                                className="w-full bg-black/30 border border-white/10 rounded-lg p-4 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none min-h-[100px] resize-y"
+                                className="w-full bg-black/30 border border-white/10 rounded-lg p-4 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none min-h-25 resize-y"
                                 maxLength={1000}
                             />
                             <div className="absolute bottom-3 right-3 text-xs text-gray-500">

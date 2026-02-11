@@ -6,6 +6,7 @@ import { Film, Loader2, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 interface RequestMovieButtonProps {
     movieName: string;
@@ -28,11 +29,8 @@ export default function RequestMovieButton({ movieName, movieSlug }: RequestMovi
         try {
             setLoading(true);
 
-            const response = await fetch(`${API_URL}/api/search/request`, {
+            const response = await customFetch(`/api/search/request`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 credentials: 'include',
                 body: JSON.stringify({
                     movieName,

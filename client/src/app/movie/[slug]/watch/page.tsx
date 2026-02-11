@@ -321,7 +321,7 @@ export default function WatchPage() {
                 </div>
 
                 {/* 2. EPISODE SIDEBAR (Right/Bottom) */}
-                <div className="w-full lg:w-96 px-4 md:px-0 space-y-4 flex-shrink-0">
+                <div className="w-full lg:w-96 px-4 md:px-0 space-y-4 shrink-0">
                     <div className="bg-surface-900/30 rounded-xl border border-white/5 overflow-hidden flex flex-col h-full max-h-[calc(100vh-100px)] lg:sticky lg:top-24">
                         <div className="p-4 border-b border-white/5 bg-surface-900/80 backdrop-blur-sm">
                             <h3 className="font-bold text-white flex items-center gap-2">

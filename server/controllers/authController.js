@@ -112,7 +112,8 @@ exports.googleLogin = async (req, res) => {
                     avatar: user.avatar,
                     role: user.role,
                     subscription: user.subscription
-                }
+                },
+                token
             },
             message: 'Đăng nhập thành công'
         });
@@ -369,7 +370,8 @@ exports.login = async (req, res) => {
                     avatar: user.avatar,
                     role: user.role,
                     subscription: user.subscription
-                }
+                },
+                token
             },
             message: 'Đăng nhập thành công'
         });

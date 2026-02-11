@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Flag, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 interface ReportModalProps {
     movieSlug: string;
@@ -36,9 +37,8 @@ export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName }: 
         setLoading(true);
 
         try {
-            const res = await fetch(`${API_URL}/api/reports`, {
+            const res = await customFetch(`/api/reports`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({
                     movieSlug,

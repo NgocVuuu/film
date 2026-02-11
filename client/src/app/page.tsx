@@ -7,6 +7,7 @@ import { LazyMovieSection } from '@/components/LazyMovieSection';
 import { TrendingCarousel } from '@/components/TrendingCarousel';
 import LoadingScreen from '@/components/LoadingScreen';
 import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 interface Movie {
   _id: string;
@@ -49,7 +50,7 @@ export default function Home() {
 
   useEffect(() => {
     // Fetch data from our Node.js server
-    fetch(`${API_URL}/api/movies/home`, { credentials: 'include' })
+    customFetch(`/api/movies/home`, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.data) {

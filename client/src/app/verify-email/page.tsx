@@ -32,11 +32,11 @@ function VerifyEmailContent() {
                     setStatus('success');
                     setMessage('Xác thực tài khoản thành công!');
                     // Auto login if data provided
-                    if (data.data && data.data.user) {
-                        // We might not want to auto-login here if we want to be strict, 
-                        // but logic says we can. 
-                        // However, better to let user login manually or just define behavior.
-                        // Let's just show success and button to login/home
+                    if (data.data && data.data.user && data.data.token) {
+                        login(data.data.user, data.data.token);
+                        setTimeout(() => {
+                           router.push('/');
+                        }, 2000);
                     }
                 } else {
                     setStatus('error');

@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { API_URL } from '@/lib/config';
+import { setAuthToken, getAuthToken, removeAuthToken } from '@/lib/api';
 
 interface User {
     id: string;
@@ -24,7 +25,7 @@ interface User {
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (userData: User) => void;
+    login: (userData: User, token?: string) => void;
     logout: () => void;
     updateUser: (userData: Partial<User>) => void;
     refresh: () => Promise<void>;
@@ -42,10 +43,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const fetchCurrentUser = async () => {
         try {
+            const token = getAuthToken();
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch(`${API_URL}/api/auth/me`, {
-                headers: {
-                    // No token header needed, cookie sent automatically with credentials: 'include'
-                },
+                headers,
                 credentials: 'include'
             });
 
@@ -62,23 +67,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const login = (userData: User) => {
+    const login = (userData: User, token?: string) => {
+        if (token) setAuthToken(token);
         setUser(userData);
         toast.success(`Chào mừng, ${userData.displayName}!`);
     };
 
     const logout = async () => {
         try {
-            await fetch(`${API_URL}/api/auth/logout`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            setUser(null);
-            toast.success('Đã đăng xuất thành công');
+            await fetch(`${API_URL}/api/auth/logout`, { method: 'POST' });
         } catch (error) {
             console.error('Logout error:', error);
-            // Force client-side logout anyway
+        } finally {
+            removeAuthToken();
             setUser(null);
+            toast.success('Đã đăng xuất thành công');
         }
     };
 
