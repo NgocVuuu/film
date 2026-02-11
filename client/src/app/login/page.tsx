@@ -91,7 +91,7 @@ function LoginContent() {
         }
     };
 
-    const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
+    const GOOGLE_CLIENT_ID = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
 
     const [width, setWidth] = useState('100%');
 
