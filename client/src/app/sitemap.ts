@@ -36,12 +36,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const res = await fetch(`${API_URL}/api/movies?limit=200`); // Fetch recent 200 movies
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
-            movieRoutes = data.data.map((movie: any) => ({
-                url: `https://pchill.com/movie/${movie.slug}`,
-                lastModified: new Date(movie.updatedAt || movie.createdAt),
-                changeFrequency: 'daily',
-                priority: 0.7,
-            }));
+            movieRoutes = data.data.map((movie: any) => {
+                const dateString = movie.updatedAt || movie.createdAt;
+                let lastModifiedDate = new Date(); // Default to current date
+
+                if (dateString) {
+                    const parsedDate = new Date(dateString);
+                    // Check if the parsed date is valid
+                    if (!isNaN(parsedDate.getTime())) {
+                        lastModifiedDate = parsedDate;
+                    }
+                }
+
+                return {
+                    url: `https://pchill.com/movie/${movie.slug}`,
+                    lastModified: lastModifiedDate,
+                    changeFrequency: 'daily',
+                    priority: 0.7,
+                };
+            });
         }
     } catch (error) {
         console.error('Failed to generate sitemap:', error);
