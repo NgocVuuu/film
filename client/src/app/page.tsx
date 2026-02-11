@@ -137,14 +137,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* DEBUG: Show when no continue watching */}
-        {continueWatchingMovies.length === 0 && (
-          <div className="container mx-auto px-4 mt-8 border border-yellow-500/50 bg-yellow-500/10 p-4 rounded">
-            <p className="text-yellow-500 text-sm">
-              [DEBUG] Không có phim "Tiếp tục xem". Hãy xem một phim để test.
-            </p>
-          </div>
-        )}
+
 
         {/* Eager-loaded sections */}
         <MovieCarousel
