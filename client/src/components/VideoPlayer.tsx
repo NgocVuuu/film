@@ -642,8 +642,8 @@ export default function VideoPlayer({
                             )}
                         </div>
 
-                        {/* Mobile Rotate Button (Force Landscape) */}
-                        <Button
+                        {/* Mobile Rotate Button (Force Landscape) - Removed per request */}
+                        {/* <Button
                             variant="ghost"
                             size="icon"
                             onClick={toggleLandscape}
@@ -653,7 +653,7 @@ export default function VideoPlayer({
                                 <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
                                 <path d="M21 3v5h-5" />
                             </svg>
-                        </Button>
+                        </Button> */}
 
                         <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:text-primary hover:bg-transparent">
                             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
