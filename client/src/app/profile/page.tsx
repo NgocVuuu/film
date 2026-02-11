@@ -80,9 +80,8 @@ export default function ProfilePage() {
 
         setChangingPassword(true);
         try {
-            const res = await fetch(`${API_URL}/api/auth/change-password`, {
-                method: 'PUT',customFetch(`/api/auth/change-password`, {
-                method: 'PUT'
+            const res = await customFetch(`/api/auth/change-password`, {
+                method: 'PUT',
                 body: JSON.stringify({ currentPassword, newPassword })
             });
             const data = await res.json();

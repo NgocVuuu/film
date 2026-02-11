@@ -121,8 +121,10 @@ export default function PricingPage() {
 
             // Get token for auth header if using manual fetch wrapper or rely on cookies if setup
             const token = localStorage.getItem('token');
-const response = await customFetch(`/api/subscriptions/create-payment`, {
-                method: 'POST'   planId: plan.id,
+            const response = await customFetch(`/api/subscriptions/create-payment`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    planId: plan.id,
                     duration: plan.duration,
                     amount: plan.price
                 })
