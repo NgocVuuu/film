@@ -88,7 +88,11 @@ exports.googleLogin = async (req, res) => {
         const token = generateToken(user._id);
 
         // Determine environment to set cookie attributes correctly
-        const isProduction = process.env.NODE_ENV === 'production' || (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'));
+        // FIX: Check Origin header to force SameSite=None for cross-site requests (Cloudflare Pages -> VPS)
+        const origin = req.headers.origin || '';
+        const isProduction = process.env.NODE_ENV === 'production' || 
+                             (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) ||
+                             (origin && !origin.includes('localhost') && origin.startsWith('http'));
 
         // Set HttpOnly Cookie
         res.cookie('token', token, {
