@@ -310,7 +310,7 @@ export default function Navbar() {
                                 className="flex items-center gap-2 p-1 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
                             >
                                 {user.avatar ? (
-                                    <img src={user.avatar} alt={user.name || user.email} className="w-8 h-8 rounded-full object-cover" />
+                                    <img src={user.avatar} alt={user.displayName || user.email} className="w-8 h-8 rounded-full object-cover" />
                                 ) : (
                                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                                         <User className="w-4 h-4 text-primary" />
@@ -321,7 +321,7 @@ export default function Navbar() {
                             {showUserMenu && (
                                 <div className="absolute right-0 top-full mt-2 w-48 bg-black/95 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden shadow-2xl z-50">
                                     <div className="p-3 border-b border-white/10 bg-white/5">
-                                        <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
+                                        <p className="text-sm font-bold text-white truncate">{user.displayName || user.email}</p>
                                         <p className="text-xs text-gray-400 truncate">{user.email}</p>
                                     </div>
 
