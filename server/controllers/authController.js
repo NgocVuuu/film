@@ -87,11 +87,14 @@ exports.googleLogin = async (req, res) => {
         // Generate JWT
         const token = generateToken(user._id);
 
+        // Determine environment to set cookie attributes correctly
+        const isProduction = process.env.NODE_ENV === 'production' || (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'));
+
         // Set HttpOnly Cookie
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            secure: isProduction, // Required for SameSite=None
+            sameSite: isProduction ? 'none' : 'lax', // Required for cross-site cookie
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 

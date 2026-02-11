@@ -45,7 +45,9 @@ app.use(cookieParser());
 app.use(morgan('dev'));
 
 // Security Middleware
-app.use(helmet());
+app.use(helmet({
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+}));
 
 // Custom Mongo Sanitize (In-place to support Express 5)
 app.use((req, res, next) => {
