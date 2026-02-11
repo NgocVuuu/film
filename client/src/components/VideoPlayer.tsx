@@ -145,7 +145,7 @@ export default function VideoPlayer({
     const touchStartRef = useRef<{ x: number, y: number } | null>(null);
     const touchStartTimeRef = useRef<number>(0);
     const [brightness, setBrightness] = useState(1);
-    const [gestureFeedback, setGestureFeedback] = useState<{ type: 'volume' | 'brightness', value: number } | null>(null);
+    const [gestureFeedback, setGestureFeedback] = useState<{ type: 'volume' | 'brightness' | 'error', value: number } | null>(null);
 
     const handleTouchStart = (e: React.TouchEvent) => {
         touchStartRef.current = {
@@ -159,28 +159,36 @@ export default function VideoPlayer({
         if (!touchStartRef.current || !containerRef.current) return;
 
         // Gestures only active in fullscreen (landscape/zoomed)
-        // as requested: "khi dọc thì không áp dụng"
-        if (!isFullscreen) return;
+        if (!isFullscreen && !isLandscape) return;
+
+        // Prevent page scroll
+        // e.preventDefault(); // Warning: Passive event listener issue in React?
+        // Better handled via CSS touch-action: none
 
         const deltaY = touchStartRef.current.y - e.touches[0].clientY;
         const deltaX = e.touches[0].clientX - touchStartRef.current.x;
         const rect = containerRef.current.getBoundingClientRect();
         const sensitive = 150; // Pixels to scroll to max change
 
-        // Ignore horizontal swipes (seeking)
-        if (Math.abs(deltaX) > Math.abs(deltaY)) return;
+        // Ignore horizontal swipes (seeking) - threshold 30px difference
+        if (Math.abs(deltaX) > Math.abs(deltaY) + 30) return;
 
         const percentChange = deltaY / sensitive;
 
         // Left side: Brightness
         if (touchStartRef.current.x < rect.width / 2) {
-            const newBrightness = Math.max(0.2, Math.min(1.5, brightness + percentChange * 0.05)); // Slower adjustment
+            const newBrightness = Math.max(0.2, Math.min(1.5, brightness + percentChange * 0.05));
             setBrightness(newBrightness);
             setGestureFeedback({ type: 'brightness', value: newBrightness });
         }
         // Right side: Volume
         else {
-            if (videoRef.current) {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+            if (isIOS) {
+                // iOS does not allow volume control via JS
+                // Show feedback but don't change volume
+                setGestureFeedback({ type: 'error', value: 0 }); // Error type for "Use Buttons"
+            } else if (videoRef.current) {
                 const newVolume = Math.max(0, Math.min(1, volume + percentChange * 0.05));
                 videoRef.current.volume = newVolume;
                 setVolume(newVolume);
@@ -255,6 +263,24 @@ export default function VideoPlayer({
         }
     };
 
+    // -- Rotation Logic (Fake Landscape for Mobile) --
+    const [isLandscape, setIsLandscape] = useState(false);
+
+    const toggleLandscape = () => {
+        setIsLandscape(!isLandscape);
+        if (!isLandscape) {
+            // Enter Landscape
+            if (screen.orientation && (screen.orientation as any).lock) {
+                try { (screen.orientation as any).lock('landscape'); } catch (e) { }
+            }
+        } else {
+            // Exit
+            if (screen.orientation && (screen.orientation as any).unlock) {
+                try { (screen.orientation as any).unlock(); } catch (e) { }
+            }
+        }
+    };
+
     // ... existing changeSpeed/changeQuality ...
 
     const changeSpeed = (speed: number) => {
@@ -303,7 +329,10 @@ export default function VideoPlayer({
             }
         };
         const onFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement || !!(document as any).webkitFullscreenElement);
+            const isFS = !!document.fullscreenElement || !!(document as any).webkitFullscreenElement;
+            setIsFullscreen(isFS);
+            // If entering native TV/PC fullscreen, turn off our fake landscape
+            if (isFS) setIsLandscape(false);
         };
 
         video.addEventListener('loadeddata', onVideoLoaded);
@@ -417,14 +446,21 @@ export default function VideoPlayer({
     return (
         <div
             ref={containerRef}
-            className="relative w-full h-full bg-black rounded-lg overflow-hidden border border-border shadow-2xl shadow-primary/10 group select-none"
+            className={`relative bg-black border border-border shadow-2xl shadow-primary/10 group select-none overflow-hidden transition-all duration-300
+                ${isLandscape
+                    ? 'fixed inset-0 z-[9999] w-[100vh] h-[100vw] rotate-90 origin-center top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-none'
+                    : 'w-full h-full rounded-lg'
+                }`}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => setShowControls(false)}
             onClick={togglePlay}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            style={{ filter: `brightness(${brightness})` }}
+            style={{
+                filter: `brightness(${brightness})`,
+                touchAction: 'none' // Important for gestures
+            }}
         >
             <video
                 ref={videoRef}
@@ -436,20 +472,32 @@ export default function VideoPlayer({
 
             {/* Gesture Feedback Overlay */}
             {gestureFeedback && (
-                <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
+                <div className={`absolute inset-0 flex items-center justify-center z-40 pointer-events-none ${isLandscape ? '-rotate-90' : ''}`}>
                     <div className="bg-black/50 backdrop-blur-sm p-4 rounded-xl text-white flex flex-col items-center gap-2">
-                        {gestureFeedback.type === 'volume' ? <Volume2 className="w-8 h-8" /> : <Loader2 className="w-8 h-8 animate-spin" />}
+                        {gestureFeedback.type === 'volume' ? <Volume2 className="w-8 h-8" /> :
+                            gestureFeedback.type === 'brightness' ? <Loader2 className="w-8 h-8 animate-spin" /> : // Should use Sun icon really but reusing loader for now or check type
+                                <VolumeX className="w-8 h-8 text-red-500" /> // Error icon
+                        }
+
                         <span className="text-xl font-bold">
-                            {gestureFeedback.type === 'brightness' ? 'Độ sáng' : 'Âm lượng'}
+                            {gestureFeedback.type === 'brightness' ? 'Độ sáng' :
+                                gestureFeedback.type === 'volume' ? 'Âm lượng' :
+                                    'Dùng phím cứng'}
                         </span>
-                        <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-primary transition-all duration-75"
-                                style={{
-                                    width: `${gestureFeedback.type === 'brightness' ? (gestureFeedback.value / 1.5) * 100 : gestureFeedback.value * 100}%`
-                                }}
-                            />
-                        </div>
+
+                        {gestureFeedback.type !== 'error' && (
+                            <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-primary transition-all duration-75"
+                                    style={{
+                                        width: `${gestureFeedback.type === 'brightness' ? (gestureFeedback.value / 1.5) * 100 : gestureFeedback.value * 100}%`
+                                    }}
+                                />
+                            </div>
+                        )}
+                        {gestureFeedback.type === 'error' && (
+                            <span className="text-xs text-center text-gray-300">iPhone không hỗ trợ<br />chỉnh âm lượng cảm ứng</span>
+                        )}
                     </div>
                 </div>
             )}
@@ -518,6 +566,7 @@ export default function VideoPlayer({
                             <Button variant="ghost" size="icon" onClick={toggleMute} className="text-white hover:text-primary hover:bg-transparent">
                                 {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                             </Button>
+                            {/* Hide volume slider on mobile, show on hover/group on desktop */}
                             <input
                                 type="range"
                                 min={0}
@@ -525,11 +574,11 @@ export default function VideoPlayer({
                                 step={0.1}
                                 value={isMuted ? 0 : volume}
                                 onChange={handleVolumeChange}
-                                className="w-20 md:w-0 md:overflow-hidden md:group-hover/volume:w-20 transition-all h-1 bg-white/30 rounded-lg cursor-pointer appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                className="hidden md:block w-0 overflow-hidden group-hover/volume:w-20 transition-all h-1 bg-white/30 rounded-lg cursor-pointer appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
                             />
                         </div>
 
-                        <span className="text-white text-xs font-mono ml-2">
+                        <span className="text-white text-xs font-mono ml-2 whitespace-nowrap">
                             {formatTime(currentTime)} / {formatTime(duration)}
                         </span>
                     </div>
@@ -549,7 +598,7 @@ export default function VideoPlayer({
 
                             {/* Settings Popup */}
                             {showSettings && (
-                                <div className="absolute bottom-12 right-0 bg-black/90 border border-white/20 rounded-lg p-3 min-w-[200px] text-white space-y-3">
+                                <div className={`absolute bottom-12 right-0 bg-black/90 border border-white/20 rounded-lg p-3 min-w-[200px] text-white space-y-3 ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
                                     {/* Speed */}
                                     <div>
                                         <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tốc độ</p>
@@ -592,6 +641,19 @@ export default function VideoPlayer({
                                 </div>
                             )}
                         </div>
+
+                        {/* Mobile Rotate Button (Force Landscape) */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleLandscape}
+                            className={`text-white hover:text-primary hover:bg-transparent md:hidden ${isLandscape ? 'text-primary' : ''}`}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                                <path d="M21 3v5h-5" />
+                            </svg>
+                        </Button>
 
                         <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:text-primary hover:bg-transparent">
                             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}

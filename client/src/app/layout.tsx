@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import MainLayout from "@/components/MainLayout";
 import { ToastProvider } from "@/components/toast-provider";
 import { AuthProvider } from "@/contexts/auth-context";
 
@@ -21,6 +20,13 @@ export const metadata: Metadata = {
   description: "Web xem phim miễn phí với giao diện đẹp mắt, cập nhật liên tục.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,11 +39,9 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <AuthProvider>
-          <Navbar />
-          <main className="flex-1 pt-16">
+          <MainLayout>
             {children}
-          </main>
-          <Footer />
+          </MainLayout>
           <ToastProvider />
         </AuthProvider>
       </body>

@@ -7,8 +7,6 @@ const { validateRequest, schemas } = require('../middleware/validationMiddleware
 
 // Public routes
 router.post('/google', authController.googleLogin);
-router.post('/phone/send-otp', authController.sendOTP);
-router.post('/phone/verify-otp', authController.verifyOTP);
 router.post('/register', validateRequest(schemas.register), authController.register);
 router.post('/login', validateRequest(schemas.login), authController.login);
 router.post('/forgot-password', validateRequest(schemas.forgotPassword), authController.forgotPassword);

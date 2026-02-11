@@ -6,6 +6,7 @@ const { attachProgressToMovies } = require('../utils/movieUtils');
 const getHomeData = async (req, res) => {
     try {
         const [
+            trendingMovies, // New Trending
             featuredMovies,
             latestMovies,
             chinaMovies,
@@ -15,6 +16,8 @@ const getHomeData = async (req, res) => {
             horrorMovies,
             familyMovies
         ] = await Promise.all([
+            // Trending: Highest Views
+            Movie.find({}).sort({ view: -1 }).limit(10).select('-content -episodes -director -actor'),
             // Featured
             Movie.find({}).sort({ updatedAt: -1 }).limit(10).select('-content -episodes -director -actor'),
             // Latest
@@ -34,10 +37,10 @@ const getHomeData = async (req, res) => {
         ]);
 
         let responseData = {
+            trendingMovies,
             featuredMovies,
             latestMovies,
             chinaMovies,
-            koreaMovies,
             usukMovies,
             cartoonMovies,
             horrorMovies,
@@ -48,13 +51,13 @@ const getHomeData = async (req, res) => {
         if (req.user) {
             try {
                 const userId = req.user._id;
+                responseData.trendingMovies = await attachProgressToMovies(trendingMovies, userId);
                 responseData.featuredMovies = await attachProgressToMovies(featuredMovies, userId);
                 responseData.latestMovies = await attachProgressToMovies(latestMovies, userId);
                 responseData.chinaMovies = await attachProgressToMovies(chinaMovies, userId);
                 responseData.koreaMovies = await attachProgressToMovies(koreaMovies, userId);
                 responseData.usukMovies = await attachProgressToMovies(usukMovies, userId);
                 responseData.cartoonMovies = await attachProgressToMovies(cartoonMovies, userId);
-                responseData.horrorMovies = await attachProgressToMovies(horrorMovies, userId);
                 responseData.familyMovies = await attachProgressToMovies(familyMovies, userId);
             } catch (progressError) {
                 console.error('Error attaching progress in getHomeData:', progressError);

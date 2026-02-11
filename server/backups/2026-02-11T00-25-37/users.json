@@ -1,0 +1,19 @@
+[
+  {
+    "_id": "698afc45c5dcfd815783016d",
+    "email": "vupaul2001@gmail.com",
+    "displayName": "admin",
+    "password": "$2b$10$PwpHdf/wY4UQuKD/uACC6uLET4cY1nKvHalrMhjKWdBh9OyJZeXIO",
+    "avatar": "https://ui-avatars.com/api/?name=User&background=D4AF37&color=000",
+    "role": "admin",
+    "subscription": {
+      "tier": "free",
+      "status": "active",
+      "autoRenew": false
+    },
+    "createdAt": "2026-02-10T09:37:09.462Z",
+    "updatedAt": "2026-02-10T10:53:15.579Z",
+    "__v": 0,
+    "lastLogin": "2026-02-10T10:53:15.529Z"
+  }
+]

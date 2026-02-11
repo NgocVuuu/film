@@ -51,8 +51,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
     const currentMovie = movies[currentIndex];
 
     return (
-        <div className="relative w-full h-[65vh] md:h-[80vh] group overflow-hidden bg-black">
-            {/* Background Slider */}
+        <div className="relative w-full h-[75vh] md:h-[95vh] group overflow-hidden bg-black">
             {/* Background Slider */}
             {movies.map((movie, index) => (
                 <div
@@ -63,10 +62,10 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                     <img
                         src={movie.poster_url || movie.thumb_url}
                         alt={movie.name}
-                        className="w-full h-full object-cover object-top opacity-60"
+                        className="w-full h-full object-cover object-top opacity-90"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/60 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/20 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/80 via-[#050505]/30 to-transparent"></div>
 
                     {/* Progress Bar for Hero */}
                     {movie.progress && movie.progress.percentage > 0 && (

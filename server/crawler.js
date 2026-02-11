@@ -173,10 +173,23 @@ async function processMovie(adapter, slug, retryCount = 0) {
             director: movie.director,
             category: movie.category,
             country: movie.country,
+            country: movie.country,
             updatedAt: new Date(movie.modified?.time || Date.now())
         };
 
         const existingMovie = await Movie.findOne({ slug: slug });
+
+        // Logic View: Giữ view cũ nếu có, nếu chưa có (phim mới) thì random để tạo hiệu ứng "Trending"
+        // Random từ 1000 -> 10000 view cho phim mới
+        let finalView = coreData.view || 0;
+        if (existingMovie) {
+            finalView = existingMovie.view > 0 ? existingMovie.view : (Math.floor(Math.random() * 9000) + 1000);
+        } else {
+            // Phim mới hoàn toàn
+            finalView = Math.floor(Math.random() * 9000) + 1000;
+        }
+        coreData.view = finalView;
+
         let finalEpisodes = processedEpisodes;
 
         if (existingMovie) {

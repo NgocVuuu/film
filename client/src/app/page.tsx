@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { HeroSlider } from '@/components/HeroSlider';
 import { MovieCarousel } from '@/components/MovieCarousel';
+import { TrendingCarousel } from '@/components/TrendingCarousel';
 import { API_URL } from '@/lib/config';
 
 interface Movie {
@@ -11,6 +12,7 @@ interface Movie {
   slug: string;
   thumb_url: string;
   year: number;
+  view?: number;
   poster_url?: string;
   progress?: {
     currentTime: number;
@@ -25,6 +27,7 @@ export default function Home() {
 
   const [loading, setLoading] = useState(true);
   const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]); // Array for Hero
+  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]); // New Trending
 
   // Categories State
   const [latestMovies, setLatestMovies] = useState<Movie[]>([]);
@@ -42,6 +45,7 @@ export default function Home() {
       .then((data) => {
         if (data.success && data.data) {
           const {
+            trendingMovies,
             featuredMovies,
             latestMovies,
             chinaMovies,
@@ -52,6 +56,7 @@ export default function Home() {
             familyMovies
           } = data.data;
 
+          setTrendingMovies(trendingMovies);
           setFeaturedMovies(featuredMovies);
           setLatestMovies(latestMovies);
           setChinaMovies(chinaMovies);
@@ -87,6 +92,11 @@ export default function Home() {
 
       {/* Carousel Sections */}
       <div className="container mx-auto px-4 space-y-8 -mt-10 relative z-20">
+
+        {/* Trending Section */}
+        {trendingMovies.length > 0 && (
+          <TrendingCarousel movies={trendingMovies} />
+        )}
 
         <MovieCarousel
           title="Phim Mới Cập Nhật"

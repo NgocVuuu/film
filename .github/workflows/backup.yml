@@ -1,0 +1,47 @@
+name: Weekly Backup to OneDrive
+
+on:
+  schedule:
+    # Chạy lúc 20:00 UTC (3:00 AM VN) mỗi Thứ Bảy
+    - cron: '0 20 * * 6'
+  workflow_dispatch: # Cho phép chạy thủ công
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies (Server)
+        run: |
+          cd server
+          npm install mongoose dotenv
+
+      - name: Run Database Backup
+        run: |
+          cd server
+          # Tạo thư mục backups nếu chưa có
+          mkdir -p backups
+          node scripts/backup_db.js
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+
+      - name: Setup Rclone
+        uses: animmustafa/setup-rclone@v1
+        with:
+          rclone_config: ${{ secrets.RCLONE_CONFIG }}
+
+      - name: Sync Backup to OneDrive
+        run: |
+          # Sync database dump
+          rclone sync server/backups onedrive:/Backup_Film_Weekly/GitHub_Database --progress
+
+          # Sync source code (optional snapshot)
+          # Lưu ý: GitHub Actions chỉ có code từ repo, KHÔNG CÓ file .env của bạn
+          # rclone sync . onedrive:/Backup_Film_Weekly/GitHub_Code --exclude ".git/**" --exclude "node_modules/**" --progress
