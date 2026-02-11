@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 
 import { MovieCard } from '@/components/MovieCard';
 import { API_URL } from '@/lib/config';
+
+export const runtime = 'edge';
 import { use } from 'react';
 
 

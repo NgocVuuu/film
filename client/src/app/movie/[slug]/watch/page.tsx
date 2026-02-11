@@ -6,6 +6,8 @@ import { Play, ArrowLeft, Star, Clock, AlertTriangle, Crown } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
+
+export const runtime = 'edge';
 import { useAuth } from '@/contexts/auth-context';
 
 
