@@ -128,7 +128,7 @@ export default function Home() {
             <div className="relative">
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
                 {continueWatchingMovies.filter(m => m.progress).map((movie) => (
-                  <div key={movie._id} className="flex-shrink-0 w-40 snap-start">
+                  <div key={movie._id} className="shrink-0 w-40 snap-start">
                     <ContinueWatchingCard movie={movie as any} />
                   </div>
                 ))}

@@ -58,7 +58,7 @@ export default function ActorPage({ params }: ActorPageProps) {
                 {loading ? (
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                         {[...Array(10)].map((_, i) => (
-                            <div key={i} className="animate-pulse bg-surface-800 rounded-lg aspect-[2/3]"></div>
+                            <div key={i} className="animate-pulse bg-surface-800 rounded-lg aspect-2/3"></div>
                         ))}
                     </div>
                 ) : (
