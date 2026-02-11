@@ -118,7 +118,7 @@ export default function Home() {
               <span className="w-1 h-6 bg-primary rounded-full"></span>
               Tiếp tục xem
             </h2>
-            <MovieCarousel movies={continueWatchingMovies} />
+            <MovieCarousel title="Tiếp tục xem" movies={continueWatchingMovies} />
           </div>
         )}
 
