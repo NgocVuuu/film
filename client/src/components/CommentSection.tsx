@@ -182,8 +182,8 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
     const contentValid = () => newComment.trim().length > 0;
 
     const CommentItem = ({ comment, isReply = false }: { comment: Comment, isReply?: boolean }) => {
-        const isLiked = user && comment.likes?.includes(user._id);
-        const likeCount = comment.likes?.length || 0;
+        const isLiked = user && comment?.likes?.includes(user._id || user.id || '');
+        const likeCount = comment?.likes?.length || 0;
 
         return (
             <div className={`p-4 rounded-lg bg-surface-900/50 border border-white/5 flex gap-4 group hover:border-white/10 transition-colors ${isReply ? 'ml-12 border-l-2 border-l-white/10' : ''}`}>
