@@ -91,7 +91,15 @@ function LoginContent() {
         }
     };
 
-    const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'your-google-client-id';
+    const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
+
+    const [width, setWidth] = useState('100%');
+
+    useEffect(() => {
+        // Dynamic width calculation or just set to a fixed pixel width if 100% fails
+        // Google Sign-In button sometimes complains about 100% width
+        // Let's try to not set width in props and handle container width instead
+    }, []);
 
     return (
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
@@ -123,6 +131,7 @@ function LoginContent() {
                                     placeholder="email@example.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
+                                    autoComplete="email"
                                     className="bg-surface-800 border-white/10 text-white placeholder-gray-500"
                                     required
                                 />
@@ -138,6 +147,7 @@ function LoginContent() {
                                     type="password"
                                     placeholder="******"
                                     value={password}
+                                    autoComplete="current-password"
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="bg-surface-800 border-white/10 text-white placeholder-gray-500"
                                     required
@@ -172,14 +182,14 @@ function LoginContent() {
                         </div>
 
                         {/* Google Login */}
-                        <div className="mb-6">
+                        <div className="mb-6 flex justify-center">
                             <GoogleLogin
                                 onSuccess={handleGoogleSuccess}
                                 onError={() => toast.error('Đăng nhập Google thất bại')}
                                 useOneTap={false}
                                 theme="filled_black"
                                 size="large"
-                                width="100%"
+                                // removed width="100%"
                             />
                         </div>
                     </div>
