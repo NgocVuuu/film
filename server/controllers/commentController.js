@@ -6,20 +6,42 @@ const getComments = async (req, res) => {
     try {
         const { slug } = req.params;
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = parseInt(req.query.limit) || 20; // Increased limit
         const skip = (page - 1) * limit;
 
-        const comments = await Comment.find({ movieSlug: slug })
+        // Fetch top-level comments (parentId: null) first? 
+        // Or fetch all and let frontend arrange? 
+        // For pagination of threads, best to fetch top-level.
+
+        const filter = { movieSlug: slug, parentId: null };
+
+        const comments = await Comment.find(filter)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .populate('user', 'displayName avatar role'); // Get user info
+            .populate('user', 'displayName avatar role')
+            .lean();
 
-        const total = await Comment.countDocuments({ movieSlug: slug });
+        // For each comment, fetch replies
+        // This is the N+1 problem, but good for simple nested structure. 
+        // Limit replies? 
+        const commentIds = comments.map(c => c._id);
+        const replies = await Comment.find({ parentId: { $in: commentIds } })
+            .sort({ createdAt: 1 })
+            .populate('user', 'displayName avatar role')
+            .lean();
+
+        // Attach replies to comments
+        const commentsWithReplies = comments.map(comment => {
+            comment.replies = replies.filter(r => r.parentId.toString() === comment._id.toString());
+            return comment;
+        });
+
+        const total = await Comment.countDocuments(filter);
 
         res.json({
             success: true,
-            data: comments,
+            data: commentsWithReplies,
             pagination: {
                 page,
                 limit,
@@ -32,18 +54,27 @@ const getComments = async (req, res) => {
     }
 };
 
-// 2. Add Comment
+// 2. Add Comment (or Reply)
 const addComment = async (req, res) => {
     try {
-        const { movieSlug, content, rating } = req.body;
+        const { movieSlug, content, rating, parentId } = req.body;
         const userId = req.user._id;
 
-        if (!content || !rating) {
-            return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung và đánh giá.' });
+        if (!content) {
+            return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung.' });
         }
 
-        if (rating < 1 || rating > 10) {
+        // Validate rating if provided
+        if (rating && (rating < 1 || rating > 10)) {
             return res.status(400).json({ success: false, message: 'Đánh giá phải từ 1 đến 10.' });
+        }
+
+        // Validate parentId if provided
+        if (parentId) {
+            const parentComment = await Comment.findById(parentId);
+            if (!parentComment) {
+                return res.status(404).json({ success: false, message: 'Bình luận gốc không tồn tại.' });
+            }
         }
 
         // Check if movie exists
@@ -57,29 +88,29 @@ const addComment = async (req, res) => {
             user: userId,
             movieSlug,
             content,
-            rating
+            rating: rating || undefined,
+            parentId: parentId || null
         });
         await newComment.save();
 
-        // Update Movie Rating
-        // Calculate new average
-        // Using aggregation for accuracy or simplified incremental update
-        // Let's us aggregation to be safe
-        const stats = await Comment.aggregate([
-            { $match: { movieSlug: movieSlug } },
-            {
-                $group: {
-                    _id: '$movieSlug',
-                    avgRating: { $avg: '$rating' },
-                    count: { $sum: 1 }
+        // Update Movie Rating ONLY if rating is provided
+        if (rating) {
+            const stats = await Comment.aggregate([
+                { $match: { movieSlug: movieSlug, rating: { $exists: true, $ne: null } } },
+                {
+                    $group: {
+                        _id: '$movieSlug',
+                        avgRating: { $avg: '$rating' },
+                        count: { $sum: 1 }
+                    }
                 }
-            }
-        ]);
+            ]);
 
-        if (stats.length > 0) {
-            movie.rating_average = Math.round(stats[0].avgRating * 10) / 10; // Round to 1 decimal
-            movie.rating_count = stats[0].count;
-            await movie.save();
+            if (stats.length > 0) {
+                movie.rating_average = Math.round(stats[0].avgRating * 10) / 10;
+                movie.rating_count = stats[0].count;
+                await movie.save();
+            }
         }
 
         // Return the new comment with populated user
@@ -93,7 +124,7 @@ const addComment = async (req, res) => {
     }
 };
 
-// 3. Delete Comment (Admin or Owner)
+// 3. Delete Comment
 const deleteComment = async (req, res) => {
     try {
         const { id } = req.params;
@@ -111,30 +142,34 @@ const deleteComment = async (req, res) => {
         }
 
         const movieSlug = comment.movieSlug;
-        await comment.deleteOne();
 
-        // Recalculate Rating
-        const movie = await Movie.findOne({ slug: movieSlug });
-        if (movie) {
-            const stats = await Comment.aggregate([
-                { $match: { movieSlug: movieSlug } },
-                {
-                    $group: {
-                        _id: '$movieSlug',
-                        avgRating: { $avg: '$rating' },
-                        count: { $sum: 1 }
+        // Delete comment and its replies
+        await Comment.deleteMany({ $or: [{ _id: id }, { parentId: id }] });
+
+        // Recalculate Rating if it had a rating
+        if (comment.rating) {
+            const movie = await Movie.findOne({ slug: movieSlug });
+            if (movie) {
+                const stats = await Comment.aggregate([
+                    { $match: { movieSlug: movieSlug, rating: { $exists: true, $ne: null } } },
+                    {
+                        $group: {
+                            _id: '$movieSlug',
+                            avgRating: { $avg: '$rating' },
+                            count: { $sum: 1 }
+                        }
                     }
-                }
-            ]);
+                ]);
 
-            if (stats.length > 0) {
-                movie.rating_average = Math.round(stats[0].avgRating * 10) / 10;
-                movie.rating_count = stats[0].count;
-            } else {
-                movie.rating_average = 0;
-                movie.rating_count = 0;
+                if (stats.length > 0) {
+                    movie.rating_average = Math.round(stats[0].avgRating * 10) / 10;
+                    movie.rating_count = stats[0].count;
+                } else {
+                    movie.rating_average = 0;
+                    movie.rating_count = 0;
+                }
+                await movie.save();
             }
-            await movie.save();
         }
 
         res.json({ success: true, message: 'Đã xóa bình luận.' });
@@ -144,8 +179,36 @@ const deleteComment = async (req, res) => {
     }
 };
 
+// 4. Like/Unlike Comment
+const toggleLike = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user._id;
+
+        const comment = await Comment.findById(id);
+        if (!comment) {
+            return res.status(404).json({ success: false, message: 'Bình luận không tồn tại.' });
+        }
+
+        const isLiked = comment.likes.includes(userId);
+
+        if (isLiked) {
+            comment.likes.pull(userId);
+        } else {
+            comment.likes.push(userId);
+        }
+
+        await comment.save();
+        res.json({ success: true, likes: comment.likes });
+
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getComments,
     addComment,
-    deleteComment
+    deleteComment,
+    toggleLike
 };

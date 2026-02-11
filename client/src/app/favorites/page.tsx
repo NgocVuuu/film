@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { API_URL } from '@/lib/config';
 import { Button } from '@/components/ui/button';
 import { MovieCard } from '@/components/MovieCard';
+import { EmptyState } from '@/components/EmptyState';
 import { Trash2, Loader2 } from 'lucide-react';
 
 export default function FavoritesPage() {
@@ -65,9 +66,11 @@ export default function FavoritesPage() {
                 <h1 className="text-3xl font-bold mb-8 text-gold-gradient inline-block">Tủ Phim Yêu Thích</h1>
 
                 {favorites.length === 0 ? (
-                    <div className="text-center py-20 text-gray-500">
-                        <p>Bạn chưa có phim yêu thích nào.</p>
-                    </div>
+                    <EmptyState
+                        title="Chưa có phim yêu thích"
+                        description="Bạn chưa lưu bộ phim nào vào danh sách yêu thích. Hãy khám phá ngay!"
+                        actionLink="/phim-moi"
+                    />
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                         {favorites.map((movie) => (

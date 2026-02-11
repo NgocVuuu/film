@@ -70,5 +70,7 @@ const optionalAuthMiddleware = async (req, res, next) => {
 module.exports = {
     authMiddleware,
     adminMiddleware,
-    optionalAuthMiddleware
+    optionalAuthMiddleware,
+    protect: authMiddleware, // Alias
+    admin: adminMiddleware   // Alias
 };

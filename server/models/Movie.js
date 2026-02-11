@@ -61,4 +61,13 @@ const movieSchema = new mongoose.Schema({
 // Text index for search
 movieSchema.index({ name: 'text', origin_name: 'text', 'actor': 'text', 'director': 'text' });
 
+// Compound indexes for performant queries
+movieSchema.index({ 'category.slug': 1, updatedAt: -1 });
+movieSchema.index({ 'country.slug': 1, updatedAt: -1 });
+movieSchema.index({ type: 1, updatedAt: -1 });
+movieSchema.index({ status: 1, updatedAt: -1 });
+movieSchema.index({ chieurap: 1, updatedAt: -1 });
+movieSchema.index({ view: -1 }); // Trending
+movieSchema.index({ slug: 1 }); // Already unique, but explicit index doesn't hurt
+
 module.exports = mongoose.model('Movie', movieSchema);

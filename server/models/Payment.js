@@ -16,13 +16,17 @@ const paymentSchema = new mongoose.Schema({
     },
     provider: {
         type: String,
-        enum: ['vnpay'],
-        default: 'vnpay'
+        enum: ['vnpay', 'sepay'],
+        default: 'sepay'
     },
     transactionId: {
         type: String,
         unique: true,
         sparse: true
+    },
+    code: { // Transaction content code (e.g. PCHILL ABC123)
+        type: String,
+        index: true
     },
     vnpTxnRef: String, // VNPay transaction reference
     vnpResponseCode: String,
@@ -50,5 +54,6 @@ const paymentSchema = new mongoose.Schema({
 paymentSchema.index({ userId: 1, createdAt: -1 });
 paymentSchema.index({ transactionId: 1 });
 paymentSchema.index({ status: 1 });
+paymentSchema.index({ code: 1 }); // Index for webhook lookup
 
 module.exports = mongoose.model('Payment', paymentSchema);

@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { Play, Calendar, Star, Clock, Info, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommentSection } from '@/components/CommentSection';
+import { ReportModal } from '@/components/ReportModal';
 import { useAuth } from '@/contexts/auth-context';
+import LoadingScreen from '@/components/LoadingScreen';
 import { API_URL } from '@/lib/config';
 
 // Types
@@ -282,15 +284,15 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                 </div>
 
                                 {/* Meta Info Line */}
-                                <div className="flex items-center justify-center md:justify-start gap-6 text-gray-300 text-sm md:text-base">
-                                    <span className="flex items-center gap-2 text-yellow-500 font-bold">
+                                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6 text-gray-300 text-sm md:text-base">
+                                    <span className="flex items-center gap-2 text-yellow-500 font-bold whitespace-nowrap">
                                         <Star className="w-5 h-5 fill-current" />
                                         {movie.rating_average ? movie.rating_average.toFixed(1) : 'N/A'}
                                         <span className="text-gray-400 text-xs font-normal">({movie.rating_count || 0})</span>
                                     </span>
-                                    <span className="flex items-center gap-2"><Calendar className="w-5 h-5" /> {movie.year}</span>
-                                    <span className="flex items-center gap-2"><Clock className="w-5 h-5" /> {movie.time || 'N/A'}</span>
-                                    <span className="px-2 py-0.5 border border-white/20 rounded text-xs">{movie.type === 'series' ? 'Phim Bộ' : 'Phim Lẻ'}</span>
+                                    <span className="flex items-center gap-2 whitespace-nowrap"><Calendar className="w-5 h-5" /> {movie.year}</span>
+                                    <span className="flex items-center gap-2 whitespace-nowrap"><Clock className="w-5 h-5" /> {movie.time || 'N/A'}</span>
+                                    <span className="px-2 py-0.5 border border-white/20 rounded text-xs whitespace-nowrap">{movie.type === 'series' ? 'Phim Bộ' : 'Phim Lẻ'}</span>
                                 </div>
 
                                 {/* Genre & Country */}
@@ -430,10 +432,24 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                             ))}
                                         </div>
                                     ) : 'Đang cập nhật'}
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2"
+                                        onClick={toggleWatchLater}
+                                    >
+                                        <Bookmark className={`w-4 h-4 ${isWatchLater ? 'fill-current' : ''}`} />
+                                        {isWatchLater ? 'Đã lưu' : 'Xem sau'}
+                                    </Button>
+
+                                    <ReportModal
+                                        movieSlug={movie.slug}
+                                        movieName={movie.name}
+                                    />
                                 </div>
                             </div>
-                        </div>
 
+                        </div>
                     </div>
                 </div>
             </div>

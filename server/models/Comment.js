@@ -15,13 +15,19 @@ const commentSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true,
-        maxlength: 500
+        maxlength: 1000 // Increased limit
     },
     rating: {
         type: Number,
         min: 1,
         max: 10,
-        required: true
+        required: false // Made optional
+    },
+    parentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Comment',
+        default: null,
+        index: true
     },
     likes: [{
         type: mongoose.Schema.Types.ObjectId,

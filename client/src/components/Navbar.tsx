@@ -95,8 +95,8 @@ export default function Navbar() {
         { name: "Phim Mới", href: "/phim-moi" },
         { name: "Phim Bộ", href: "/phim-bo" },
         { name: "Phim Lẻ", href: "/phim-le" },
-        { name: "Tủ Phim", href: "/favorites" },
-        { name: "Lịch Sử", href: "/history" },
+        { name: "Danh sách yêu thích", href: "/favorites" },
+        { name: "Đang xem", href: "/history" },
     ];
 
     useEffect(() => {
@@ -187,11 +187,11 @@ export default function Navbar() {
         >
             <div className="container mx-auto flex h-16 items-center justify-between px-4">
                 {/* Logo */}
-                <Link href="/" className="flex items-center gap-2">
+                <Link href="/" className="flex items-center gap-2 flex-shrink-0">
                     <img
                         src="/logo.png"
                         alt="Pchill Logo"
-                        className="h-14 w-auto object-contain rounded-md"
+                        className="h-10 w-auto sm:h-14 object-contain rounded-md"
                     />
                     <span className="text-2xl font-bold tracking-tighter text-gold-gradient hidden sm:block">
                         PCHILL
@@ -212,16 +212,16 @@ export default function Navbar() {
                 </nav>
 
                 {/* Search & Actions */}
-                <div className="hidden lg:flex items-center gap-2">
+                <div className="flex items-center gap-2">
                     {/* Expandable Search */}
                     <div
                         ref={searchRef}
-                        className={`relative flex items-center transition-all duration-300 ${isSearchOpen ? 'w-80 bg-white/10' : 'w-10 bg-transparent'} rounded-full overflow-visible border border-transparent ${isSearchOpen ? 'border-white/10' : ''}`}
+                        className={`relative flex items-center transition-all duration-300 ${isSearchOpen ? 'w-48 sm:w-80 bg-white/10' : 'w-10 bg-transparent'} rounded-full overflow-visible border border-transparent ${isSearchOpen ? 'border-white/10' : ''}`}
                     >
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="text-gray-300 hover:text-white hover:bg-transparent flex-shrink-0"
+                            className="text-gray-300 hover:text-white hover:bg-transparent flex-shrink-0 hidden lg:block"
                             onClick={() => {
                                 setIsSearchOpen(!isSearchOpen);
                             }}
@@ -353,7 +353,7 @@ export default function Navbar() {
 
                     {/* User Menu */}
                     {!loading && (
-                        <div ref={userMenuRef} className="relative">
+                        <div ref={userMenuRef} className="relative hidden lg:block">
                             {user ? (
                                 <>
                                     <button
@@ -365,9 +365,7 @@ export default function Navbar() {
                                             alt={user.displayName}
                                             className="w-8 h-8 rounded-full"
                                         />
-                                        {user.subscription?.tier === 'premium' && (
-                                            <Crown className="w-4 h-4 text-primary" />
-                                        )}
+                                        <Crown className="w-4 h-4 text-primary" />
                                     </button>
 
                                     {/* User Dropdown */}
@@ -376,12 +374,10 @@ export default function Navbar() {
                                             <div className="p-4 border-b border-white/10">
                                                 <p className="text-white font-medium truncate">{user.displayName}</p>
                                                 <p className="text-xs text-gray-400 truncate">{user.email || user.phoneNumber}</p>
-                                                {user.subscription?.tier === 'premium' && (
-                                                    <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-primary/20 text-primary text-xs font-bold rounded border border-primary/20">
-                                                        <Crown className="w-3 h-3" />
-                                                        Premium
-                                                    </div>
-                                                )}
+                                                <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-primary/20 text-primary text-xs font-bold rounded border border-primary/20">
+                                                    <Crown className="w-3 h-3" />
+                                                    Premium
+                                                </div>
                                             </div>
                                             <div className="p-2">
                                                 <Link
@@ -392,16 +388,7 @@ export default function Navbar() {
                                                     <User className="w-4 h-4" />
                                                     Tài khoản
                                                 </Link>
-                                                {user.subscription?.tier !== 'premium' && (
-                                                    <Link
-                                                        href="/pricing"
-                                                        className="flex items-center gap-3 px-3 py-2 text-sm text-primary hover:bg-primary/10 rounded transition-colors"
-                                                        onClick={() => setShowUserMenu(false)}
-                                                    >
-                                                        <Crown className="w-4 h-4" />
-                                                        Nâng cấp Premium
-                                                    </Link>
-                                                )}
+
                                                 <button
                                                     onClick={() => {
                                                         logout();
@@ -418,12 +405,22 @@ export default function Navbar() {
                                     )}
                                 </>
                             ) : (
-                                <Button
-                                    onClick={() => router.push('/login')}
-                                    className="bg-primary hover:bg-primary/90 text-black font-bold"
-                                >
-                                    Đăng nhập
-                                </Button>
+                                <>
+                                    <Button
+                                        onClick={() => router.push('/login')}
+                                        className="hidden lg:flex bg-primary hover:bg-primary/90 text-black font-bold"
+                                    >
+                                        Đăng nhập
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => router.push('/login')}
+                                        className="lg:hidden text-white hover:text-primary hover:bg-transparent"
+                                    >
+                                        <User className="w-6 h-6" />
+                                    </Button>
+                                </>
                             )}
                         </div>
                     )}
@@ -438,32 +435,41 @@ export default function Navbar() {
                 </button>
             </div>
 
-            {/* Mobile Menu */}
+            {/* Mobile Menu & Backdrop */}
             {isMobileMenuOpen && (
-                <div className="lg:hidden bg-deep-black border-t border-gray-800 px-4 py-4 space-y-4">
-                    <form onSubmit={handleSearch} className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            type="search"
-                            placeholder="Tìm kiếm..."
-                            className="w-full rounded-full bg-secondary/20 pl-8 text-sm text-white"
-                            value={searchQuery}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                        />
-                    </form>
-                    <nav className="flex flex-col space-y-3">
-                        {navLinks.map((link) => (
-                            <Link
-                                key={link.name}
-                                href={link.href}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className="text-white hover:text-primary block py-2"
+                <>
+                    {/* Backdrop - Click outside to close */}
+                    <div
+                        className="fixed inset-0 top-16 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    />
+
+                    {/* Menu Content - Positioned below navbar */}
+                    <div className="absolute top-16 left-0 w-full bg-deep-black border-y border-gray-800 px-4 py-6 space-y-4 shadow-2xl animate-in slide-in-from-top-2 duration-200 z-50 lg:hidden">
+                        <nav className="flex flex-col space-y-4">
+                            {navLinks.filter(link => !['/', '/favorites', '/history'].includes(link.href)).map((link) => (
+                                <Link
+                                    key={link.name}
+                                    href={link.href}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="text-white hover:text-primary block py-2 text-sm font-medium border-b border-white/5 last:border-0"
+                                >
+                                    {link.name}
+                                </Link>
+                            ))}
+                        </nav>
+
+                        {/* Mobile User actions if not logged in - Logged in user has BottomNav Profile */}
+                        {!user && (
+                            <Button
+                                onClick={() => router.push('/login')}
+                                className="w-full bg-primary text-black font-bold"
                             >
-                                {link.name}
-                            </Link>
-                        ))}
-                    </nav>
-                </div>
+                                Đăng nhập
+                            </Button>
+                        )}
+                    </div>
+                </>
             )}
         </header>
     );

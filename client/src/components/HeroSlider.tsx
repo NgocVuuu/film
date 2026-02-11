@@ -94,7 +94,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                         {currentMovie.origin_name}
                         <span className="text-primary font-bold text-base md:text-xl">({currentMovie.year})</span>
                         {currentMovie.episode_current && (
-                            <span className="text-white/80 text-sm md:text-lg border border-white/20 px-2 py-0.5 rounded">
+                            <span className="text-gold-400 font-bold text-sm md:text-lg border border-gold-500/30 px-3 py-1 rounded-lg whitespace-nowrap bg-black/40 backdrop-blur-sm shadow-sm">
                                 {currentMovie.episode_current}
                             </span>
                         )}
@@ -130,7 +130,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             </button>
 
             {/* Pagination Dots */}
-            <div className="absolute bottom-6 right-8 md:right-12 z-30 flex gap-2">
+            <div className="absolute bottom-18 md:bottom-20 right-8 md:right-12 z-30 flex gap-2">
                 {movies.map((_, idx) => (
                     <button
                         key={idx}

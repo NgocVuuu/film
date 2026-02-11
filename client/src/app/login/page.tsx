@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,17 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { API_URL } from '@/lib/config';
 
-export default function LoginPage() {
+function LoginContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const registered = searchParams.get('registered');
+
+    useEffect(() => {
+        if (registered) {
+            toast.success('Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.', { duration: 6000 });
+        }
+    }, [registered]);
+
     const { login } = useAuth();
     const [loading, setLoading] = useState(false);
 
@@ -177,10 +186,18 @@ export default function LoginPage() {
 
                     <p className="text-center text-gray-500 text-sm mt-6">
                         Bằng việc đăng nhập, bạn đồng ý với{' '}
-                        <Link href="/terms" className="text-primary hover:underline">Điều khoản dịch vụ</Link>
+                        <Link href="/terms" className="text-primary hover:underline whitespace-nowrap">Điều khoản dịch vụ</Link>
                     </p>
                 </div>
             </div>
         </GoogleOAuthProvider>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-deep-black"></div>}>
+            <LoginContent />
+        </Suspense>
     );
 }

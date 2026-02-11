@@ -55,9 +55,10 @@ export default function RegisterPage() {
             const data = await response.json();
 
             if (data.success) {
-                login(data.data.user); // Auto login check if backend returns user
-                toast.success('Đăng ký thành công!');
-                router.push('/');
+                // login(data.data.user); // Removed auto-login
+                toast.success('Đăng ký thành công! Vui lòng kiểm tra email.');
+                // Redirect to login or show success state
+                router.push('/login?registered=true');
             } else {
                 toast.error(data.message || 'Đăng ký thất bại');
             }

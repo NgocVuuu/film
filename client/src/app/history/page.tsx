@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { MovieCard } from '@/components/MovieCard';
+import { EmptyState } from '@/components/EmptyState';
 import { Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -32,10 +33,12 @@ export default function HistoryPage() {
                 </div>
 
                 {history.length === 0 ? (
-                    <div className="text-center py-20 text-gray-500">
-                        <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>Bạn chưa xem phim nào gần đây.</p>
-                    </div>
+                    <EmptyState
+                        title="Chưa có lịch sử xem"
+                        description="Bạn chưa xem phim nào gần đây. Hãy bắt đầu trải nghiệm ngay!"
+                        actionLink="/"
+                        icon={Clock}
+                    />
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                         {history.map((movie) => (

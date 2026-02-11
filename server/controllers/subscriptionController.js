@@ -127,43 +127,68 @@ exports.createPayment = async (req, res) => {
 };
 
 // Handle SePay Webhook
+// Handle SePay Webhook
 exports.handleSepayWebhook = async (req, res) => {
     try {
         const data = req.body;
         console.log('SePay Webhook:', JSON.stringify(data));
 
-        // SePay data fields: { id, gateway, transactionDate, accountNumber, subAccount, code, content, transferType, description, transferAmount, referenceCode } - Verify docs
-        // Assuming standard fields: content, transferAmount
+        // 1. Security Check: Verify API Key (Simple Token Authentication)
+        // SePay doesn't have partial signature verification yet, so we use a shared secret in the query or body or header.
+        // Assuming we configure SePay to send ?api_key=... or we check a specific header if supported.
+        // OR: We enforce that the "content" MUST contain our specific code pattern which is hard to guess? No, that's weak.
+        // BEST PRACTICE for now: Check if `api_key` param matches env variable (if SePay supports custom params)
+        // OR better: Since SePay webhook setup allows adding params to the URL, we assume the webhook URL is configured as:
+        // https://api.pchill.com/api/subscriptions/webhook/sepay?api_key=YOUR_SECRET_KEY
+
+        const apiKey = req.query.api_key;
+        if (!process.env.SEPAY_API_KEY || apiKey !== process.env.SEPAY_API_KEY) {
+            console.warn('[SePay Security] Invalid or missing API Key.');
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
 
         const content = data.content;
         const amount = data.transferAmount;
+        const transactionId = data.id || data.referenceCode; // SePay Transaction ID
 
-        if (!content || !amount) {
-            return res.status(200).json({ success: true, message: 'Ignored: No content/amount' });
+        if (!content || !amount || !transactionId) {
+            return res.status(200).json({ success: true, message: 'Ignored: Missing required fields' });
         }
 
-        // Parse ID from content: PCHILL ABCDEF
+        // 2. Idempotency Check (Prevent Double Payment)
+        // Check if this incoming transaction ID has already been processed
+        const existingTransaction = await Payment.findOne({
+            $or: [
+                { transactionId: transactionId.toString() },
+                { 'metadata.sepayData.id': transactionId }
+            ],
+            status: 'completed'
+        });
+
+        if (existingTransaction) {
+            console.log(`[SePay Idempotency] Transaction ${transactionId} already processed.`);
+            return res.status(200).json({ success: true, message: 'Ignored: Transaction already processed' });
+        }
+
+        // Parse ID from content: PCHILL <CODE>
+        // We use the `code` field in Payment to match EXACTLY
+        // data.content might contain extra text like "MBVCB PCHILL ABC...", so we regex or partial match
         const match = content.match(/PCHILL\s*([A-Z0-9]{6})/i);
         if (!match) {
             return res.status(200).json({ success: true, message: 'Ignored: Content format mismatch' });
         }
 
-        const paymentCodeSuffix = match[1];
+        const paymentCodeSuffix = match[1].toUpperCase();
+        const infoToMatch = `PCHILL ${paymentCodeSuffix}`;
 
-        // Find pending payment with matching code or ID suffix
-        // Since we only stored the suffix in 'code' or need to search by ID suffix
-        // Ideally we should use full ID or a unique code.
-        // Let's search payments where _id ends with suffix AND status is pending
-
-        // Note: _id is ObjectId. Converting to string in query might be slow.
-        // Better: search by `code` field if we saved it.
+        // Find pending payment
         const payment = await Payment.findOne({
-            code: `PCHILL ${paymentCodeSuffix.toUpperCase()}`,
+            code: infoToMatch,
             status: 'pending'
         });
 
         if (!payment) {
-            console.log('Payment not found for code:', paymentCodeSuffix);
+            console.log('Payment not found for code:', infoToMatch);
             return res.status(200).json({ success: true, message: 'Ignored: Payment not found' });
         }
 
@@ -197,7 +222,7 @@ exports.handleSepayWebhook = async (req, res) => {
 
         // Update payment status
         payment.status = 'completed';
-        payment.transactionId = data.id || data.referenceCode; // SePay ID
+        payment.transactionId = transactionId.toString(); // Save SePay ID to prevent reuse
         payment.metadata = { ...payment.metadata, sepayData: data };
         await payment.save();
 

@@ -59,28 +59,88 @@ export function useWatchProgress({
 
     // Save progress function
     const saveProgress = async (currentTime: number, duration: number) => {
-        if (!user || !movieSlug || !episodeSlug || !serverName || currentTime < 5) return;
+        if (!movieSlug || !episodeSlug || currentTime < 5) return;
 
+        // 1. Save to LocalStorage for History Page (Immediate UI update)
         try {
-            await fetch(`${API_URL}/api/progress/save`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    movieSlug,
-                    movieName,
-                    movieThumb,
-                    episodeSlug,
-                    episodeName,
-                    serverName,
-                    currentTime,
-                    duration
-                })
-            });
-        } catch (error) {
-            console.error('Error saving progress:', error);
+            const history = JSON.parse(localStorage.getItem('history') || '[]');
+            const percentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+            // Allow update if movie exists in history
+            const existingIndex = history.findIndex((h: any) => h.slug === movieSlug);
+
+            if (existingIndex !== -1) {
+                // Update existing
+                history[existingIndex] = {
+                    ...history[existingIndex],
+                    progress: {
+                        currentTime,
+                        duration,
+                        percentage,
+                        episodeSlug,
+                        episodeName: episodeName || '',
+                    },
+                    viewedAt: new Date().toISOString()
+                };
+
+                // Move to top
+                const item = history.splice(existingIndex, 1)[0];
+                history.unshift(item);
+
+                localStorage.setItem('history', JSON.stringify(history));
+            } else {
+                // If not in history (e.g. direct link), maybe add it? 
+                // For now, let's assume MovieDetail added it. 
+                // If we want to be robust, we could add a basic entry here, but we might lack thumb/name if props aren't full.
+                // Given VideoPlayerProps has movieName/Thumb, we can add it!
+                if (movieName) {
+                    const newItem = {
+                        _id: movieSlug, // fallback id
+                        name: movieName,
+                        origin_name: '',
+                        slug: movieSlug,
+                        thumb_url: movieThumb || '',
+                        year: new Date().getFullYear(),
+                        viewedAt: new Date().toISOString(),
+                        progress: {
+                            currentTime,
+                            duration,
+                            percentage,
+                            episodeSlug,
+                            episodeName: episodeName || '',
+                        }
+                    };
+                    history.unshift(newItem);
+                    localStorage.setItem('history', JSON.stringify(history.slice(0, 50)));
+                }
+            }
+        } catch (e) {
+            console.error('Error saving local history:', e);
+        }
+
+        // 2. Save to API (if user logged in)
+        if (user && serverName) {
+            try {
+                await fetch(`${API_URL}/api/progress/save`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        movieSlug,
+                        movieName,
+                        movieThumb,
+                        episodeSlug,
+                        episodeName,
+                        serverName,
+                        currentTime,
+                        duration
+                    })
+                });
+            } catch (error) {
+                console.error('Error saving progress:', error);
+            }
         }
     };
 

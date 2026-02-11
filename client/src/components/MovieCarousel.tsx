@@ -86,7 +86,7 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
                         <Link
                             key={movie._id}
                             href={`/movie/${movie.slug}`}
-                            className="bg-surface-800 rounded-lg overflow-hidden border border-border/50 shadow-lg relative snap-start w-[160px] md:w-[200px] flex-shrink-0 group hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 will-change-transform"
+                            className="bg-surface-800 rounded-lg overflow-hidden border border-border/50 shadow-lg relative snap-start w-[40vw] md:w-[200px] flex-shrink-0 group hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 will-change-transform"
                         >
                             {/* Image */}
                             <div className="aspect-[2/3] w-full relative overflow-hidden">

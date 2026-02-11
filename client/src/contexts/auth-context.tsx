@@ -11,6 +11,7 @@ interface User {
     displayName: string;
     avatar: string;
     role: string;
+    hasPassword?: boolean;
     subscription: {
         tier: string;
         status: string;

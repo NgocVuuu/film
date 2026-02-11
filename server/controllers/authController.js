@@ -124,6 +124,9 @@ exports.googleLogin = async (req, res) => {
 exports.getCurrentUser = async (req, res) => {
     try {
         const user = req.user;
+        // Check if user has password
+        const userFull = await User.findById(user._id).select('password');
+        const hasPassword = !!(userFull && userFull.password);
 
         res.json({
             success: true,
@@ -134,7 +137,8 @@ exports.getCurrentUser = async (req, res) => {
                 displayName: user.displayName,
                 avatar: user.avatar,
                 role: user.role,
-                subscription: user.subscription
+                subscription: user.subscription,
+                hasPassword
             }
         });
     } catch (error) {
@@ -182,33 +186,124 @@ exports.register = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create user
+        // Generate verification token
+        const verificationToken = crypto.randomBytes(20).toString('hex');
+        const verificationTokenHash = crypto
+            .createHash('sha256')
+            .update(verificationToken)
+            .digest('hex');
+
+        // Create user (Not verified yet)
         const user = await User.create({
             displayName,
             email,
             password: hashedPassword,
-            role: 'user'
+            role: 'user',
+            verificationToken: verificationTokenHash,
+            verificationTokenExpire: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
         });
 
-        // Generate token and respond
-        const token = generateToken(user._id);
+        // Send verification email
+        const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+        const message = `
+            <h1>Xác thực tài khoản PChill</h1>
+            <p>Cảm ơn bạn đã đăng ký. Vui lòng click vào link dưới đây để kích hoạt tài khoản:</p>
+            <a href="${verifyUrl}" clicktracking=off>${verifyUrl}</a>
+            <p>Link này sẽ hết hạn sau 24 giờ.</p>
+        `;
 
-        res.cookie('token', token, {
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: 'Xác thực tài khoản - PChill Film',
+                message
+            });
+
+            res.status(201).json({
+                success: true,
+                message: 'Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.'
+            });
+        } catch (emailError) {
+            console.error('Email send error:', emailError);
+            user.verificationToken = undefined;
+            user.verificationTokenExpire = undefined;
+            await user.save({ validateBeforeSave: false });
+
+            // In dev environment, log the token so we can still verify
+            if (process.env.NODE_ENV === 'development') {
+                console.log('DEV ONLY - Verify Link:', verifyUrl);
+                return res.status(201).json({
+                    success: true,
+                    message: 'Đã tạo tài khoản nhưng lỗi gửi email. (Check Server Console for Link)'
+                });
+            }
+
+            return res.status(500).json({ success: false, message: 'Lỗi gửi email xác thực' });
+        }
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// Verify Email
+exports.verifyEmail = async (req, res) => {
+    try {
+        const { token } = req.query;
+
+        if (!token) {
+            return res.status(400).json({ success: false, message: 'Token không hợp lệ' });
+        }
+
+        const verificationTokenHash = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+
+        const user = await User.findOne({
+            verificationToken: verificationTokenHash,
+            verificationTokenExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'Token không hợp lệ hoặc đã hết hạn' });
+        }
+
+        // Verify user
+        user.isVerified = true;
+        user.verificationToken = undefined;
+        user.verificationTokenExpire = undefined;
+        await user.save();
+
+        // Auto login after verification using existing method logic
+        const jwtToken = generateToken(user._id);
+
+        res.cookie('token', jwtToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        res.status(201).json({
+        res.json({
             success: true,
-            data: { user: { id: user._id, displayName: user.displayName, email: user.email, role: user.role, avatar: user.avatar } },
-            message: 'Đăng ký thành công'
+            message: 'Xác thực tài khoản thành công',
+            data: {
+                user: {
+                    id: user._id,
+                    displayName: user.displayName,
+                    email: user.email,
+                    role: user.role,
+                    avatar: user.avatar
+                },
+                token: jwtToken
+            }
         });
 
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: err.message });
+    } catch (error) {
+        console.error('Verify email error:', error);
+        res.status(500).json({ success: false, message: 'Lỗi xác thực email' });
     }
 };
 
@@ -230,7 +325,15 @@ exports.login = async (req, res) => {
         // Check password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng' });
+            return res.status(401).json({ success: false, message: 'Mật khẩu không chính xác' });
+        }
+
+        // Check if user is verified
+        if (!user.isVerified) {
+            return res.status(401).json({
+                success: false,
+                message: 'Tài khoản chưa được xác thực. Vui lòng kiểm tra email của bạn.'
+            });
         }
 
         // Login success
@@ -354,6 +457,61 @@ exports.resetPassword = async (req, res) => {
         // Let's return success and ask to login.
         res.json({ success: true, message: 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập.' });
 
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// Change Password
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user._id).select('+password');
+
+        if (!user.password) {
+            return res.status(400).json({ success: false, message: 'Tài khoản này đăng nhập bằng Google, không thể đổi mật khẩu.' });
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Mật khẩu hiện tại không đúng.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.json({ success: true, message: 'Đổi mật khẩu thành công.' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// Update Profile (Avatar/DisplayName)
+exports.updateProfile = async (req, res) => {
+    try {
+        const { displayName, avatar } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (displayName) user.displayName = displayName;
+        if (avatar) user.avatar = avatar;
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Cập nhật thông tin thành công.',
+            data: {
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    displayName: user.displayName,
+                    avatar: user.avatar,
+                    role: user.role,
+                    subscription: user.subscription
+                }
+            }
+        });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

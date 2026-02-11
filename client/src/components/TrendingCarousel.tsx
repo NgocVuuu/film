@@ -60,30 +60,34 @@ export function TrendingCarousel({ movies }: TrendingCarouselProps) {
             >
                 <CarouselContent className="-ml-4">
                     {movies.map((movie, index) => (
-                        <CarouselItem key={movie._id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-                            <Link href={`/movie/${movie.slug}`} className="block relative w-full aspect-[2/3] rounded-xl overflow-hidden group/item border border-white/5 hover:border-gold-500/50 transition-all duration-300 hover:shadow-[0_0_20px_rgba(234,179,8,0.2)]">
+                        <CarouselItem key={movie._id} className="pl-4 basis-[65%] sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
+                            <Link href={`/movie/${movie.slug}`} className="block relative w-full aspect-[2/3] overflow-hidden group/item border-2 border-yellow-500/80 hover:border-yellow-400 transition-all duration-300 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] hover:scale-[1.02] hover:-translate-y-1 -skew-x-6 rounded-2xl md:rounded-3xl transform bg-black">
+                                <div className="absolute inset-0 border-[1px] border-white/10 z-10 pointer-events-none rounded-2xl md:rounded-3xl"></div>
 
                                 <img
                                     src={movie.poster_url || movie.thumb_url}
                                     alt={movie.name}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-125 scale-[1.15] skew-x-6"
                                 />
 
                                 {/* Gradient Overlay */}
-                                <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/80 to-transparent opacity-80 group-hover/item:opacity-90 transition-opacity" />
+                                <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black via-black/80 to-transparent opacity-90 group-hover/item:opacity-95 transition-opacity skew-x-6 -ml-4 w-[120%]" />
 
                                 {/* Rank Number */}
-                                <div className="absolute top-2 right-2 md:top-0 md:right-4 z-20">
+                                <div className="absolute top-0 right-0 p-2 z-20 skew-x-6">
                                     <span
-                                        className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/0 drop-shadow-sm font-outline-2 md:font-outline-4 opacity-50 group-hover/item:opacity-100 transition-opacity select-none italic"
-                                        style={{ WebkitTextStroke: index < 3 ? '2px #eab308' : '1px rgba(255,255,255,0.3)' }}
+                                        className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-yellow-500 to-yellow-700 drop-shadow-[0_2px_10px_rgba(234,179,8,0.5)] opacity-80 group-hover/item:opacity-100 transition-opacity select-none italic"
+                                        style={{
+                                            WebkitTextStroke: '1px rgba(255,255,255,0.5)',
+                                            filter: 'drop-shadow(0 0 5px rgba(234,179,8,0.3))'
+                                        }}
                                     >
                                         #{index + 1}
                                     </span>
                                 </div>
 
                                 {/* Content */}
-                                <div className="absolute inset-x-0 bottom-0 p-4 z-20 translate-y-2 group-hover/item:translate-y-0 transition-transform duration-300">
+                                <div className="absolute inset-x-0 bottom-0 p-4 z-20 translate-y-2 group-hover/item:translate-y-0 transition-transform duration-300 skew-x-6">
                                     {/* Progress Bar (if any) */}
                                     {movie.progress && movie.progress.percentage > 0 && (
                                         <div className="w-full h-1 bg-white/20 rounded-full mb-3 overflow-hidden">

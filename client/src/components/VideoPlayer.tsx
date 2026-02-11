@@ -603,7 +603,7 @@ export default function VideoPlayer({
                                     <div>
                                         <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tốc độ</p>
                                         <div className="grid grid-cols-4 gap-1">
-                                            {[0.5, 1, 1.5, 2].map(speed => (
+                                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(speed => (
                                                 <button
                                                     key={speed}
                                                     onClick={() => changeSpeed(speed)}

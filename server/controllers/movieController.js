@@ -14,7 +14,11 @@ const getHomeData = async (req, res) => {
             usukMovies,
             cartoonMovies,
             horrorMovies,
-            familyMovies
+            familyMovies,
+            thailandMovies, // New
+            japanMovies,    // New
+            actionMovies,   // New
+            romanceMovies   // New
         ] = await Promise.all([
             // Trending: Highest Views
             Movie.find({}).sort({ view: -1 }).limit(10).select('-content -episodes -director -actor'),
@@ -33,7 +37,15 @@ const getHomeData = async (req, res) => {
             // Horror
             Movie.find({ 'category.slug': 'kinh-di' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Family
-            Movie.find({ 'category.slug': 'gia-dinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor')
+            Movie.find({ 'category.slug': 'gia-dinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // Thailand
+            Movie.find({ 'country.slug': 'thai-lan' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // Japan
+            Movie.find({ 'country.slug': 'nhat-ban' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // Action
+            Movie.find({ 'category.slug': 'hanh-dong' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // Romance
+            Movie.find({ 'category.slug': 'tinh-cam' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
         ]);
 
         let responseData = {
@@ -44,10 +56,14 @@ const getHomeData = async (req, res) => {
             usukMovies,
             cartoonMovies,
             horrorMovies,
-            familyMovies
+            familyMovies,
+            koreaMovies,      // Was missing in original responseData construction? checking... yes it was missing in line 43-47 range, added here
+            thailandMovies,
+            japanMovies,
+            actionMovies,
+            romanceMovies
         };
 
-        // If user is logged in, attach progress
         if (req.user) {
             try {
                 const userId = req.user._id;
@@ -59,6 +75,38 @@ const getHomeData = async (req, res) => {
                 responseData.usukMovies = await attachProgressToMovies(usukMovies, userId);
                 responseData.cartoonMovies = await attachProgressToMovies(cartoonMovies, userId);
                 responseData.familyMovies = await attachProgressToMovies(familyMovies, userId);
+                responseData.thailandMovies = await attachProgressToMovies(thailandMovies, userId);
+                responseData.japanMovies = await attachProgressToMovies(japanMovies, userId);
+                responseData.actionMovies = await attachProgressToMovies(actionMovies, userId);
+                responseData.romanceMovies = await attachProgressToMovies(romanceMovies, userId);
+
+                // Fetch Continue Watching
+                const WatchProgress = require('../models/WatchProgress');
+                const recentProgress = await WatchProgress.find({ userId }).sort({ updatedAt: -1 }).limit(10);
+
+                if (recentProgress.length > 0) {
+                    const slugs = recentProgress.map(p => p.movieSlug);
+                    // Fetch movies to get latest details (thumb, name, etc)
+                    const movies = await Movie.find({ slug: { $in: slugs } }).select('name slug thumb_url year episode_current type poster_url');
+
+                    // Map back to preserve order and attach progress
+                    responseData.continueWatching = recentProgress.map(p => {
+                        const movie = movies.find(m => m.slug === p.movieSlug);
+                        if (!movie) return null;
+                        const movieObj = movie.toObject();
+                        movieObj.progress = {
+                            currentTime: p.currentTime,
+                            duration: p.duration,
+                            percentage: p.duration > 0 ? Math.round((p.currentTime / p.duration) * 100) : 0,
+                            episodeSlug: p.episodeSlug,
+                            episodeName: p.episodeName
+                        };
+                        return movieObj;
+                    }).filter(Boolean);
+                } else {
+                    responseData.continueWatching = [];
+                }
+
             } catch (progressError) {
                 console.error('Error attaching progress in getHomeData:', progressError);
                 // Continue without progress if error occurs
@@ -82,46 +130,45 @@ const getMovies = async (req, res) => {
         const limit = parseInt(req.query.limit) || 24;
         const skip = (page - 1) * limit;
 
-        // Filter conditions
-        const query = {};
-        if (req.query.type) {
-            query.type = req.query.type; // 'single', 'series', 'hoathinh', 'tvshows'
-        }
-        if (req.query.category) {
-            query['category.slug'] = req.query.category;
-        }
-        if (req.query.country) {
-            query['country.slug'] = req.query.country;
-        }
-        if (req.query.year) {
-            query.year = parseInt(req.query.year);
-        }
-        if (req.query.actor) {
-            // Case-insensitive regex match for actor name
-            query.actor = { $regex: req.query.actor, $options: 'i' };
+        // Filters
+        const { category, country, year, status, sort, type, chieurap, q } = req.query;
+        let query = {};
+
+        // Text search (if 'q' is present)
+        if (q) {
+            query.$text = { $search: q };
         }
 
+        if (category) query['category.slug'] = category;
+        if (country) query['country.slug'] = country;
+        if (year) query.year = parseInt(year);
+        if (status) query.status = status; // 'completed' | 'ongoing'
+        if (type) query.type = type; // 'series' | 'single' | 'hoathinh' | 'tvshows'
+        if (chieurap === 'true') query.chieurap = true;
+
+        // Sorting
+        let sortOption = { updatedAt: -1 }; // Default: Newest update
+        if (sort === 'newest') sortOption = { year: -1, updatedAt: -1 }; // Release year
+        if (sort === 'view') sortOption = { view: -1 };
+        if (sort === 'rating') sortOption = { rating_average: -1 };
+
         const movies = await Movie.find(query)
-            .sort({ updatedAt: -1 })
+            .sort(sortOption)
             .skip(skip)
             .limit(limit)
-            .limit(limit)
-            .select('-content -episodes -director -actor'); // Light selection
+            .select('name slug thumb_url origin_name year type quality episode_current view rating_average');
 
         const total = await Movie.countDocuments(query);
 
-        let moviesData = movies;
+        // Attach progress if logged in
+        let finalMovies = movies;
         if (req.user) {
-            try {
-                moviesData = await attachProgressToMovies(movies, req.user._id);
-            } catch (error) {
-                console.error('Error attaching progress in getMovies:', error);
-            }
+            finalMovies = await attachProgressToMovies(movies, req.user._id);
         }
 
         res.json({
             success: true,
-            data: moviesData,
+            data: finalMovies,
             pagination: {
                 page,
                 limit,
@@ -130,9 +177,11 @@ const getMovies = async (req, res) => {
             }
         });
     } catch (err) {
+        console.error('Get movies error:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
 
 // 3. Get Movie Detail
 const getMovieDetail = async (req, res) => {
