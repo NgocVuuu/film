@@ -1,4 +1,5 @@
 'use client';
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
@@ -16,7 +17,7 @@ interface Movie {
     progress?: any;
 }
 
-export default function PhimMoiPage() {
+function PhimMoiContent() {
     const searchParams = useSearchParams();
     const page = parseInt(searchParams.get('page') || '1');
     const [movies, setMovies] = useState<Movie[]>([]);
@@ -83,5 +84,13 @@ export default function PhimMoiPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function PhimMoiPage() {
+    return (
+        <Suspense fallback={<LoadingScreen />}>
+            <PhimMoiContent />
+        </Suspense>
     );
 }

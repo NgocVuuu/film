@@ -1,4 +1,5 @@
 'use client';
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
@@ -34,7 +35,7 @@ const COUNTRY_NAMES: Record<string, string> = {
     'viet-nam': 'Việt Nam'
 };
 
-export default function CountryPage() {
+function CountryPageContent() {
     const params = useParams();
     const searchParams = useSearchParams();
     const countrySlug = params.slug as string;
@@ -117,5 +118,13 @@ export default function CountryPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function CountryPage() {
+    return (
+        <Suspense fallback={<LoadingScreen />}>
+            <CountryPageContent />
+        </Suspense>
     );
 }

@@ -1,4 +1,5 @@
 'use client';
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
@@ -46,7 +47,7 @@ const CATEGORY_NAMES: Record<string, string> = {
     'hoc-duong': 'Học Đường'
 };
 
-export default function CategoryPage() {
+function CategoryPageContent() {
     const params = useParams();
     const searchParams = useSearchParams();
     const categorySlug = params.slug as string;
@@ -129,5 +130,13 @@ export default function CategoryPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function CategoryPage() {
+    return (
+        <Suspense fallback={<LoadingScreen />}>
+            <CategoryPageContent />
+        </Suspense>
     );
 }
