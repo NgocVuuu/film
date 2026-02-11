@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { API_URL } from '@/lib/config';
 import { useAuth } from '@/contexts/auth-context';
 
-export const runtime = 'edge';
+
 
 // Types (Reuse same types)
 interface Episode {

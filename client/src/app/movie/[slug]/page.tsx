@@ -2,7 +2,7 @@ import { Metadata, ResolvingMetadata } from 'next';
 import MovieDetailClient from './MovieDetailClient';
 import { API_URL } from '@/lib/config';
 
-export const runtime = 'edge';
+
 
 type Props = {
     params: Promise<{ slug: string }>

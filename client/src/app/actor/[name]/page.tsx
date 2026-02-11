@@ -5,7 +5,7 @@ import { MovieCard } from '@/components/MovieCard';
 import { User, Film } from 'lucide-react';
 import { API_URL } from '@/lib/config';
 
-export const runtime = 'edge';
+
 
 interface ActorPageProps {
     params: Promise<{ name: string }>;
