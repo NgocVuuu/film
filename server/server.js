@@ -28,6 +28,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/pchill';
 
+// Trust Proxy (Required for Cookie Safe/Secure across proxies like Cloudflare/Nginx)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
     origin: [
