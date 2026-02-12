@@ -8,9 +8,35 @@ import { useAuth } from '@/contexts/auth-context';
 import { customFetch } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+interface WatchProgressResponse {
+    movieId?: string;
+    movieSlug: string;
+    movieName: string;
+    movieThumb: string;
+    currentTime: number;
+    duration: number;
+    episodeSlug?: string;
+    episodeName?: string;
+}
+
+interface Movie {
+    _id: string;
+    name: string;
+    slug: string;
+    thumb_url: string;
+    year: number;
+    progress?: {
+        currentTime: number;
+        duration: number;
+        percentage: number;
+        episodeSlug: string;
+        episodeName: string;
+    };
+}
+
 export default function HistoryPage() {
     const { user } = useAuth();
-    const [movies, setMovies] = useState<Record<string, unknown>[]>([]);
+    const [movies, setMovies] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchHistory = async () => {
@@ -39,8 +65,8 @@ export default function HistoryPage() {
                 if (data.success && data.data && data.data.length > 0) {
                     // Backend returns WatchProgress objects directly
                     const moviesWithProgress = data.data
-                        .filter((item: Record<string, unknown>) => item.movieSlug && item.movieName) // Ensure valid data
-                        .map((item: Record<string, unknown>) => ({
+                        .filter((item: WatchProgressResponse) => item.movieSlug && item.movieName) // Ensure valid data
+                        .map((item: WatchProgressResponse) => ({
                             _id: item.movieId || item.movieSlug,
                             name: item.movieName,
                             slug: item.movieSlug,
