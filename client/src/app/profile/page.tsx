@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -15,7 +15,7 @@ import {
 import { API_URL } from '@/lib/config';
 import { customFetch } from '@/lib/api';
 
-export default function ProfilePage() {
+function ProfileContent() {
     const { user, loading: authLoading, refresh, logout } = useAuth(); // Changed checkAuth to refresh
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -345,6 +345,18 @@ export default function ProfilePage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function ProfilePage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-deep-black flex items-center justify-center text-primary">
+                <Loader2 className="animate-spin w-8 h-8" />
+            </div>
+        }>
+            <ProfileContent />
+        </Suspense>
     );
 }
 
