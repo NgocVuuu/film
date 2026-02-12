@@ -7,8 +7,16 @@ import { API_URL } from '@/lib/config';
 export const runtime = 'edge';
 import { use } from 'react';
 
-
-
+interface Movie {
+    _id: string;
+    name: string;
+    origin_name: string;
+    slug: string;
+    thumb_url: string;
+    year: number;
+    episode_current?: string;
+    progress?: Record<string, unknown>;
+}
 
 interface CatalogPageProps {
     params: Promise<{ category: string }>; // This captures /phim-bo, /phim-le from URL
@@ -17,7 +25,7 @@ interface CatalogPageProps {
 export default function CatalogPage({ params }: CatalogPageProps) {
     const { category } = use(params);
     const categorySlug = category;
-    const [movies, setMovies] = useState<Record<string, unknown>[]>([]);
+    const [movies, setMovies] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
     const typeMap: Record<string, string> = {
         'phim-bo': 'series',
