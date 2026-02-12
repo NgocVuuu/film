@@ -22,10 +22,12 @@ interface WatchProgressResponse {
 interface Movie {
     _id: string;
     name: string;
+    origin_name: string;
     slug: string;
     thumb_url: string;
     year: number;
-    progress?: {
+    episode_current?: string;
+    progress: {
         currentTime: number;
         duration: number;
         percentage: number;
@@ -69,9 +71,11 @@ export default function HistoryPage() {
                         .map((item: WatchProgressResponse) => ({
                             _id: item.movieId || item.movieSlug,
                             name: item.movieName,
+                            origin_name: item.movieName,
                             slug: item.movieSlug,
                             thumb_url: item.movieThumb,
                             year: new Date().getFullYear(),
+                            episode_current: item.episodeSlug,
                             progress: {
                                 currentTime: item.currentTime || 0,
                                 duration: item.duration || 0,
