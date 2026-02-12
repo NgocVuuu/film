@@ -26,6 +26,22 @@ interface Movie {
     };
 }
 
+interface FavoriteResponse {
+    movieSlug: string;
+    movieName?: string;
+    thumbUrl?: string;
+    movie?: {
+        _id?: string;
+        name?: string;
+        origin_name?: string;
+        slug?: string;
+        thumb_url?: string;
+        year?: number;
+        episode_current?: string;
+        quality?: string;
+    };
+}
+
 export default function FavoritesPage() {
     const [favorites, setFavorites] = useState<Movie[]>([]);
     const { user, loading: authLoading } = useAuth();
@@ -47,11 +63,11 @@ export default function FavoritesPage() {
                     const data = await res.json();
                     if (data.success) {
                         // Backend returns favorites which has 'movie' populated. Map it to flat structure or meaningful structure
-                        const mapped = data.data.map((fav: any) => ({
+                        const mapped = data.data.map((fav: FavoriteResponse) => ({
                             _id: fav.movie?._id || fav.movieSlug,
-                            name: fav.movie?.name || fav.movieName,
+                            name: fav.movie?.name || fav.movieName || '',
                             origin_name: fav.movie?.origin_name || '',
-                            slug: fav.movieSlug || fav.movie?.slug,
+                            slug: fav.movieSlug || fav.movie?.slug || '',
                             thumb_url: fav.movie?.thumb_url || fav.thumbUrl || '',
                             year: fav.movie?.year || new Date().getFullYear(),
                             episode_current: fav.movie?.episode_current,
