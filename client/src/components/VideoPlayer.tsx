@@ -621,7 +621,7 @@ export default function VideoPlayer({
                                                         onClick={() => changeQuality(level.index)}
                                                         className={`text-xs text-left p-1.5 rounded ${currentQuality === level.index ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
                                                     >
-                                                        {level.name}
+                                                        {level.height}p
                                                     </button>
                                                 ))}
                                             </div>
