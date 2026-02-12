@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Search, XCircle, Loader2, Crown, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
-import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 interface Subscription {
     _id: string;
@@ -33,8 +33,8 @@ export default function AdminSubscriptionsPage() {
     const fetchSubscriptions = async () => {
         try {
             setLoading(true);
-            const response = await fetch(
-                `${API_URL}/api/admin/subscriptions?page=${page}&limit=20&status=${filter}`,
+            const response = await customFetch(
+                `/api/admin/subscriptions?page=${page}&limit=20&status=${filter}`,
                 {
                     credentials: 'include'
                 }
@@ -57,8 +57,8 @@ export default function AdminSubscriptionsPage() {
         if (!confirm('Hủy đăng ký này? User sẽ mất quyền Premium ngay lập tức.')) return;
 
         try {
-            const response = await fetch(
-                `${API_URL}/api/admin/subscriptions/${userId}/cancel`,
+            const response = await customFetch(
+                `/api/admin/subscriptions/${userId}/cancel`,
                 {
                     method: 'POST',
                     credentials: 'include'

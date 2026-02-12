@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Users, CreditCard, Film, TrendingUp, Loader2, Eye, UserPlus, Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 interface Movie {
     name: string;
@@ -42,7 +42,7 @@ export default function AdminDashboardPage() {
 
     const fetchStats = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/admin/stats`, {
+            const response = await customFetch(`/api/admin/stats`, {
                 credentials: 'include'
             });
 
@@ -201,7 +201,7 @@ export default function AdminDashboardPage() {
                                 </div>
                                 <div className="w-full bg-surface-800 rounded-full h-2 overflow-hidden">
                                     <div
-                                        className="bg-gradient-to-r from-primary to-yellow-500 h-full rounded-full transition-all"
+                                        className="bg-linear-to-r from-primary to-yellow-500 h-full rounded-full transition-all"
                                         style={{ width: `${(movie.view / maxViews) * 100}%` }}
                                     />
                                 </div>
@@ -220,7 +220,7 @@ export default function AdminDashboardPage() {
                             return (
                                 <div key={index} className="flex-1 flex flex-col items-center group relative">
                                     <div
-                                        className="w-full bg-gradient-to-t from-primary to-yellow-500 rounded-t transition-all hover:opacity-80"
+                                        className="w-full bg-linear-to-t from-blue-500 to-purple-500 rounded-t transition-all hover:opacity-80"
                                         style={{ height: `${height}%` }}
                                     />
                                     <div className="absolute -top-8 hidden group-hover:block bg-surface-800 px-2 py-1 rounded text-xs text-white whitespace-nowrap">
@@ -244,7 +244,7 @@ export default function AdminDashboardPage() {
                         return (
                             <div key={index} className="flex-1 flex flex-col items-center group relative">
                                 <div
-                                    className="w-full bg-gradient-to-t from-blue-500 to-purple-500 rounded-t transition-all hover:opacity-80"
+                                    className="w-full bg-linear-to-t from-blue-500 to-purple-500 rounded-t transition-all hover:opacity-80"
                                     style={{ height: `${height}%` }}
                                 />
                                 <div className="absolute -top-8 hidden group-hover:block bg-surface-800 px-2 py-1 rounded text-xs text-white whitespace-nowrap">

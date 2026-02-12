@@ -69,11 +69,23 @@ function LoginContent() {
     const handleResendVerification = async () => {
         try {
             setResendLoading(true);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+
             const response = await fetch(`${API_URL}/api/auth/resend-verification`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ email }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
             const data = await response.json();
             if (data.success) {
                 toast.success(data.message);
@@ -81,9 +93,15 @@ function LoginContent() {
             } else {
                 toast.error(data.message || 'Gửi lại thất bại');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Resend error:', error);
-            toast.error('Lỗi kết nối');
+            if (error.name === 'AbortError') {
+                toast.error('Yêu cầu quá lâu. Vui lòng thử lại.');
+            } else if (error.message?.includes('Failed to fetch')) {
+                toast.error('Không kết nối được server.');
+            } else {
+                toast.error(error.message || 'Lỗi kết nối');
+            }
         } finally {
             setResendLoading(false);
         }

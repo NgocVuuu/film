@@ -2,17 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'react-hot-toast';
-import { User, Lock, Save, Loader2, Camera, LogOut } from 'lucide-react';
+import { 
+    User, Lock, Save, Loader2, LogOut, Crown, 
+    ChevronRight, FileText, Shield, MessageSquare, 
+    History, Monitor, Plus, ArrowLeft, Heart, Camera, Mail
+} from 'lucide-react';
 import { API_URL } from '@/lib/config';
 import { customFetch } from '@/lib/api';
 
 export default function ProfilePage() {
     const { user, loading: authLoading, refresh, logout } = useAuth(); // Changed checkAuth to refresh
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const mode = searchParams.get('mode');
+    const isEditMode = mode === 'edit';
     const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
 
     // ... (rest of state)
@@ -107,12 +115,75 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen bg-deep-black text-foreground pt-24 pb-20">
             <div className="container mx-auto px-4 max-w-4xl">
-                <h1 className="text-3xl font-bold mb-8 text-white flex items-center gap-3">
+                
+                <h1 className={`text-3xl font-bold mb-8 text-white items-center gap-3 ${isEditMode ? 'flex' : 'hidden md:flex'}`}>
+                    {isEditMode && (
+                        <Link href="/profile" className="md:hidden mr-2">
+                            <ArrowLeft className="w-6 h-6" />
+                        </Link>
+                    )}
                     <User className="w-8 h-8 text-primary" />
                     Quản lý tài khoản
                 </h1>
 
-                <div className="flex flex-col md:flex-row gap-8">
+                {/* Mobile Dashboard View */}
+                <div className={`md:hidden ${isEditMode ? 'hidden' : 'block'} pb-8`}>
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="relative shrink-0">
+                            <img 
+                                src={user.avatar || `https://ui-avatars.com/api/?name=${user.displayName}`} 
+                                alt={user.displayName} 
+                                className="w-16 h-16 rounded-full border-2 border-primary object-cover"
+                            />
+                            <span className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">LV.1</span>
+                        </div>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                {user.isPremium ? (
+                                    <span className="bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm shrink-0">PREMIUM</span>
+                                ) : (
+                                    <span className="bg-surface-700 text-gray-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-white/10 shrink-0">FREE</span>
+                                )}
+                                <h2 className="font-bold text-white text-lg truncate">{user.displayName}</h2>
+                            </div>
+                            <p className="text-gray-400 text-sm truncate">{user.email}</p>
+                        </div>
+                    </div>
+
+                    <div className="mb-8">
+                        <div className="bg-surface-900/50 p-4 rounded-xl border border-white/10 flex flex-col justify-between h-32 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <Crown className="w-12 h-12"/>
+                            </div>
+                            <p className="text-gray-400 text-xs font-medium leading-relaxed relative z-10">
+                                {user.isPremium ? 'Thành viên cao cấp' : 'Bạn đang là thành viên miễn phí'}
+                            </p>
+                            <Button className="w-full bg-[#fbbf24] hover:bg-[#f59e0b] text-black text-xs h-8 font-bold mt-auto relative z-10 shadow-lg shadow-yellow-500/10">
+                                {user.isPremium ? 'Gia hạn' : 'Nâng cấp'} <span className="ml-1 text-[10px]">▲</span>
+                            </Button>
+                        </div>
+                    </div>
+
+                    <Link href="/profile?mode=edit" className="block w-full bg-white hover:bg-gray-100 text-black font-bold py-3.5 text-center rounded-xl mb-8 shadow-lg transition-colors">
+                        Quản lý tài khoản
+                    </Link>
+
+                    <div className="space-y-1">
+                        <MobileMenuLink href="/my-lists" icon={Plus} label="Danh sách phim của tôi" />
+                        <div className="h-px bg-white/5 my-2 mx-4" />
+                        <MobileMenuLink href="/dmca" icon={Shield} label="DMCA - Bản quyền" />
+                        <MobileMenuLink href="/terms" icon={FileText} label="Điều khoản sử dụng" />
+                        <MobileMenuLink href="/privacy" icon={Lock} label="Chính sách bảo mật" />
+                        <MobileMenuLink href="/contact" icon={Mail} label="Liên hệ & Góp ý" />
+                    </div>
+                    
+                    <button onClick={handleLogout} className="mt-8 flex items-center gap-4 text-red-500 font-medium px-4 w-full py-4 hover:bg-surface-900/50 rounded-xl transition-colors">
+                        <LogOut className="w-5 h-5"/> 
+                        <span>Đăng xuất</span>
+                    </button>
+                </div>
+
+                <div className={`flex flex-col md:flex-row gap-8 ${isEditMode ? 'block' : 'hidden md:flex'}`}>
                     {/* Sidebar / Tabs */}
                     <div className="w-full md:w-64 shrink-0">
                         <div className="bg-surface-900 border border-white/10 rounded-xl overflow-hidden sticky top-24">
@@ -147,8 +218,13 @@ export default function ProfilePage() {
                                     onClick={() => setActiveTab('security')}
                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'security' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                                 >
+                                    <Lock className="w-4 h-4" />
                                     Bảo mật & Mật khẩu
                                 </button>
+
+                                {/* Mobile Only Links - Removed as now handled by Dashboard View */}
+
+
                                 <div className="border-t border-white/10 my-2 pt-2">
                                     <button
                                         onClick={handleLogout}
@@ -271,3 +347,18 @@ export default function ProfilePage() {
         </div>
     );
 }
+
+function MobileMenuLink({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
+    return (
+        <Link href={href} className="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors group border-b border-white/5 last:border-0">
+            <div className="flex items-center gap-4">
+                <div className="w-9 h-9 rounded-full bg-surface-800 flex items-center justify-center border border-white/5 group-hover:bg-primary/20 group-hover:border-primary/50 transition-colors">
+                    <Icon className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
+                </div>
+                <span className="font-medium text-gray-200 group-hover:text-white transition-colors text-sm">{label}</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400" />
+        </Link>
+    );
+}
+

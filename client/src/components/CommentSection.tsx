@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Star, Trash2, Send, ThumbsUp, MessageSquare, CornerDownRight } from 'lucide-react';
 import { API_URL } from '@/lib/config';
+import { getAuthToken } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 
 interface User {
@@ -47,8 +48,14 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
 
     const fetchComments = async (pageNum = 1) => {
         try {
+            const token = getAuthToken();
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
             const res = await fetch(`${API_URL}/api/comments/${movieSlug}?page=${pageNum}&limit=10`, { // Increased limit
-                credentials: 'include'
+                credentials: 'include',
+                headers
             });
             const data = await res.json();
             if (data.success) {
@@ -93,9 +100,14 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
 
         setSubmitting(true);
         try {
+            const token = getAuthToken();
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
             const res = await fetch(`${API_URL}/api/comments`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 credentials: 'include',
                 body: JSON.stringify({
                     movieSlug,
@@ -131,9 +143,15 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
     const handleDelete = async (commentId: string) => {
         if (!confirm('Bạn có chắc muốn xóa bình luận này?')) return;
         try {
+            const token = getAuthToken();
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
             const res = await fetch(`${API_URL}/api/comments/${commentId}`, {
                 method: 'DELETE',
-                credentials: 'include'
+                credentials: 'include',
+                headers
             });
             const data = await res.json();
             if (data.success) {
@@ -153,9 +171,15 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
             return;
         }
         try {
+            const token = getAuthToken();
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
             const res = await fetch(`${API_URL}/api/comments/${commentId}/like`, {
                 method: 'POST',
-                credentials: 'include'
+                credentials: 'include',
+                headers
             });
             const data = await res.json();
             if (data.success) {

@@ -1,20 +1,23 @@
 'use client';
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
 import RequestMovieButton from '@/components/RequestMovieButton';
 import { SearchSidebar } from '@/components/SearchSidebar';
 import { EmptyState } from '@/components/EmptyState';
 import { Pagination } from '@/components/Pagination';
-import { Search } from 'lucide-react';
+import { Search, Filter, X } from 'lucide-react';
 import { API_URL } from '@/lib/config';
+import { Button } from '@/components/ui/button';
 
 function SearchContent() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     // const query = searchParams.get('q'); // Old standard query
     // New: Construct query string from all params
     const queryString = searchParams.toString();
     const queryKeyword = searchParams.get('q');
+    const [searchQuery, setSearchQuery] = useState(queryKeyword || '');
 
     const [movies, setMovies] = useState<any[]>([]);
     const [pagination, setPagination] = useState({
@@ -24,6 +27,40 @@ function SearchContent() {
         totalPages: 0
     });
     const [loading, setLoading] = useState(false);
+    const [showMobileFilter, setShowMobileFilter] = useState(false);
+
+    useEffect(() => {
+        if (showMobileFilter) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+        } else {
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+        };
+    }, [showMobileFilter]);
+
+    useEffect(() => {
+        setSearchQuery(queryKeyword || '');
+    }, [queryKeyword]);
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        const params = new URLSearchParams(searchParams.toString());
+        if (searchQuery.trim()) {
+            params.set('q', searchQuery);
+        } else {
+            params.delete('q');
+        }
+        params.delete('page'); // Reset pagination
+        router.push(`/search?${params.toString()}`);
+    };
 
     // FilterBar and Pagination components need to be imported
     // Assuming imports are added at top
@@ -101,23 +138,97 @@ function SearchContent() {
                         <SearchSidebar />
                     </div>
 
+                    {/* Mobile Filters Drawer */}
+                    {showMobileFilter && (
+                        <div className="fixed inset-0 z-100 lg:hidden flex justify-end">
+                            <div 
+                                className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+                                onClick={() => setShowMobileFilter(false)}
+                                aria-hidden="true"
+                            />
+                            <div className="relative w-75 max-w-[85vw] bg-surface-900 h-dvh border-l border-white/10 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
+                                {/* Header */}
+                                <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0 bg-surface-900 z-10">
+                                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                        <Filter className="w-5 h-5 text-primary" />
+                                        Bộ lọc tìm kiếm
+                                    </h2>
+                                    <button 
+                                        onClick={() => setShowMobileFilter(false)} 
+                                        className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 bg-white/5"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 overflow-y-auto overscroll-contain p-4 pb-24">
+                                    <SearchSidebar />
+                                </div>
+
+                                {/* Footer Button */}
+                                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 bg-surface-900/95 backdrop-blur shadow-[0_-4px_12px_rgba(0,0,0,0.5)] z-20 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                                    <Button 
+                                        className="w-full text-base font-bold py-6 shadow-lg shadow-primary/20" 
+                                        onClick={() => setShowMobileFilter(false)}
+                                    >
+                                        Xem kết quả
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Main Content */}
                     <div className="flex-1">
+                        {/* Search Input */}
+                        <form onSubmit={handleSearch} className="mb-8 relative group">
+                            <div className="relative flex items-center w-full">
+                                <input
+                                    type="text"
+                                    placeholder="Tìm kiếm tên phim, diễn viên..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-surface-900/80 backdrop-blur-sm border border-white/10 rounded-xl py-3.5 pl-12 pr-28 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300 shadow-lg"
+                                />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors duration-300" />
+                                <div className="absolute right-1.5 top-1.5 bottom-1.5">
+                                    <Button 
+                                        type="submit" 
+                                        className="h-full px-6 rounded-lg bg-primary hover:bg-gold-600 text-black font-bold shadow-md hover:shadow-primary/20 transition-all duration-300 transform active:scale-95"
+                                        size="sm"
+                                    >
+                                        Tìm kiếm
+                                    </Button>
+                                </div>
+                            </div>
+                        </form>
+
                         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-                            <h1 className="text-2xl font-bold text-white">
-                                {queryKeyword ? (
-                                    <>Kết quả tìm kiếm: <span className="text-primary">"{queryKeyword}"</span></>
-                                ) : (
-                                    'Khám phá phim'
-                                )}
-                            </h1>
+                            <div className="flex items-center justify-between gap-4 w-full md:w-auto">
+                                <h1 className="text-2xl font-bold text-white">
+                                    {queryKeyword ? (
+                                        <>Kết quả tìm kiếm: <span className="text-primary">"{queryKeyword}"</span></>
+                                    ) : (
+                                        'Khám phá phim'
+                                    )}
+                                </h1>
+                                <button 
+                                    className="lg:hidden flex items-center gap-2 px-3 py-2 bg-surface-800 text-white rounded-lg border border-white/10 hover:bg-surface-700 transition-colors text-sm font-medium ml-auto md:ml-0"
+                                    onClick={() => setShowMobileFilter(true)}
+                                >
+                                    <Filter className="w-4 h-4" />
+                                    Bộ lọc
+                                </button>
+                            </div>
+                            {/* Desktop Sort/Filter could go here if separat
                             {/* Mobile Filter Toggle could go here */}
                         </div>
 
                         {loading ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                                 {[...Array(12)].map((_, i) => (
-                                    <div key={i} className="animate-pulse bg-surface-800 rounded-lg aspect-[2/3]"></div>
+                                    <div key={i} className="animate-pulse bg-surface-800 rounded-lg aspect-2/3"></div>
                                 ))}
                             </div>
                         ) : (

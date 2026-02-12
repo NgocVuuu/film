@@ -45,26 +45,42 @@ export default function RegisterPage() {
 
         try {
             setLoading(true);
+
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
             const response = await fetch(`${API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ displayName, email, password })
+                body: JSON.stringify({ displayName, email, password }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
 
             const data = await response.json();
 
             if (data.success) {
-                // login(data.data.user); // Removed auto-login
-                toast.success('Đăng ký thành công! Vui lòng kiểm tra email.');
-                // Redirect to login or show success state
+                toast.success(data.message || 'Đăng ký thành công!');
                 router.push('/login?registered=true');
             } else {
                 toast.error(data.message || 'Đăng ký thất bại');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Register error:', error);
-            toast.error('Lỗi kết nối');
+            if (error.name === 'AbortError') {
+                toast.error('Yêu cầu quá lâu. Vui lòng thử lại.');
+            } else if (error.message?.includes('Failed to fetch')) {
+                toast.error('Không kết nối được server. Vui lòng kiểm tra kết nối.');
+            } else {
+                toast.error(error.message || 'Lỗi kết nối');
+            }
         } finally {
             setLoading(false);
         }

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Play, Loader2, StopCircle, RefreshCw, Trash2, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
-import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 interface CrawlerStatus {
     isRunning: boolean;
@@ -27,7 +27,7 @@ export default function AdminCrawlerPage() {
 
     const fetchStatus = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/admin/crawler/status`, {
+            const response = await customFetch(`/api/admin/crawler/status`, {
                 credentials: 'include'
             });
             const data = await response.json();
@@ -43,7 +43,7 @@ export default function AdminCrawlerPage() {
 
     const fetchBlacklist = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/admin/crawler/blacklist`, {
+            const response = await customFetch(`/api/admin/crawler/blacklist`, {
                 credentials: 'include'
             });
             const data = await response.json();
@@ -63,7 +63,7 @@ export default function AdminCrawlerPage() {
         }
 
         try {
-            const response = await fetch(`${API_URL}/api/admin/crawler/sync`, {
+            const response = await customFetch(`/api/admin/crawler/sync`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ export default function AdminCrawlerPage() {
     const handleAddToBlacklist = async () => {
         if (!newItem.trim()) return;
         try {
-            const response = await fetch(`${API_URL}/api/admin/crawler/blacklist`, {
+            const response = await customFetch(`/api/admin/crawler/blacklist`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -114,7 +114,7 @@ export default function AdminCrawlerPage() {
 
     const handleRemoveFromBlacklist = async (slug: string) => {
         try {
-            const response = await fetch(`${API_URL}/api/admin/crawler/blacklist`, {
+            const response = await customFetch(`/api/admin/crawler/blacklist`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',

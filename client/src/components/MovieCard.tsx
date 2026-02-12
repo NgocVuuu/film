@@ -28,7 +28,7 @@ export function MovieCard({ movie }: MovieCardProps) {
             className="group relative block w-full rounded-md overflow-hidden bg-card border border-border shadow-md hover:shadow-primary/30 transition-all duration-300 hover:scale-105"
         >
             {/* Image Container */}
-            <div className="aspect-[2/3] w-full overflow-hidden relative">
+            <div className="aspect-2/3 w-full overflow-hidden relative">
                 <img
                     src={movie.thumb_url}
                     alt={movie.name}
@@ -36,7 +36,7 @@ export function MovieCard({ movie }: MovieCardProps) {
                     loading="lazy"
                 />
                 {/* Overlay Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
 
                 {/* Progress Bar */}
                 {movie.progress && movie.progress.percentage > 0 && (
@@ -69,7 +69,7 @@ export function MovieCard({ movie }: MovieCardProps) {
             </div>
 
             {/* Content */}
-            <div className="absolute bottom-0 left-0 w-full p-3 bg-gradient-to-t from-black via-black/80 to-transparent pt-6">
+            <div className="absolute bottom-0 left-0 w-full p-3 bg-linear-to-t from-black via-black/80 to-transparent pt-6">
                 <h3 className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors uppercase leading-tight">
                     {movie.name}
                 </h3>

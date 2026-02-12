@@ -2,13 +2,15 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Play, Calendar, Star, Clock, Info, Bookmark } from 'lucide-react';
+import { Play, Calendar, Star, Clock, Info, Bookmark, ListPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommentSection } from '@/components/CommentSection';
 import { ReportModal } from '@/components/ReportModal';
+import { AddToListModal } from '@/components/AddToListModal';
 import { useAuth } from '@/contexts/auth-context';
 import LoadingScreen from '@/components/LoadingScreen';
 import { API_URL } from '@/lib/config';
+import { getAuthToken } from '@/lib/api';
 
 // Types
 interface Episode {
@@ -59,6 +61,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     const [loading, setLoading] = useState(!initialMovie);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWatchLater, setIsWatchLater] = useState(false);
+    const [showListModal, setShowListModal] = useState(false);
 
     useEffect(() => {
         // If we have initial data (from server), we only need to sync favorites and history
@@ -98,7 +101,12 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
 
         if (user) {
             try {
-                const favRes = await fetch(`${API_URL}/api/favorites/${movieData.slug}/check`, { credentials: 'include' });
+                const token = getAuthToken();
+                const headers: Record<string, string> = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                const favRes = await fetch(`${API_URL}/api/favorites/${movieData.slug}/check`, { credentials: 'include', headers });
                 const favData = await favRes.json();
                 setIsFavorite(favData.isFavorite);
                 setIsWatchLater(favData.isWatchLater);
@@ -139,13 +147,19 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
         if (user) {
             // API
             try {
+                const token = getAuthToken();
+                const headers: Record<string, string> = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
                 if (isFavorite) {
-                    await fetch(`${API_URL}/api/favorites/${movie.slug}`, { method: 'DELETE', credentials: 'include' });
+                    await fetch(`${API_URL}/api/favorites/${movie.slug}`, { method: 'DELETE', credentials: 'include', headers });
                     setIsFavorite(false);
                 } else {
+                    headers['Content-Type'] = 'application/json';
                     await fetch(`${API_URL}/api/favorites`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers,
                         credentials: 'include',
                         body: JSON.stringify({ slug: movie.slug })
                     });
@@ -185,13 +199,19 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
         if (!movie || !user) return; // Only for logged in users
 
         try {
+            const token = getAuthToken();
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
             if (isWatchLater) {
-                await fetch(`${API_URL}/api/favorites/${movie.slug}?type=watch_later`, { method: 'DELETE', credentials: 'include' });
+                await fetch(`${API_URL}/api/favorites/${movie.slug}?type=watch_later`, { method: 'DELETE', credentials: 'include', headers });
                 setIsWatchLater(false);
             } else {
+                headers['Content-Type'] = 'application/json';
                 await fetch(`${API_URL}/api/favorites`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     credentials: 'include',
                     body: JSON.stringify({ slug: movie.slug, type: 'watch_later' })
                 });
@@ -232,9 +252,9 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                         className="w-full h-full object-cover"
                     />
                     {/* Gradient Overlays for readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent"></div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/90 via-[#050505]/40 to-transparent"></div>
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-transparent h-32"></div>
+                    <div className="absolute inset-0 bg-linear-to-t from-[#050505] via-[#050505]/60 to-transparent"></div>
+                    <div className="absolute inset-0 bg-linear-to-r from-[#050505]/90 via-[#050505]/40 to-transparent"></div>
+                    <div className="absolute inset-0 bg-linear-to-b from-black/80 via-transparent to-transparent h-32"></div>
                 </div>
 
                 {/* Content Container */}
@@ -243,7 +263,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                         <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-end">
 
                             {/* Left: Poster (Vertical) */}
-                            <div className="hidden md:block flex-shrink-0 w-56 md:w-64 lg:w-72 aspect-[2/3] rounded-lg overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.5)] border border-white/10 relative group">
+                            <div className="hidden md:block shrink-0 w-56 md:w-64 lg:w-72 aspect-2/3 rounded-lg overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.5)] border border-white/10 relative group">
                                 <img
                                     src={movie.poster_url || movie.thumb_url}
                                     alt={movie.name}
@@ -323,6 +343,18 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                         <Star className={`mr-2 w-5 h-5 md:w-6 md:h-6 ${isFavorite ? 'fill-current' : ''}`} />
                                         {isFavorite ? 'Đã Thêm' : 'Yêu Thích'}
                                     </Button>
+                                    
+                                    {user && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setShowListModal(true)}
+                                            className="h-10 md:h-12 px-6 border-2 border-white/20 hover:bg-white/10 text-white text-base md:text-lg font-bold rounded-full backdrop-blur-sm transition-all"
+                                            title="Lưu vào danh sách"
+                                        >
+                                            <ListPlus className="w-5 h-5 md:w-6 md:h-6" />
+                                        </Button>
+                                    )}
+
                                     {user && (
                                         <Button
                                             variant="outline"
@@ -440,6 +472,13 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                 </div>
             </div>
 
+            {movie && (
+                <AddToListModal 
+                    isOpen={showListModal} 
+                    onClose={() => setShowListModal(false)} 
+                    movieId={movie._id} 
+                />
+            )}
         </div>
     );
 }

@@ -22,7 +22,8 @@ const movieRoutes = require('./routes/movieRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const commentRoutes = require('./routes/commentRoutes');
-const reportRoutes = require('./routes/reportRoutes'); // Added
+const reportRoutes = require('./routes/reportRoutes');
+const movieListRoutes = require('./routes/movieListRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -112,6 +113,7 @@ app.get('/', (req, res) => {
 // 1, 2, 3. Movie Routes (List, Search, Detail, Home)
 app.use('/api', movieRoutes);
 app.use('/api/favorites', favoriteRoutes);
+app.use('/api/lists', movieListRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Comments

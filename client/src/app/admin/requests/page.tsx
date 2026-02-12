@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Check, X, Loader2, Film, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
-import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 interface MovieRequest {
     _id: string;
@@ -34,8 +34,8 @@ export default function AdminRequestsPage() {
     const fetchRequests = async () => {
         try {
             setLoading(true);
-            const response = await fetch(
-                `${API_URL}/api/admin/movie-requests?page=${page}&limit=20&status=${filter}`,
+            const response = await customFetch(
+                `/api/admin/movie-requests?page=${page}&limit=20&status=${filter}`,
                 {
                     credentials: 'include'
                 }
@@ -56,8 +56,8 @@ export default function AdminRequestsPage() {
 
     const handleApprove = async (requestId: string) => {
         try {
-            const response = await fetch(
-                `${API_URL}/api/admin/movie-requests/${requestId}/approve`,
+            const response = await customFetch(
+                `/api/admin/movie-requests/${requestId}/approve`,
                 {
                     method: 'POST',
                     credentials: 'include'
@@ -82,8 +82,8 @@ export default function AdminRequestsPage() {
         if (reason === null) return;
 
         try {
-            const response = await fetch(
-                `${API_URL}/api/admin/movie-requests/${requestId}/reject`,
+            const response = await customFetch(
+                `/api/admin/movie-requests/${requestId}/reject`,
                 {
                     method: 'POST',
                     headers: {
@@ -179,7 +179,7 @@ export default function AdminRequestsPage() {
                                     <tr key={request._id} className="hover:bg-white/5">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <Film className="w-5 h-5 text-primary flex-shrink-0" />
+                                                <Film className="w-5 h-5 text-primary shrink-0" />
                                                 <div>
                                                     <div className="font-medium text-white">{request.movieName}</div>
                                                     {request.movieSlug && (

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { API_URL } from '@/lib/config';
+import { getAuthToken } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { MovieCard } from '@/components/MovieCard';
 import { EmptyState } from '@/components/EmptyState';
@@ -19,7 +20,12 @@ export default function FavoritesPage() {
             setLoading(true);
             if (user) {
                 try {
-                    const res = await fetch(`${API_URL}/api/favorites`, { credentials: 'include' });
+                    const token = getAuthToken();
+                    const headers: Record<string, string> = {};
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
+                    const res = await fetch(`${API_URL}/api/favorites`, { credentials: 'include', headers });
                     const data = await res.json();
                     if (data.success) {
                         // Backend returns favorites which has 'movie' populated. Map it to flat structure or meaningful structure
@@ -48,7 +54,12 @@ export default function FavoritesPage() {
     const removeFavorite = async (slug: string) => {
         if (user) {
             try {
-                await fetch(`${API_URL}/api/favorites/${slug}`, { method: 'DELETE', credentials: 'include' });
+                const token = getAuthToken();
+                const headers: Record<string, string> = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                await fetch(`${API_URL}/api/favorites/${slug}`, { method: 'DELETE', credentials: 'include', headers });
                 setFavorites(prev => prev.filter(m => m.slug !== slug));
             } catch (e) { console.error(e); }
         } else {

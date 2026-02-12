@@ -150,7 +150,11 @@ const getMovies = async (req, res) => {
 
         // Text search (if 'q' is present)
         if (q) {
-            query.$text = { $search: q };
+            query.$or = [
+                { name: { $regex: q, $options: 'i' } },
+                { origin_name: { $regex: q, $options: 'i' } },
+                { slug: { $regex: q, $options: 'i' } }
+            ];
         }
 
         if (category) query['category.slug'] = category;

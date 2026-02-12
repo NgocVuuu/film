@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader2, User, LogOut, Crown, Bell, Check, Heart, Clock } from 'lucide-react';
+import { Search, Loader2, User, LogOut, Crown, Bell, Check, Heart, Clock, Filter, List, Film, MessageSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
@@ -27,6 +27,36 @@ export default function Navbar() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [showNotifications, setShowNotifications] = useState(false);
     const notificationRef = useRef<HTMLDivElement>(null);
+    const [imageError, setImageError] = useState(false);
+    
+    // Browse Menu
+    const [showBrowseMenu, setShowBrowseMenu] = useState(false);
+    const [showGenreMenu, setShowGenreMenu] = useState(false);
+    const browserMenuRef = useRef<HTMLDivElement>(null);
+
+    const genres = [
+        { name: 'Hành động', slug: 'hanh-dong' },
+        { name: 'Tình cảm', slug: 'tinh-cam' },
+        { name: 'Hài hước', slug: 'hai-huoc' },
+        { name: 'Cổ trang', slug: 'co-trang' },
+        { name: 'Tâm lý', slug: 'tam-ly' },
+        { name: 'Hình sự', slug: 'hinh-su' },
+        { name: 'Chiến tranh', slug: 'chien-tranh' },
+        { name: 'Thể thao', slug: 'the-thao' },
+        { name: 'Võ thuật', slug: 'vo-thuat' },
+        { name: 'Viễn tưởng', slug: 'vien-tuong' },
+        { name: 'Khoa học', slug: 'khoa-hoc' },
+        { name: 'Kinh dị', slug: 'kinh-di' },
+        { name: 'Âm nhạc', slug: 'am-nhac' },
+        { name: 'Thần thoại', slug: 'than-thoai' },
+        { name: 'Tài liệu', slug: 'tai-lieu' },
+        { name: 'Gia đình', slug: 'gia-dinh' },
+        { name: 'Hoạt hình', slug: 'hoat-hinh' },
+        { name: 'Chiếu rạp', slug: 'chieu-rap' },
+        { name: 'Học đường', slug: 'hoc-duong' },
+        { name: 'Bí ẩn', slug: 'bi-an' },
+        { name: 'Phiêu lưu', slug: 'phieu-luu' }
+    ];
 
     const fetchNotifications = async () => {
         if (!user) return;
@@ -102,33 +132,8 @@ export default function Navbar() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Debounce search
     useEffect(() => {
-        if (searchQuery.trim().length < 2) {
-            setSearchSuggestions([]);
-            setShowSuggestions(false);
-            return;
-        }
-
-        setIsSearching(true);
-        const timeoutId = setTimeout(async () => {
-            try {
-                const response = await fetch(`${API_URL}/api/search/hybrid?q=${encodeURIComponent(searchQuery)}`, {
-                    credentials: 'include'
-                });
-                const data = await response.json();
-                if (data.success) {
-                    setSearchSuggestions(data.data.slice(0, 5));
-                    setShowSuggestions(data.data.length > 0);
-                }
-            } catch (error) {
-                console.error('Search error:', error);
-            } finally {
-                setIsSearching(false);
-            }
-        }, 300);
-
-        return () => clearTimeout(timeoutId);
+        // Debounce cleanup only, actual search moved to Search Page
     }, [searchQuery]);
 
     // Click outside to close menus
@@ -142,6 +147,10 @@ export default function Navbar() {
             }
             if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
                 setShowNotifications(false);
+            }
+            if (browserMenuRef.current && !browserMenuRef.current.contains(event.target as Node)) {
+                setShowBrowseMenu(false);
+                setShowGenreMenu(false);
             }
         };
 
@@ -182,72 +191,120 @@ export default function Navbar() {
             className={`fixed top-0 z-50 w-full transition-all duration-300 ${isScrolled ? 'bg-deep-black/95 backdrop-blur-sm shadow-md shadow-primary/10' : 'bg-transparent'
                 }`}
         >
-            <div className="container mx-auto flex h-16 items-center justify-between px-4 gap-4">
+            <div className="container mx-auto flex h-14 md:h-16 items-center justify-between px-4 gap-4">
                 {/* Logo - Left */}
                 <Link href="/" className="flex items-center gap-2 shrink-0">
                     <img
                         src="/logo.png"
                         alt="Pchill Logo"
-                        className="h-10 w-auto sm:h-14 object-contain rounded-md"
+                        className="h-8 md:h-14 w-auto object-contain rounded-md"
                     />
                     <span className="text-2xl font-bold tracking-tighter text-gold-gradient hidden sm:block">
                         PCHILL
                     </span>
                 </Link>
 
-                {/* Search - Center */}
-                <div ref={searchRef} className="flex-1 max-w-2xl mx-auto relative">
-                    <form onSubmit={handleSearch} className="relative">
-                        <div className="relative flex items-center bg-white/10 rounded-full border border-white/10 hover:border-white/20 transition-colors">
-                            <Search className="absolute left-3 h-4 w-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm phim..."
-                                className="w-full bg-transparent border-none outline-none text-white text-sm pl-10 pr-4 py-2.5 placeholder-gray-500"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onFocus={() => {
-                                    if (searchSuggestions.length > 0) setShowSuggestions(true);
-                                }}
-                            />
-                            {isSearching && (
-                                <Loader2 className="absolute right-3 h-4 w-4 text-gray-400 animate-spin" />
-                            )}
-                        </div>
+                {/* Actions - Right */}
+                <div className="flex items-center gap-1 md:gap-3 shrink-0 ml-auto">
+                    {/* Search Icon */}
+                    <Link 
+                        href="/search" 
+                        className="p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                    >
+                        <Search className="w-5 h-5 md:w-6 md:h-6" />
+                    </Link>
 
-                        {/* Search Suggestions */}
-                        {showSuggestions && searchSuggestions.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-black/95 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden shadow-2xl z-50">
-                                {searchSuggestions.map((movie) => (
-                                    <button
-                                        key={movie._id}
-                                        onClick={() => handleSuggestionClick(movie.slug)}
-                                        className="w-full flex items-center gap-3 p-3 hover:bg-white/10 transition-colors text-left border-b border-white/5 last:border-0"
-                                    >
-                                        <img
-                                            src={movie.thumb_url}
-                                            alt={movie.name}
-                                            className="w-12 h-16 object-cover rounded"
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-white truncate">{movie.name}</p>
-                                            <p className="text-xs text-gray-400 truncate">{movie.origin_name} • {movie.year}</p>
+                    {/* Filter / Browse Menu */}
+                    <div ref={browserMenuRef} className="relative">
+                        <button
+                            onClick={() => {
+                                setShowBrowseMenu(!showBrowseMenu);
+                                setShowGenreMenu(false); // Reset sub-menu on toggle
+                            }}
+                            className="p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                        >
+                            <Filter className="w-5 h-5 md:w-6 md:h-6" />
+                        </button>
+
+                        {/* Browse Menu Content */}
+                        {showBrowseMenu && (
+                            <div className="fixed inset-x-0 bottom-[calc(3rem+env(safe-area-inset-bottom))] md:bottom-auto top-auto md:absolute md:top-full md:right-0 md:inset-x-auto w-full md:w-64 bg-black/95 backdrop-blur-md md:border border-white/10 md:rounded-lg overflow-hidden shadow-2xl z-50 rounded-t-xl transition-all animate-in slide-in-from-bottom-10 md:slide-in-from-top-2 border-t">
+                                {/* Mobile Handle */}
+                                <div className="w-12 h-1 bg-white/20 rounded-full mx-auto my-3 md:hidden"></div>
+                                
+                                <div className="p-2 space-y-1 pb-2">
+                                    {!showGenreMenu ? (
+                                        <>
+                                            <Link 
+                                                href="/phim-moi" 
+                                                onClick={() => setShowBrowseMenu(false)}
+                                                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
+                                            >
+                                                <Crown className="w-4 h-4 text-primary" />
+                                                Đề xuất / Phim mới
+                                            </Link>
+                                            <Link 
+                                                href="/phim-le" 
+                                                onClick={() => setShowBrowseMenu(false)}
+                                                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
+                                            >
+                                                <Film className="w-4 h-4 text-blue-400" />
+                                                Phim lẻ
+                                            </Link>
+                                            <Link 
+                                                href="/phim-bo" 
+                                                onClick={() => setShowBrowseMenu(false)}
+                                                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
+                                            >
+                                                <List className="w-4 h-4 text-green-400" />
+                                                Phim bộ
+                                            </Link>
+                                            <button 
+                                                onClick={() => setShowGenreMenu(true)}
+                                                className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
+                                            >
+                                                <span className="flex items-center gap-3">
+                                                    <Filter className="w-4 h-4 text-purple-400" />
+                                                    Thể loại
+                                                </span>
+                                                <span className="text-gray-500">›</span>
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <div className="h-[50vh] md:h-auto md:max-h-[60vh] flex flex-col overscroll-contain">
+                                            <button 
+                                                onClick={() => setShowGenreMenu(false)}
+                                                className="flex items-center gap-2 px-4 py-3 text-sm text-gray-400 hover:text-white border-b border-white/10 mb-2 shrink-0"
+                                            >
+                                                ‹ Quay lại
+                                            </button>
+                                            <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-1 gap-1 p-2 overscroll-contain">
+                                                {genres.map((genre) => (
+                                                    <Link
+                                                        key={genre.slug}
+                                                        href={`/search?category=${genre.slug}`}
+                                                        onClick={() => setShowBrowseMenu(false)}
+                                                        className="px-3 py-2 text-sm text-gray-300 hover:text-primary hover:bg-white/5 rounded transition-colors text-center md:text-left"
+                                                    >
+                                                        {genre.name}
+                                                    </Link>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </button>
-                                ))}
-                                <button
-                                    onClick={handleSearch}
-                                    className="w-full p-3 text-center text-sm text-primary hover:bg-white/5 transition-colors border-t border-white/10"
-                                >
-                                    Xem tất cả kết quả cho "{searchQuery}"
-                                </button>
+                                    )}
+                                </div>
                             </div>
                         )}
-                    </form>
-                </div>
+                        
+                        {/* Backdrop for Mobile */}
+                        {showBrowseMenu && (
+                            <div 
+                                className="fixed inset-0 bg-black/60 z-40 md:hidden"
+                                onClick={() => setShowBrowseMenu(false)}
+                            />
+                        )}
+                    </div>
 
-                {/* Actions - Right */}
-                <div className="flex items-center gap-2 shrink-0">
                     {/* Notifications */}
                     {user && (
                         <div ref={notificationRef} className="relative">
@@ -255,9 +312,9 @@ export default function Navbar() {
                                 onClick={() => setShowNotifications(!showNotifications)}
                                 className="relative p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
                             >
-                                <Bell className="w-5 h-5" />
+                                <Bell className="w-5 h-5 md:w-6 md:h-6" />
                                 {unreadCount > 0 && (
-                                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse ring-2 ring-black"></span>
+                                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                                 )}
                             </button>
 
@@ -305,13 +362,18 @@ export default function Navbar() {
 
                     {/* User Menu / Login */}
                     {user ? (
-                        <div ref={userMenuRef} className="relative">
+                        <div ref={userMenuRef} className="relative hidden md:block">
                             <button
                                 onClick={() => setShowUserMenu(!showUserMenu)}
                                 className="flex items-center gap-2 p-1 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
                             >
-                                {user.avatar ? (
-                                    <img src={user.avatar} alt={user.displayName || user.email} className="w-8 h-8 rounded-full object-cover" />
+                                {user.avatar && !imageError ? (
+                                    <img 
+                                        src={user.avatar} 
+                                        alt={user.displayName || user.email} 
+                                        className="w-8 h-8 rounded-full object-cover"
+                                        onError={() => setImageError(true)}
+                                    />
                                 ) : (
                                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                                         <User className="w-4 h-4 text-primary" />
@@ -345,6 +407,15 @@ export default function Navbar() {
                                         Đang xem
                                     </Link>
 
+                                    <Link
+                                        href="/my-lists"
+                                        onClick={() => setShowUserMenu(false)}
+                                        className="hidden lg:flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5"
+                                    >
+                                        <List className="w-4 h-4" />
+                                        Danh sách của tôi
+                                    </Link>
+
                                     {user.isPremium && (
                                         <div className="px-3 py-2.5 border-b border-white/5 bg-yellow-500/10">
                                             <div className="flex items-center gap-2 text-yellow-500">
@@ -353,6 +424,26 @@ export default function Navbar() {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Admin & Static Links */}
+                                    {user.role === 'admin' && (
+                                        <Link
+                                            href="/admin"
+                                            onClick={() => setShowUserMenu(false)}
+                                            className="block px-3 py-2.5 text-sm font-semibold text-primary hover:bg-white/10 transition-colors border-b border-white/5"
+                                        >
+                                            Trang quản trị (Admin)
+                                        </Link>
+                                    )}
+
+                                    <Link
+                                        href="/feedback"
+                                        onClick={() => setShowUserMenu(false)}
+                                        className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5"
+                                    >
+                                        <MessageSquare className="w-4 h-4" />
+                                        Góp ý & Báo lỗi
+                                    </Link>
 
                                     <button
                                         onClick={handleLogout}
@@ -365,13 +456,15 @@ export default function Navbar() {
                             )}
                         </div>
                     ) : (
-                        <Button
-                            onClick={() => router.push('/login')}
-                            variant="outline"
-                            className="border-primary/50 text-primary hover:bg-primary hover:text-black transition-colors text-sm"
-                        >
-                            Đăng nhập
-                        </Button>
+                        <div className="hidden md:block">
+                            <Button
+                                onClick={() => router.push('/login')}
+                                variant="outline"
+                                className="border-primary/50 text-primary hover:bg-primary hover:text-black transition-colors text-sm"
+                            >
+                                Đăng nhập
+                            </Button>
+                        </div>
                     )}
                 </div>
             </div>

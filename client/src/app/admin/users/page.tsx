@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Search, Ban, Trash2, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
-import { API_URL } from '@/lib/config';
+import { customFetch } from '@/lib/api';
 
 interface User {
     _id: string;
@@ -34,8 +34,8 @@ export default function AdminUsersPage() {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const response = await fetch(
-                `${API_URL}/api/admin/users?page=${page}&limit=20&search=${search}`,
+            const response = await customFetch(
+                `/api/admin/users?page=${page}&limit=20&search=${search}`,
                 {
                     credentials: 'include'
                 }
@@ -58,7 +58,7 @@ export default function AdminUsersPage() {
         if (!confirm(isBanned ? 'Cấm người dùng này?' : 'Bỏ cấm người dùng này?')) return;
 
         try {
-            const response = await fetch(`${API_URL}/api/admin/users/${userId}/ban`, {
+            const response = await customFetch(`/api/admin/users/${userId}/ban`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ export default function AdminUsersPage() {
         if (!confirm('Xóa người dùng này? Hành động không thể hoàn tác!')) return;
 
         try {
-            const response = await fetch(`${API_URL}/api/admin/users/${userId}`, {
+            const response = await customFetch(`/api/admin/users/${userId}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });

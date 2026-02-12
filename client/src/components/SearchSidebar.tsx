@@ -16,19 +16,26 @@ export function SearchSidebar() {
 
     const handleFilter = (key: string, value: string) => {
         const params = new URLSearchParams(searchParams.toString());
+        // Keep category as 'category' to match backend expectation
+        const paramKey = key;
+        
         if (value === 'all') {
-            params.delete(key);
+            params.delete(paramKey);
         } else {
-            params.set(key, value);
+            params.set(paramKey, value);
         }
         params.delete('page'); // Reset to page 1
-        router.push(`/search?${params.toString()}`);
+        router.push(`/search?${params.toString()}`, { scroll: false });
     };
 
     const isActive = (key: string, value: string) => {
-        const current = searchParams.get(key);
+        // Keep category as 'category' for consistency
+        const paramKey = key;
+        const current = searchParams.get(paramKey);
+        
+        // Handle encoded values for comparison
         if (value === 'all') return !current;
-        return current === value;
+        return current === value || decodeURIComponent(current || '') === value;
     };
 
     const filters = [
@@ -40,10 +47,24 @@ export function SearchSidebar() {
                 { label: 'Hành động', value: 'hanh-dong' },
                 { label: 'Tình cảm', value: 'tinh-cam' },
                 { label: 'Hài hước', value: 'hai-huoc' },
-                { label: 'Kinh dị', value: 'kinh-di' },
+                { label: 'Cổ trang', value: 'co-trang' },
                 { label: 'Tâm lý', value: 'tam-ly' },
+                { label: 'Hình sự', value: 'hinh-su' },
+                { label: 'Chiến tranh', value: 'chien-tranh' },
+                { label: 'Thể thao', value: 'the-thao' },
+                { label: 'Võ thuật', value: 'vo-thuat' },
                 { label: 'Viễn tưởng', value: 'vien-tuong' },
+                { label: 'Phiêu lưu', value: 'phieu-luu' },
+                { label: 'Khoa học', value: 'khoa-hoc' },
+                { label: 'Kinh dị', value: 'kinh-di' },
+                { label: 'Âm nhạc', value: 'am-nhac' },
+                { label: 'Thần thoại', value: 'than-thoai' },
+                { label: 'Tài liệu', value: 'tai-lieu' },
+                { label: 'Gia đình', value: 'gia-dinh' },
                 { label: 'Hoạt hình', value: 'hoat-hinh' },
+                { label: 'Chiếu rạp', value: 'chieu-rap' },
+                { label: 'Học đường', value: 'hoc-duong' },
+                { label: 'Bí ẩn', value: 'bi-an' }
             ]
         },
         {
@@ -57,6 +78,11 @@ export function SearchSidebar() {
                 { label: 'Thái Lan', value: 'thai-lan' },
                 { label: 'Âu Mỹ', value: 'au-my' },
                 { label: 'Nhật Bản', value: 'nhat-ban' },
+                { label: 'Đài Loan', value: 'dai-loan' },
+                { label: 'Hồng Kông', value: 'hong-kong' },
+                { label: 'Ấn Độ', value: 'an-do' },
+                { label: 'Anh', value: 'anh' },
+                { label: 'Pháp', value: 'phap' },
             ]
         },
         {
@@ -68,7 +94,8 @@ export function SearchSidebar() {
                 { label: '2023', value: '2023' },
                 { label: '2022', value: '2022' },
                 { label: '2021', value: '2021' },
-                { label: 'Trước 2021', value: 'old' },
+                { label: '2020', value: '2020' },
+                { label: 'Trước 2020', value: 'old' },
             ]
         },
         {
@@ -83,7 +110,7 @@ export function SearchSidebar() {
     ];
 
     return (
-        <div className="w-full lg:w-64 flex-shrink-0 space-y-4">
+        <div className="w-full lg:w-64 shrink-0 space-y-4">
             <div className="flex items-center gap-2 font-bold text-white mb-4">
                 <Filter className="w-5 h-5 text-primary" />
                 Bộ lọc tìm kiếm
