@@ -234,24 +234,17 @@ exports.register = async (req, res) => {
             });
         } catch (emailError) {
             console.error('Email send error:', emailError);
-            user.verificationToken = undefined;
-            user.verificationTokenExpire = undefined;
-            await user.save({ validateBeforeSave: false });
 
-            // In dev environment, log the token so we can still verify
-            if (process.env.NODE_ENV === 'development') {
-                console.log('DEV ONLY - Verify Link:', verifyUrl);
-                return res.status(201).json({
-                    success: true,
-                    message: 'Đã tạo tài khoản nhưng lỗi gửi email. (Check Server Console for Link)'
-                });
-            }
-
-            return res.status(500).json({ success: false, message: 'Lỗi gửi email xác thực' });
+            // Even if email fails, user account is created
+            // They can resend verification email later
+            res.status(201).json({
+                success: true,
+                message: 'Đăng ký thành công! Email xác thực sẽ được gửi sau. Bạn có thể yêu cầu gửi lại từ trang đăng nhập.',
+                emailSent: false
+            });
         }
-
     } catch (err) {
-        console.error(err);
+        console.error('Registration error:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 };

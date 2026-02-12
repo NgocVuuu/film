@@ -60,4 +60,8 @@ router.post('/notifications/broadcast', adminNotificationController.broadcastNot
 router.post('/notifications/user/:userId', adminNotificationController.sendToUser);
 router.get('/notifications/sent', adminNotificationController.getSentNotifications);
 
+// Test email (for debugging SMTP)
+const adminEmailController = require('../controllers/adminEmailController');
+router.post('/test-email', adminEmailController.testEmail);
+
 module.exports = router;
