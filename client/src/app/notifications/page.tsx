@@ -6,9 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Check, Trash2, Bell, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+interface Notification {
+    _id: string;
+    content: string;
+    type: string;
+    isRead: boolean;
+    link?: string;
+    createdAt: string;
+}
+
 export default function NotificationsPage() {
     const { user, loading: authLoading } = useAuth();
-    const [notifications, setNotifications] = useState<Record<string, unknown>[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
