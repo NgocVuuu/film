@@ -176,6 +176,8 @@ exports.deleteUser = async (req, res) => {
 // Get admin dashboard stats
 exports.getDashboardStats = async (req, res) => {
     try {
+        const Movie = require('../models/Movie');
+
         // Total users
         const totalUsers = await User.countDocuments();
 
@@ -195,16 +197,77 @@ exports.getDashboardStats = async (req, res) => {
         // New users (last 7 days)
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const newUsers = await User.countDocuments({
+        const newUsersLast7Days = await User.countDocuments({
             createdAt: { $gte: sevenDaysAgo }
         });
 
+        // New users this month
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const newUsersThisMonth = await User.countDocuments({
+            createdAt: { $gte: startOfMonth }
+        });
+
+        // Active users (logged in last 7 days)
+        const activeUsers = await User.countDocuments({
+            lastLogin: { $gte: sevenDaysAgo }
+        });
+
         // Total movies
-        const Movie = require('../models/Movie');
-        const totalMovies = await Movie.countDocuments();
+        const totalMovies = await Movie.countDocuments({ isActive: { $ne: false } });
 
         // Total watch progress
         const totalWatchProgress = await WatchProgress.countDocuments();
+
+        // Top 10 movies by views
+        const topMovies = await Movie.find({ isActive: { $ne: false } })
+            .sort({ view: -1 })
+            .limit(10)
+            .select('name slug thumb_url view type');
+
+        // View trends - last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const viewTrends = await WatchProgress.aggregate([
+            {
+                $match: {
+                    updatedAt: { $gte: thirtyDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { _id: 1 }
+            }
+        ]);
+
+        // User registration trends - last 30 days
+        const userTrends = await User.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: thirtyDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { _id: 1 }
+            }
+        ]);
 
         res.json({
             success: true,
@@ -212,9 +275,20 @@ exports.getDashboardStats = async (req, res) => {
                 totalUsers,
                 activeSubscriptions,
                 totalRevenue,
-                newUsers,
+                newUsersLast7Days,
+                newUsersThisMonth,
+                activeUsers,
                 totalMovies,
-                totalWatchProgress
+                totalWatchProgress,
+                topMovies,
+                viewTrends: viewTrends.map(item => ({
+                    date: item._id,
+                    views: item.count
+                })),
+                userTrends: userTrends.map(item => ({
+                    date: item._id,
+                    users: item.count
+                }))
             }
         });
     } catch (error) {

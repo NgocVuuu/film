@@ -26,6 +26,8 @@ function LoginContent() {
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [needsVerification, setNeedsVerification] = useState(false);
+    const [resendLoading, setResendLoading] = useState(false);
 
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,6 +37,7 @@ function LoginContent() {
         }
         try {
             setLoading(true);
+            setNeedsVerification(false); // Reset state
             const response = await fetch(`${API_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -51,12 +54,38 @@ function LoginContent() {
                 }
             } else {
                 toast.error(data.message || 'Đăng nhập thất bại');
+                if (data.message && data.message.includes('xác thực')) {
+                    setNeedsVerification(true);
+                }
             }
         } catch (error) {
             console.error('Login error:', error);
             toast.error('Lỗi kết nối');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleResendVerification = async () => {
+        try {
+            setResendLoading(true);
+            const response = await fetch(`${API_URL}/api/auth/resend-verification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await response.json();
+            if (data.success) {
+                toast.success(data.message);
+                setNeedsVerification(false);
+            } else {
+                toast.error(data.message || 'Gửi lại thất bại');
+            }
+        } catch (error) {
+            console.error('Resend error:', error);
+            toast.error('Lỗi kết nối');
+        } finally {
+            setResendLoading(false);
         }
     };
 
@@ -170,6 +199,28 @@ function LoginContent() {
                             <div className="text-center text-sm text-gray-400">
                                 Chưa có tài khoản? <Link href="/register" className="text-primary hover:underline">Đăng ký ngay</Link>
                             </div>
+
+                            {needsVerification && (
+                                <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-center">
+                                    <p className="text-yellow-500 text-sm mb-2">Bạn dã đăng ký nhưng chưa xác thực?</p>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handleResendVerification}
+                                        disabled={resendLoading}
+                                        className="w-full text-yellow-500 border-yellow-500 hover:bg-yellow-500 hover:text-black"
+                                    >
+                                        {resendLoading ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Đang gửi...
+                                            </>
+                                        ) : (
+                                            'Gửi lại email xác thực'
+                                        )}
+                                    </Button>
+                                </div>
+                            )}
                         </form>
 
                         <div className="relative mb-6">
@@ -189,7 +240,7 @@ function LoginContent() {
                                 useOneTap={false}
                                 theme="filled_black"
                                 size="large"
-                                // removed width="100%"
+                            // removed width="100%"
                             />
                         </div>
                     </div>

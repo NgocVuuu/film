@@ -72,6 +72,7 @@ exports.googleLogin = async (req, res) => {
                 email,
                 displayName: name,
                 avatar: picture,
+                isVerified: true, // Google already verified the email
                 lastLogin: new Date(),
                 role: email === 'vupaul2001@gmail.com' ? 'admin' : 'user'
             });
@@ -90,9 +91,9 @@ exports.googleLogin = async (req, res) => {
         // Determine environment to set cookie attributes correctly
         // FIX: Check Origin header to force SameSite=None for cross-site requests (Cloudflare Pages -> VPS)
         const origin = req.headers.origin || '';
-        const isProduction = process.env.NODE_ENV === 'production' || 
-                             (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) ||
-                             (origin && !origin.includes('localhost') && origin.startsWith('http'));
+        const isProduction = process.env.NODE_ENV === 'production' ||
+            (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) ||
+            (origin && !origin.includes('localhost') && origin.startsWith('http'));
 
         // Set HttpOnly Cookie
         res.cookie('token', token, {
@@ -213,7 +214,7 @@ exports.register = async (req, res) => {
 
         // Send verification email
         const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
-        const message = `
+        const htmlContent = `
             <h1>Xác thực tài khoản PChill</h1>
             <p>Cảm ơn bạn đã đăng ký. Vui lòng click vào link dưới đây để kích hoạt tài khoản:</p>
             <a href="${verifyUrl}" clicktracking=off>${verifyUrl}</a>
@@ -224,7 +225,7 @@ exports.register = async (req, res) => {
             await sendEmail({
                 email: user.email,
                 subject: 'Xác thực tài khoản - PChill Film',
-                message
+                html: htmlContent
             });
 
             res.status(201).json({
@@ -312,6 +313,72 @@ exports.verifyEmail = async (req, res) => {
     } catch (error) {
         console.error('Verify email error:', error);
         res.status(500).json({ success: false, message: 'Lỗi xác thực email' });
+    }
+};
+
+
+// Resend Verification Email
+exports.resendVerification = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Vui lòng cung cấp email' });
+        }
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản với email này' });
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({ success: false, message: 'Tài khoản này đã được xác thực' });
+        }
+
+        // Generate verification token
+        const verificationToken = crypto.randomBytes(20).toString('hex');
+        const verificationTokenHash = crypto
+            .createHash('sha256')
+            .update(verificationToken)
+            .digest('hex');
+
+        user.verificationToken = verificationTokenHash;
+        user.verificationTokenExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+        await user.save();
+
+        // Send verification email
+        const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+        const htmlContent = `
+            <h1>Xác thực tài khoản PChill (Gửi lại)</h1>
+            <p>Bạn đã yêu cầu gửi lại email xác thực. Vui lòng click vào link dưới đây để kích hoạt tài khoản:</p>
+            <a href="${verifyUrl}" clicktracking=off>${verifyUrl}</a>
+            <p>Link này sẽ hết hạn sau 24 giờ.</p>
+        `;
+
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: 'Xác thực tài khoản - PChill Film',
+                html: htmlContent
+            });
+
+            res.json({
+                success: true,
+                message: 'Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư đến.'
+            });
+        } catch (emailError) {
+            console.error('Email send error:', emailError);
+            user.verificationToken = undefined;
+            user.verificationTokenExpire = undefined;
+            await user.save({ validateBeforeSave: false });
+
+            return res.status(500).json({ success: false, message: 'Lỗi gửi email xác thực' });
+        }
+
+    } catch (error) {
+        console.error('Resend verification error:', error);
+        res.status(500).json({ success: false, message: 'Lỗi hệ thống' });
     }
 };
 

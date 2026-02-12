@@ -1,4 +1,5 @@
 const Movie = require('../models/Movie');
+const mongoose = require('mongoose');
 
 const { attachProgressToMovies } = require('../utils/movieUtils');
 
@@ -82,7 +83,20 @@ const getHomeData = async (req, res) => {
 
                 // Fetch Continue Watching
                 const WatchProgress = require('../models/WatchProgress');
-                const recentProgress = await WatchProgress.find({ userId }).sort({ updatedAt: -1 }).limit(10);
+                // Use aggregation to get unique movies (most recently watched episode per movie)
+                const recentProgress = await WatchProgress.aggregate([
+                    { $match: { userId: req.user._id } },
+                    { $sort: { updatedAt: -1 } },
+                    {
+                        $group: {
+                            _id: "$movieSlug",
+                            doc: { $first: "$$ROOT" }
+                        }
+                    },
+                    { $replaceRoot: { newRoot: "$doc" } },
+                    { $sort: { updatedAt: -1 } },
+                    { $limit: 10 }
+                ]);
 
                 if (recentProgress.length > 0) {
                     const slugs = recentProgress.map(p => p.movieSlug);

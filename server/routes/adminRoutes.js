@@ -4,6 +4,10 @@ const adminController = require('../controllers/adminController');
 const adminSubscriptionController = require('../controllers/adminSubscriptionController');
 const adminRequestController = require('../controllers/adminRequestController');
 const adminCrawlerController = require('../controllers/adminCrawlerController');
+const adminCommentController = require('../controllers/adminCommentController');
+const adminReportController = require('../controllers/adminReportController');
+const adminMovieController = require('../controllers/adminMovieController');
+const adminNotificationController = require('../controllers/adminNotificationController');
 const { authMiddleware, adminMiddleware } = require('../middleware/authMiddleware');
 
 // All routes require admin authentication
@@ -35,5 +39,25 @@ router.get('/crawler/status', adminCrawlerController.getCrawlerStatus);
 router.get('/crawler/blacklist', adminCrawlerController.getBlacklist);
 router.post('/crawler/blacklist', adminCrawlerController.addToBlacklist);
 router.delete('/crawler/blacklist', adminCrawlerController.removeFromBlacklist);
+
+// Comment management
+router.get('/comments', adminCommentController.getAllComments);
+router.delete('/comments/:commentId', adminCommentController.deleteComment);
+router.patch('/comments/:commentId/hide', adminCommentController.toggleHideComment);
+
+// Report management
+router.get('/reports', adminReportController.getAllReports);
+router.patch('/reports/:reportId/resolve', adminReportController.resolveReport);
+
+// Movie management
+router.get('/movies', adminMovieController.getAllMovies);
+router.patch('/movies/:slug', adminMovieController.updateMovie);
+router.delete('/movies/:slug', adminMovieController.deleteMovie);
+router.patch('/movies/:slug/featured', adminMovieController.toggleFeatured);
+
+// Notification management
+router.post('/notifications/broadcast', adminNotificationController.broadcastNotification);
+router.post('/notifications/user/:userId', adminNotificationController.sendToUser);
+router.get('/notifications/sent', adminNotificationController.getSentNotifications);
 
 module.exports = router;

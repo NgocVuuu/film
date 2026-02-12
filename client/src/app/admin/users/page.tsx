@@ -12,6 +12,7 @@ interface User {
     phoneNumber?: string;
     role: string;
     isBanned?: boolean;
+    isVerified?: boolean;
     subscription: {
         tier: string;
         status: string;
@@ -139,6 +140,7 @@ export default function AdminUsersPage() {
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Contact</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Role</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Subscription</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Verified</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Status</th>
                                     <th className="px-6 py-4 text-right text-sm font-semibold text-gray-300">Actions</th>
                                 </tr>
@@ -169,6 +171,19 @@ export default function AdminUsersPage() {
                                                 }`}>
                                                 {user.subscription?.tier || 'free'}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {user.isVerified ? (
+                                                <span className="flex items-center gap-1 text-green-400 text-sm">
+                                                    <CheckCircle className="w-4 h-4" />
+                                                    Verified
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1 text-yellow-400 text-sm">
+                                                    <XCircle className="w-4 h-4" />
+                                                    Not Verified
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4">
                                             {user.isBanned ? (

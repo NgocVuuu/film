@@ -11,7 +11,11 @@ import {
     LogOut,
     Menu,
     X,
-    RefreshCw
+    RefreshCw,
+    MessageSquare,
+    Flag,
+    Video,
+    Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
@@ -19,8 +23,12 @@ import toast from 'react-hot-toast';
 const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
+    { name: 'Movies', href: '/admin/movies', icon: Video },
+    { name: 'Comments', href: '/admin/comments', icon: MessageSquare },
+    { name: 'Reports', href: '/admin/reports', icon: Flag },
     { name: 'Subscriptions', href: '/admin/subscriptions', icon: CreditCard },
     { name: 'Movie Requests', href: '/admin/requests', icon: Film },
+    { name: 'Notifications', href: '/admin/notifications', icon: Bell },
     { name: 'Crawler', href: '/admin/crawler', icon: RefreshCw },
 ];
 
@@ -85,7 +93,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </div>
 
                     {/* Navigation */}
-                    <nav className="flex-1 p-4 space-y-1">
+                    <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                         {navigation.map((item) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href;

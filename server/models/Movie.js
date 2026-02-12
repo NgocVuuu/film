@@ -55,6 +55,9 @@ const movieSchema = new mongoose.Schema({
     },
   ],
 
+  isFeatured: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
+
   updatedAt: { type: Date, default: Date.now },
 });
 
