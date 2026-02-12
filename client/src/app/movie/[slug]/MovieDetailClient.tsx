@@ -84,7 +84,10 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                     setLoading(false);
                 }
             } else {
-                processUserData(movie || initialMovie);
+                const data = movie || initialMovie;
+                if (data) {
+                    processUserData(data);
+                }
             }
         };
 
