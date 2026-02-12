@@ -2,9 +2,29 @@
 import { useInView } from '@/hooks/useInView';
 import { MovieCarousel } from './MovieCarousel';
 
+interface Movie {
+    _id: string;
+    name: string;
+    origin_name: string;
+    slug: string;
+    thumb_url: string;
+    year: number;
+    poster_url?: string;
+    episode_current?: string;
+    quality?: string;
+    lang?: string;
+    progress?: {
+        currentTime: number;
+        duration: number;
+        percentage: number;
+        episodeSlug: string;
+        episodeName: string;
+    };
+}
+
 interface LazyMovieSectionProps {
     title: string;
-    movies: Record<string, unknown>[];
+    movies: Movie[];
     viewAllLink?: string;
 }
 
