@@ -8,8 +8,26 @@ import { MovieCard } from '@/components/MovieCard';
 import { EmptyState } from '@/components/EmptyState';
 import { Trash2, Loader2 } from 'lucide-react';
 
+interface Movie {
+    _id: string;
+    name: string;
+    origin_name: string;
+    slug: string;
+    thumb_url: string;
+    year: number;
+    episode_current?: string;
+    quality?: string;
+    progress?: {
+        currentTime: number;
+        duration: number;
+        percentage: number;
+        episodeSlug: string;
+        episodeName: string;
+    };
+}
+
 export default function FavoritesPage() {
-    const [favorites, setFavorites] = useState<Record<string, unknown>[]>([]);
+    const [favorites, setFavorites] = useState<Movie[]>([]);
     const { user, loading: authLoading } = useAuth();
     const [loading, setLoading] = useState(true);
 
@@ -29,12 +47,15 @@ export default function FavoritesPage() {
                     const data = await res.json();
                     if (data.success) {
                         // Backend returns favorites which has 'movie' populated. Map it to flat structure or meaningful structure
-                        const mapped = data.data.map((fav: Record<string, unknown>) => ({
-                            ...fav.movie,
-                            // Ensure properties exist
-                            thumb_url: fav.movie?.thumb_url || fav.thumbUrl,
+                        const mapped = data.data.map((fav: any) => ({
+                            _id: fav.movie?._id || fav.movieSlug,
                             name: fav.movie?.name || fav.movieName,
-                            slug: fav.movieSlug
+                            origin_name: fav.movie?.origin_name || '',
+                            slug: fav.movieSlug || fav.movie?.slug,
+                            thumb_url: fav.movie?.thumb_url || fav.thumbUrl || '',
+                            year: fav.movie?.year || new Date().getFullYear(),
+                            episode_current: fav.movie?.episode_current,
+                            quality: fav.movie?.quality
                         }));
                         setFavorites(mapped);
                     }
