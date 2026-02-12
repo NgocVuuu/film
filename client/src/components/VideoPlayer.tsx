@@ -266,7 +266,7 @@ export default function VideoPlayer({
     };
 
     // -- Rotation Logic (Fake Landscape for Mobile) --
-    const [isLandscape] = useState(false);
+    const [isLandscape, setIsLandscape] = useState(false);
 
     // ... existing changeSpeed/changeQuality ...
 
