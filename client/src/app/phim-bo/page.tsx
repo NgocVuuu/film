@@ -14,7 +14,14 @@ interface Movie {
     thumb_url: string;
     year: number;
     episode_current?: string;
-    progress?: Record<string, unknown>;
+    quality?: string;
+    progress?: {
+        currentTime: number;
+        duration: number;
+        percentage: number;
+        episodeSlug: string;
+        episodeName: string;
+    };
 }
 
 function PhimBoContent() {
