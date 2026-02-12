@@ -7,6 +7,15 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { customFetch } from '@/lib/api';
 
+interface Notification {
+    _id: string;
+    content: string;
+    type: string;
+    isRead: boolean;
+    link?: string;
+    createdAt: string;
+}
+
 export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
@@ -15,7 +24,7 @@ export default function Navbar() {
     const { user, loading, logout } = useAuth();
 
     // Notifications
-    const [notifications, setNotifications] = useState<Record<string, unknown>[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [showNotifications, setShowNotifications] = useState(false);
     const notificationRef = useRef<HTMLDivElement>(null);
@@ -72,7 +81,7 @@ export default function Navbar() {
         }
     }, [user]);
 
-    const handleNotificationClick = async (notification: { _id: string; isRead?: boolean; link?: string }) => {
+    const handleNotificationClick = async (notification: Notification) => {
         if (!notification.isRead) {
             try {
                 await customFetch(`/api/notifications/${notification._id}/read`, {
@@ -80,7 +89,7 @@ export default function Navbar() {
                     credentials: 'include'
                 });
                 setUnreadCount(prev => Math.max(0, prev - 1));
-                setNotifications(prev => prev.map(n => (n as { _id: string; isRead?: boolean })._id === notification._id ? { ...n, isRead: true } : n));
+                setNotifications(prev => prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n));
             } catch (e) { console.error(e); }
         }
         setShowNotifications(false);
