@@ -10,6 +10,24 @@ import { Search, Filter, X } from 'lucide-react';
 import { API_URL } from '@/lib/config';
 import { Button } from '@/components/ui/button';
 
+interface Movie {
+    _id: string;
+    name: string;
+    origin_name: string;
+    slug: string;
+    thumb_url: string;
+    year: number;
+    episode_current?: string;
+    quality?: string;
+    progress?: {
+        currentTime: number;
+        duration: number;
+        percentage: number;
+        episodeSlug: string;
+        episodeName: string;
+    };
+}
+
 function SearchContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -19,7 +37,7 @@ function SearchContent() {
     const queryKeyword = searchParams.get('q');
     const [searchQuery, setSearchQuery] = useState(queryKeyword || '');
 
-    const [movies, setMovies] = useState<Record<string, unknown>[]>([]);
+    const [movies, setMovies] = useState<Movie[]>([]);
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 24,

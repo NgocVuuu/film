@@ -7,7 +7,23 @@ import { API_URL } from '@/lib/config';
 
 export const runtime = 'edge';
 
-
+interface Movie {
+    _id: string;
+    name: string;
+    origin_name: string;
+    slug: string;
+    thumb_url: string;
+    year: number;
+    episode_current?: string;
+    quality?: string;
+    progress?: {
+        currentTime: number;
+        duration: number;
+        percentage: number;
+        episodeSlug: string;
+        episodeName: string;
+    };
+}
 
 interface ActorPageProps {
     params: Promise<{ name: string }>;
@@ -16,7 +32,7 @@ interface ActorPageProps {
 export default function ActorPage({ params }: ActorPageProps) {
     const { name } = use(params);
     const actorName = decodeURIComponent(name);
-    const [movies, setMovies] = useState<Record<string, unknown>[]>([]);
+    const [movies, setMovies] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
