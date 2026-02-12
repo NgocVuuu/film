@@ -42,6 +42,12 @@ function ProfileContent() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [changingPassword, setChangingPassword] = useState(false);
 
+    // Refresh user data on mount to get latest subscription info
+    useEffect(() => {
+        refresh();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     useEffect(() => {
         if (!authLoading && !user) {
             router.push('/login');
@@ -134,7 +140,6 @@ function ProfileContent() {
                                 alt={user.displayName} 
                                 className="w-16 h-16 rounded-full border-2 border-primary object-cover"
                             />
-                            <span className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">LV.1</span>
                         </div>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1">
@@ -150,16 +155,25 @@ function ProfileContent() {
                     </div>
 
                     <div className="mb-8">
-                        <div className="bg-surface-900/50 p-4 rounded-xl border border-white/10 flex flex-col justify-between h-32 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <Crown className="w-12 h-12"/>
+                        <div className={`p-4 rounded-xl border flex flex-col justify-between h-32 relative overflow-hidden group ${user.isPremium ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/30' : 'bg-surface-900/50 border-white/10'}`}>
+                            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <Crown className={`w-12 h-12 ${user.isPremium ? 'text-yellow-500' : 'text-gray-600'}`}/>
                             </div>
-                            <p className="text-gray-400 text-xs font-medium leading-relaxed relative z-10">
-                                {user.isPremium ? 'Thành viên cao cấp' : 'Bạn đang là thành viên miễn phí'}
-                            </p>
-                            <Button className="w-full bg-[#fbbf24] hover:bg-[#f59e0b] text-black text-xs h-8 font-bold mt-auto relative z-10 shadow-lg shadow-yellow-500/10">
-                                {user.isPremium ? 'Gia hạn' : 'Nâng cấp'} <span className="ml-1 text-[10px]">▲</span>
-                            </Button>
+                            <div className="relative z-10">
+                                <p className={`text-sm font-bold mb-1 ${user.isPremium ? 'text-yellow-400' : 'text-gray-300'}`}>
+                                    {user.isPremium ? 'Thành viên Premium' : 'Thành viên Miễn phí'}
+                                </p>
+                                <p className="text-gray-500 text-xs leading-relaxed">
+                                    {user.isPremium 
+                                        ? 'Cảm ơn bạn đã ủng hộ ad! Server còn chạy nhờ bạn đó 🙏' 
+                                        : 'Chiều lòng ad chút đi mà, tiền server đắt lắm 🥺'}
+                                </p>
+                            </div>
+                            <Link href="/pricing">
+                                <Button className="w-full bg-[#fbbf24] hover:bg-[#f59e0b] text-black text-xs h-8 font-bold mt-auto relative z-10 shadow-lg shadow-yellow-500/10">
+                                    {user.isPremium ? 'Gia hạn' : 'Nâng cấp'} <span className="ml-1 text-[10px]">▲</span>
+                                </Button>
+                            </Link>
                         </div>
                     </div>
 

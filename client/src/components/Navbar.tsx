@@ -9,7 +9,6 @@ import { customFetch } from '@/lib/api';
 
 export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
     const [showUserMenu, setShowUserMenu] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
@@ -125,10 +124,6 @@ export default function Navbar() {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
-
-    useEffect(() => {
-        // Debounce cleanup only, actual search moved to Search Page
-    }, [searchQuery]);
 
     // Click outside to close menus
     useEffect(() => {

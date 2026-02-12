@@ -11,7 +11,7 @@ exports.getPlans = async (req, res) => {
                 name: 'Premium - 1 Tháng',
                 tier: 'premium',
                 duration: 1,
-                price: 49000, // 49k VND
+                price: 19000,
                 features: [
                     'Xem phim không quảng cáo',
                     'Lưu tiến độ xem không giới hạn',
@@ -24,12 +24,12 @@ exports.getPlans = async (req, res) => {
                 name: 'Premium - 3 Tháng',
                 tier: 'premium',
                 duration: 3,
-                price: 129000, // 129k VND (save 18k)
-                originalPrice: 147000,
+                price: 39000,
+                originalPrice: 57000,
                 features: [
                     'Tất cả tính năng Premium',
-                    'Tiết kiệm 12% so với gói tháng',
-                    'Gia hạn tự động'
+                    'Tiết kiệm 31% so với gói tháng',
+                    'Cộng dồn thời gian premium'
                 ]
             },
             {
@@ -37,13 +37,28 @@ exports.getPlans = async (req, res) => {
                 name: 'Premium - 6 Tháng',
                 tier: 'premium',
                 duration: 6,
-                price: 239000, // 239k VND (save 55k)
-                originalPrice: 294000,
+                price: 69000,
+                originalPrice: 114000,
                 badge: 'Phổ biến',
                 features: [
                     'Tất cả tính năng Premium',
-                    'Tiết kiệm 19% so với gói tháng',
-                    'Gia hạn tự động'
+                    'Tiết kiệm 39% so với gói tháng',
+                    'Cộng dồn thời gian premium'
+                ]
+            },
+            {
+                id: 'premium-12m',
+                name: 'Premium - 1 Năm',
+                tier: 'premium',
+                duration: 12,
+                price: 129000,
+                originalPrice: 228000,
+                badge: 'Tốt nhất',
+                features: [
+                    'Tất cả tính năng Premium',
+                    'Tiết kiệm 43% so với gói tháng',
+                    'Cộng dồn thời gian premium',
+                    'Ưu đãi dành cho fan cứng'
                 ]
             }
         ];

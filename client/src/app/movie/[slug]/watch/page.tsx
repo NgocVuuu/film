@@ -331,13 +331,13 @@ export default function WatchPage() {
                         </div>
 
                         <div className="p-4 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-                            {filteredServers.map((server: any) => (
+                            {filteredServers.map((server: { server_name: string; server_data: { slug: string; name: string; link_m3u8: string; link_embed: string }[] }) => (
                                 <div key={server.server_name}>
                                     <h4 className="inline-block px-3 py-1 rounded bg-primary/20 text-primary text-xs font-bold mb-3 uppercase tracking-wider border border-primary/20">
                                         {getCleanServerName(server.server_name)}
                                     </h4>
                                     <div className="grid grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                                        {server.server_data.map((ep: any) => {
+                                        {server.server_data.map((ep: { slug: string; name: string; link_m3u8: string; link_embed: string }) => {
                                             const isActive = currentEpisode === ep;
                                             return (
                                                 <button

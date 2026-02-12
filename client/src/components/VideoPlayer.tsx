@@ -64,7 +64,7 @@ export default function VideoPlayer({
     const [showControls, setShowControls] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(false);
-    const [useEmbed, setUseEmbed] = useState(false);
+    const [useEmbed] = useState(false);
     const [hoverTime, setHoverTime] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<number>(0);
 
@@ -240,7 +240,7 @@ export default function VideoPlayer({
                     if (screen.orientation && (screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> }).lock) {
                         try {
                             await (screen.orientation as ScreenOrientation & { lock: (orientation: string) => Promise<void> }).lock('landscape');
-                        } catch (e) {
+                        } catch {
                             console.log('Orientation lock not supported/allowed');
                         }
                     }
@@ -266,22 +266,7 @@ export default function VideoPlayer({
     };
 
     // -- Rotation Logic (Fake Landscape for Mobile) --
-    const [isLandscape, setIsLandscape] = useState(false);
-
-    const toggleLandscape = () => {
-        setIsLandscape(!isLandscape);
-        if (!isLandscape) {
-            // Enter Landscape
-            if (screen.orientation && (screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> }).lock) {
-                try { (screen.orientation as ScreenOrientation & { lock: (orientation: string) => Promise<void> }).lock('landscape').catch(() => {}); } catch { }
-            }
-        } else {
-            // Exit
-            if (screen.orientation && (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock) {
-                try { (screen.orientation as ScreenOrientation & { unlock: () => void }).unlock(); } catch { }
-            }
-        }
-    };
+    const [isLandscape] = useState(false);
 
     // ... existing changeSpeed/changeQuality ...
 

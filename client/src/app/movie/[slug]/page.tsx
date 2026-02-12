@@ -59,7 +59,7 @@ export async function generateMetadata(
     };
 }
 
-export default async function Page({ params, searchParams }: Props) {
+export default async function Page({ params }: Props) {
     const slug = (await params).slug;
     const movie = await getMovie(slug);
 

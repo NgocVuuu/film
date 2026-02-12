@@ -137,6 +137,11 @@ exports.getCurrentUser = async (req, res) => {
         const userFull = await User.findById(user._id).select('password');
         const hasPassword = !!(userFull && userFull.password);
 
+        // Calculate isPremium from subscription
+        const isPremium = user.subscription && 
+                         user.subscription.tier === 'premium' && 
+                         user.subscription.status === 'active';
+
         res.json({
             success: true,
             data: {
@@ -147,6 +152,7 @@ exports.getCurrentUser = async (req, res) => {
                 avatar: user.avatar,
                 role: user.role,
                 subscription: user.subscription,
+                isPremium,
                 hasPassword
             }
         });

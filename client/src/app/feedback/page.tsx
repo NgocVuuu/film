@@ -33,7 +33,7 @@ export default function FeedbackPage() {
             toast.success('Cảm ơn bạn đã đóng góp ý kiến!');
             setSuccess(true);
             setFormData({ title: '', content: '', type: 'feature', email: '' });
-        } catch (error) {
+        } catch {
             toast.error('Có lỗi xảy ra, vui lòng thử lại sau.');
         } finally {
             setLoading(false);
@@ -77,7 +77,7 @@ export default function FeedbackPage() {
                                 <select 
                                     className="w-full bg-black/50 border border-white/10 rounded-lg h-10 px-3 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                                     value={formData.type}
-                                    onChange={(e) => setFormData({...formData, type: e.target.value as any})}
+                                    onChange={(e) => setFormData({...formData, type: e.target.value as 'feature' | 'content' | 'bug' | 'other'})}
                                 >
                                     <option value="feature">Đề xuất tính năng</option>
                                     <option value="content">Yêu cầu phim / Nội dung</option>

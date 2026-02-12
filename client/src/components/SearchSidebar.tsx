@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from './ui/button';
 import { ChevronDown, ChevronUp, Check, Filter } from 'lucide-react';
 
 export function SearchSidebar() {

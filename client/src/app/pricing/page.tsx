@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Crown, Check, Loader2, ArrowRight, X, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import Link from 'next/link';
 import { API_URL } from '@/lib/config';
 import { customFetch } from '@/lib/api';
 
@@ -83,7 +82,7 @@ export default function PricingPage() {
                     setShowModal(false);
                     setPaymentData(null);
                     await refresh(); // Refresh layout/user data
-                    router.push('/'); // Redirect home
+                    router.push('/profile'); // Redirect to profile to see updated subscription
                 }
             } catch (e) {
                 console.error('Polling error', e);
@@ -181,8 +180,11 @@ export default function PricingPage() {
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
                         Trải nghiệm <span className="text-gold-gradient">không giới hạn</span>
                     </h1>
-                    <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                    <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-2">
                         Thanh toán qua mã QR - Kích hoạt tự động sau 30 giây.
+                    </p>
+                    <p className="text-gray-500 text-sm max-w-xl mx-auto italic">
+                        Ủng hộ ad chút để duy trì web nhé, quả thật server đắt lắm 😭
                     </p>
                 </div>
 
@@ -258,9 +260,14 @@ export default function PricingPage() {
                 )}
 
                 {/* Disclaimer */}
-                <p className="text-center text-gray-500 mt-12">
-                    Hỗ trợ tất cả ngân hàng tại Việt Nam (VietQR).
-                </p>
+                <div className="text-center mt-12 space-y-2">
+                    <p className="text-gray-500 text-sm">
+                        Hỗ trợ tất cả ngân hàng tại Việt Nam (VietQR).
+                    </p>
+                    <p className="text-gray-600 text-xs italic">
+                        Mỗi sự ủng hộ của bạn giúp ad duy trì và cải thiện dịch vụ. Cảm ơn bạn rất nhiều! ❤️
+                    </p>
+                </div>
             </div>
 
             {/* Payment Modal */}

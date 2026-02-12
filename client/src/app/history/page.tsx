@@ -83,7 +83,7 @@ export default function HistoryPage() {
             try {
                 // TODO: Add API endpoint to clear all progress
                 toast.success('Tính năng xóa lịch sử đang được phát triển');
-            } catch (error) {
+            } catch {
                 toast.error('Có lỗi xảy ra');
             }
         } else {
