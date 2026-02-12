@@ -14,7 +14,7 @@ interface Movie {
     thumb_url: string;
     year: number;
     episode_current?: string;
-    progress?: any;
+    progress?: Record<string, unknown>;
 }
 
 function PhimLeContent() {

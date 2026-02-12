@@ -85,7 +85,7 @@ export default function ListDetailPage() {
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi cập nhật');
         } finally {
             setSavingName(false);
@@ -109,7 +109,7 @@ export default function ListDetailPage() {
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi xóa phim');
         }
     };

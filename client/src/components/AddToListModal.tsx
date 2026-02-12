@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Check, Loader2, ListPlus } from 'lucide-react';
+import { Plus, Check, Loader2 } from 'lucide-react';
 import { customFetch } from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -100,7 +100,7 @@ export function AddToListModal({ isOpen, onClose, movieId }: AddToListModalProps
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi tạo danh sách');
         } finally {
             setCreating(false);
@@ -131,7 +131,7 @@ export function AddToListModal({ isOpen, onClose, movieId }: AddToListModalProps
                 setLists(prev => prev.map(l => l._id === list._id ? { ...l, hasMovie: !isAdding } : l));
                 toast.error(data.message);
             }
-        } catch (error) {
+        } catch {
             // Revert
             setLists(prev => prev.map(l => l._id === list._id ? { ...l, hasMovie: !isAdding } : l));
             toast.error('Lỗi cập nhật');

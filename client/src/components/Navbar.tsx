@@ -1,29 +1,23 @@
 'use client';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader2, User, LogOut, Crown, Bell, Check, Heart, Clock, Filter, List, Film, MessageSquare } from 'lucide-react';
+import { Search, User, LogOut, Crown, Bell, Check, Heart, Clock, Filter, List, Film, MessageSquare } from 'lucide-react';
 import { Button } from './ui/button';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { API_URL } from '@/lib/config';
 import { customFetch } from '@/lib/api';
 
 export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
-    const [isSearching, setIsSearching] = useState(false);
-    const [showSuggestions, setShowSuggestions] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
-    const pathname = usePathname();
     const { user, loading, logout } = useAuth();
 
     // Notifications
-    const [notifications, setNotifications] = useState<any[]>([]);
+    const [notifications, setNotifications] = useState<Record<string, unknown>[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [showNotifications, setShowNotifications] = useState(false);
     const notificationRef = useRef<HTMLDivElement>(null);
@@ -80,7 +74,7 @@ export default function Navbar() {
         }
     }, [user]);
 
-    const handleNotificationClick = async (notification: any) => {
+    const handleNotificationClick = async (notification: { _id: string; isRead?: boolean; link?: string }) => {
         if (!notification.isRead) {
             try {
                 await customFetch(`/api/notifications/${notification._id}/read`, {
@@ -88,7 +82,7 @@ export default function Navbar() {
                     credentials: 'include'
                 });
                 setUnreadCount(prev => Math.max(0, prev - 1));
-                setNotifications(prev => prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n));
+                setNotifications(prev => prev.map(n => (n as { _id: string; isRead?: boolean })._id === notification._id ? { ...n, isRead: true } : n));
             } catch (e) { console.error(e); }
         }
         setShowNotifications(false);
@@ -157,23 +151,6 @@ export default function Navbar() {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (searchQuery.trim()) {
-            router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
-            setIsSearchOpen(false);
-            setSearchQuery('');
-            setShowSuggestions(false);
-        }
-    };
-
-    const handleSuggestionClick = (slug: string) => {
-        router.push(`/movie/${slug}`);
-        setSearchQuery('');
-        setShowSuggestions(false);
-        setIsSearchOpen(false);
-    };
 
     const handleLogout = () => {
         logout();

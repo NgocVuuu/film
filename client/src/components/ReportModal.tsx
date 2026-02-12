@@ -16,7 +16,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Flag, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { API_URL } from '@/lib/config';
 import { customFetch } from '@/lib/api';
 
 interface ReportModalProps {
@@ -59,7 +58,7 @@ export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName }: 
             } else {
                 toast.error(data.message || 'Có lỗi xảy ra.');
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi kết nối.');
         } finally {
             setLoading(false);
@@ -81,7 +80,7 @@ export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName }: 
                     <Flag className="w-4 h-4" /> Báo lỗi
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] max-w-[90vw] bg-surface-900 border-white/10 text-white">
+            <DialogContent className="sm:max-w-106.25 max-w-[90vw] bg-surface-900 border-white/10 text-white">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-yellow-500">
                         <AlertTriangle className="w-5 h-5" /> Báo lỗi phim

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Play, Loader2, StopCircle, RefreshCw, Trash2, ShieldAlert } from 'lucide-react';
+import { Play, Loader2, RefreshCw, Trash2, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';

@@ -1,8 +1,7 @@
 'use client';
 import { useRef } from 'react';
-import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
 
 interface Movie {
     _id: string;

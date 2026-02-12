@@ -85,7 +85,7 @@ export function FilterBar() {
         applyFilters(newFilters);
     };
 
-    const applyFilters = (currentFilters: any) => {
+    const applyFilters = (currentFilters: Record<string, string>) => {
         const params = new URLSearchParams(searchParams.toString());
 
         // Update params

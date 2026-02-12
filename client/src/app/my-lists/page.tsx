@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Film, Loader2, Play } from 'lucide-react';
+import { Plus, Trash2, Film, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -25,7 +24,6 @@ export default function MyListsPage() {
     const [newListName, setNewListName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [showCreateDialog, setShowCreateDialog] = useState(false);
-    const router = useRouter();
 
     useEffect(() => {
         fetchLists();
@@ -63,7 +61,7 @@ export default function MyListsPage() {
             } else {
                 toast.error(data.message || 'Lỗi tạo danh sách');
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi kết nối');
         } finally {
             setIsCreating(false);
@@ -85,7 +83,7 @@ export default function MyListsPage() {
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi xóa danh sách');
         }
     };
@@ -169,7 +167,7 @@ export default function MyListsPage() {
                                 </div>
                                 
                                 {/* Gradient Overlay & Content */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent flex flex-col justify-end p-3 md:p-4">
+                                <div className="absolute inset-0 bg-linear-to-t from-black via-black/60 to-transparent flex flex-col justify-end p-3 md:p-4">
                                     <div className="flex items-end justify-between gap-2">
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-bold text-white text-base md:text-lg truncate group-hover:text-primary transition-colors mb-0.5 md:mb-1">{list.name}</h3>

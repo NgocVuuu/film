@@ -9,10 +9,9 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'react-hot-toast';
 import { 
     User, Lock, Save, Loader2, LogOut, Crown, 
-    ChevronRight, FileText, Shield, MessageSquare, 
-    History, Monitor, Plus, ArrowLeft, Heart, Camera, Mail
+    ChevronRight, FileText, Shield, 
+    Plus, ArrowLeft, Mail
 } from 'lucide-react';
-import { API_URL } from '@/lib/config';
 import { customFetch } from '@/lib/api';
 
 function ProfileContent() {
@@ -68,7 +67,7 @@ function ProfileContent() {
             } else {
                 toast.error(data.message || 'Lỗi cập nhật.');
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi kết nối.');
         } finally {
             setUpdatingProfile(false);
@@ -101,7 +100,7 @@ function ProfileContent() {
             } else {
                 toast.error(data.message || 'Lỗi đổi mật khẩu.');
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi kết nối.');
         } finally {
             setChangingPassword(false);
@@ -360,7 +359,7 @@ export default function ProfilePage() {
     );
 }
 
-function MobileMenuLink({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
+function MobileMenuLink({ href, icon: Icon, label }: { href: string; icon: React.ComponentType<{ className?: string }>; label: string }) {
     return (
         <Link href={href} className="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors group border-b border-white/5 last:border-0">
             <div className="flex items-center gap-4">

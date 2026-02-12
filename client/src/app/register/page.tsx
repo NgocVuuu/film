@@ -4,14 +4,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Film, Loader2, Mail, Lock, User } from 'lucide-react';
+import { Loader2, Mail, Lock, User } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { API_URL } from '@/lib/config';
 
 export default function RegisterPage() {
     const router = useRouter();
-    const { login } = useAuth();
     const [formData, setFormData] = useState({
         displayName: '',
         email: '',
@@ -72,14 +71,18 @@ export default function RegisterPage() {
             } else {
                 toast.error(data.message || 'Đăng ký thất bại');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Register error:', error);
-            if (error.name === 'AbortError') {
-                toast.error('Yêu cầu quá lâu. Vui lòng thử lại.');
-            } else if (error.message?.includes('Failed to fetch')) {
-                toast.error('Không kết nối được server. Vui lòng kiểm tra kết nối.');
+            if (error instanceof Error) {
+                if (error.name === 'AbortError') {
+                    toast.error('Yêu cầu quá lâu. Vui lòng thử lại.');
+                } else if (error.message?.includes('Failed to fetch')) {
+                    toast.error('Không kết nối được server. Vui lòng kiểm tra kết nối.');
+                } else {
+                    toast.error(error.message || 'Lỗi kết nối');
+                }
             } else {
-                toast.error(error.message || 'Lỗi kết nối');
+                toast.error('Lỗi kết nối');
             }
         } finally {
             setLoading(false);

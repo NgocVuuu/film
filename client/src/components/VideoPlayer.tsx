@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize,
@@ -64,12 +64,12 @@ export default function VideoPlayer({
     const [showControls, setShowControls] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(false);
-    const [useEmbed, setUseEmbed] = useState(false); // New state for switching to embed
+    const [useEmbed, setUseEmbed] = useState(false);
     const [hoverTime, setHoverTime] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<number>(0);
 
     // Quality State
-    const [qualityLevels, setQualityLevels] = useState<any[]>([]);
+    const [qualityLevels, setQualityLevels] = useState<{ height: number; bitrate: number; index: number }[]>([]);
     const [currentQuality, setCurrentQuality] = useState(-1); // -1 is Auto
     const [showSettings, setShowSettings] = useState(false);
 
@@ -185,7 +185,7 @@ export default function VideoPlayer({
         }
         // Right side: Volume
         else {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as { MSStream?: unknown }).MSStream;
             if (isIOS) {
                 // iOS does not allow volume control via JS
                 // Show feedback but don't change volume
@@ -214,32 +214,32 @@ export default function VideoPlayer({
 
             // Check if standard fullscreen calls are available on container
             const requestFS = container.requestFullscreen ||
-                (container as any).webkitRequestFullscreen ||
-                (container as any).mozRequestFullScreen ||
-                (container as any).msRequestFullscreen;
+                (container as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen ||
+                (container as HTMLElement & { mozRequestFullScreen?: () => Promise<void> }).mozRequestFullScreen ||
+                (container as HTMLElement & { msRequestFullscreen?: () => Promise<void> }).msRequestFullscreen;
 
             const exitFS = document.exitFullscreen ||
-                (document as any).webkitExitFullscreen ||
-                (document as any).mozCancelFullScreen ||
-                (document as any).msExitFullscreen;
+                (document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen ||
+                (document as Document & { mozCancelFullScreen?: () => Promise<void> }).mozCancelFullScreen ||
+                (document as Document & { msExitFullscreen?: () => Promise<void> }).msExitFullscreen;
 
             // iOS Safari often doesn't support container fullscreen, acts on video element
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
 
-            if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+            if (!document.fullscreenElement && !(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement) {
                 // ENTER FULLSCREEN
-                if (isIOS && (video as any).webkitEnterFullscreen) {
+                if (isIOS && (video as HTMLVideoElement & { webkitEnterFullscreen?: () => void }).webkitEnterFullscreen) {
                     // Use native iOS fullscreen
-                    (video as any).webkitEnterFullscreen();
+                    (video as HTMLVideoElement & { webkitEnterFullscreen: () => void }).webkitEnterFullscreen();
                 } else if (requestFS) {
                     // Use standard/standard-ish container fullscreen
                     await requestFS.call(container);
                     setIsFullscreen(true);
 
                     // Attempt Orientation Lock (Android)
-                    if (screen.orientation && (screen.orientation as any).lock) {
+                    if (screen.orientation && (screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> }).lock) {
                         try {
-                            await (screen.orientation as any).lock('landscape');
+                            await (screen.orientation as ScreenOrientation & { lock: (orientation: string) => Promise<void> }).lock('landscape');
                         } catch (e) {
                             console.log('Orientation lock not supported/allowed');
                         }
@@ -249,14 +249,14 @@ export default function VideoPlayer({
                 // EXIT FULLSCREEN
                 if (exitFS) {
                     await exitFS.call(document);
-                } else if ((video as any).webkitExitFullscreen) {
-                    (video as any).webkitExitFullscreen();
+                } else if ((video as HTMLVideoElement & { webkitExitFullscreen?: () => void }).webkitExitFullscreen) {
+                    (video as HTMLVideoElement & { webkitExitFullscreen: () => void }).webkitExitFullscreen();
                 }
                 setIsFullscreen(false);
 
                 // Unlock Orientation
-                if (screen.orientation && (screen.orientation as any).unlock) {
-                    try { (screen.orientation as any).unlock(); } catch (e) { }
+                if (screen.orientation && (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock) {
+                    try { (screen.orientation as ScreenOrientation & { unlock: () => void }).unlock(); } catch { }
                 }
             }
 
@@ -272,13 +272,13 @@ export default function VideoPlayer({
         setIsLandscape(!isLandscape);
         if (!isLandscape) {
             // Enter Landscape
-            if (screen.orientation && (screen.orientation as any).lock) {
-                try { (screen.orientation as any).lock('landscape'); } catch (e) { }
+            if (screen.orientation && (screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> }).lock) {
+                try { (screen.orientation as ScreenOrientation & { lock: (orientation: string) => Promise<void> }).lock('landscape').catch(() => {}); } catch { }
             }
         } else {
             // Exit
-            if (screen.orientation && (screen.orientation as any).unlock) {
-                try { (screen.orientation as any).unlock(); } catch (e) { }
+            if (screen.orientation && (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock) {
+                try { (screen.orientation as ScreenOrientation & { unlock: () => void }).unlock(); } catch { }
             }
         }
     };
@@ -333,7 +333,7 @@ export default function VideoPlayer({
             }
         };
         const onFullscreenChange = () => {
-            const isFS = !!document.fullscreenElement || !!(document as any).webkitFullscreenElement;
+            const isFS = !!document.fullscreenElement || !!(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement;
             setIsFullscreen(isFS);
             // If entering native TV/PC fullscreen, turn off our fake landscape
             if (isFS) setIsLandscape(false);
@@ -452,7 +452,7 @@ export default function VideoPlayer({
             ref={containerRef}
             className={`relative bg-black border border-border shadow-2xl shadow-primary/10 group select-none overflow-hidden transition-all duration-300
                 ${isLandscape
-                    ? 'fixed inset-0 z-[9999] w-[100vh] h-[100vw] rotate-90 origin-center top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-none'
+                    ? 'fixed inset-0 z-9999 w-[100vh] h-[100vw] rotate-90 origin-center top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-none'
                     : 'w-full h-full rounded-lg'
                 }`}
             onMouseMove={handleMouseMove}
@@ -514,7 +514,7 @@ export default function VideoPlayer({
             )}
 
             {/* Controls Overlay */}
-            <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
 
                 {/* Progress Bar */}
                 <div
@@ -602,7 +602,7 @@ export default function VideoPlayer({
 
                             {/* Settings Popup */}
                             {showSettings && (
-                                <div className={`absolute bottom-12 right-0 bg-black/90 border border-white/20 rounded-lg p-3 min-w-[200px] text-white space-y-3 ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+                                <div className={`absolute bottom-12 right-0 bg-black/90 border border-white/20 rounded-lg p-3 min-w-50 text-white space-y-3 ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
                                     {/* Speed */}
                                     <div>
                                         <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tốc độ</p>

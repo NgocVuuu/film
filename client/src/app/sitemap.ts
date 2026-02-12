@@ -36,7 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const res = await fetch(`${API_URL}/api/movies?limit=200`); // Fetch recent 200 movies
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
-            movieRoutes = data.data.map((movie: any) => {
+            movieRoutes = data.data.map((movie: { slug: string; updatedAt?: string; createdAt?: string }) => {
                 const dateString = movie.updatedAt || movie.createdAt;
                 let lastModifiedDate = new Date(); // Default to current date
 

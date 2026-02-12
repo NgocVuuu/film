@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
-import { Play, ArrowLeft, Star, Clock, AlertTriangle, Crown } from 'lucide-react';
+import { Play, ArrowLeft, AlertTriangle, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
@@ -53,7 +53,7 @@ export default function WatchPage() {
     const [loading, setLoading] = useState(true);
 
     // Player State
-    const [currentEpisode, setCurrentEpisode] = useState<any>(null);
+    const [currentEpisode, setCurrentEpisode] = useState<{ name: string; slug: string; link_m3u8: string; link_embed: string } | null>(null);
     const [currentServerName, setCurrentServerName] = useState<string>('');
     const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
     const [startTime, setStartTime] = useState<number>(0);
@@ -61,7 +61,7 @@ export default function WatchPage() {
     // Source State
     const [availableSources, setAvailableSources] = useState<string[]>([]);
     const [currentSource, setCurrentSource] = useState<string>('');
-    const [filteredServers, setFilteredServers] = useState<any[]>([]);
+    const [filteredServers, setFilteredServers] = useState<Episode[]>([]);
 
     // Get query params
     const episodeParam = searchParams.get('episode');
@@ -89,7 +89,7 @@ export default function WatchPage() {
 
         // 1. Identify Sources
         const sources = new Set<string>();
-        movie.episodes.forEach((ep: any) => {
+        movie.episodes.forEach((ep: Episode) => {
             const name = ep.server_name;
             if (name.startsWith('NC -')) sources.add('NguonC');
             else if (name.startsWith('KK -')) sources.add('KKPhim');
@@ -122,7 +122,7 @@ export default function WatchPage() {
             };
             const prefix = prefixMap[activeSource];
 
-            const filtered = movie.episodes.filter((ep: any) => {
+            const filtered = movie.episodes.filter((ep: Episode) => {
                 if (activeSource === 'Khác') {
                     return !ep.server_name.startsWith('NC -') &&
                         !ep.server_name.startsWith('KK -') &&
@@ -140,7 +140,7 @@ export default function WatchPage() {
                 // Try to find episode from URL param
                 if (episodeParam) {
                     for (const server of filtered) {
-                        const found = server.server_data.find((ep: any) => ep.slug === episodeParam);
+                        const found = server.server_data.find((ep: { slug: string }) => ep.slug === episodeParam);
                         if (found) {
                             selectedEpisode = found;
                             selectedServer = server.server_name;
@@ -173,7 +173,7 @@ export default function WatchPage() {
 
     }, [movie, currentSource, episodeParam, timestampParam]);
 
-    const handleEpisodeClick = (serverName: string, episode: any) => {
+    const handleEpisodeClick = (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string }) => {
         setCurrentServerName(serverName);
         setCurrentEpisode(episode);
         setShouldAutoPlay(true);

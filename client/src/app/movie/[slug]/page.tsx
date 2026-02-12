@@ -23,7 +23,7 @@ async function getMovie(slug: string) {
 }
 
 export async function generateMetadata(
-    { params, searchParams }: Props,
+    { params }: Props,
     parent: ResolvingMetadata
 ): Promise<Metadata> {
     const slug = (await params).slug;

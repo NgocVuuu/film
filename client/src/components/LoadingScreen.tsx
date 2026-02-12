@@ -108,7 +108,7 @@ export default function LoadingScreen() {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] bg-deep-black flex flex-col items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 bg-deep-black flex flex-col items-center justify-center p-4">
 
             {/* Main Visual */}
             <div className="relative mb-8">
@@ -121,7 +121,7 @@ export default function LoadingScreen() {
             </div>
 
             {/* Logo Text */}
-            <h2 className="text-3xl md:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500 mb-2">
+            <h2 className="text-3xl md:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-r from-white via-gray-200 to-gray-500 mb-2">
                 PCHILL
             </h2>
 
@@ -132,13 +132,13 @@ export default function LoadingScreen() {
                     style={{ width: `${progress}%` }}
                 ></div>
                 {/* Shimmer effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" style={{ transform: 'skewX(-20deg)' }}></div>
+                <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent animate-shimmer" style={{ transform: 'skewX(-20deg)' }}></div>
             </div>
 
             {/* Message Box */}
             <div className={`max-w-lg text-center px-6 py-4 rounded-xl border backdrop-blur-sm animate-fade-in-up ${getThemeColors()}`}>
                 <p className="font-bold text-lg md:text-xl italic">
-                    "{message}"
+                    &quot;{message}&quot;
                 </p>
             </div>
 

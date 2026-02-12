@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from './ui/button';
-import { ChevronDown, ChevronUp, Filter, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, Filter } from 'lucide-react';
 
 export function SearchSidebar() {
     const router = useRouter();

@@ -93,14 +93,18 @@ function LoginContent() {
             } else {
                 toast.error(data.message || 'Gửi lại thất bại');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Resend error:', error);
-            if (error.name === 'AbortError') {
-                toast.error('Yêu cầu quá lâu. Vui lòng thử lại.');
-            } else if (error.message?.includes('Failed to fetch')) {
-                toast.error('Không kết nối được server.');
+            if (error instanceof Error) {
+                if (error.name === 'AbortError') {
+                    toast.error('Yêu cầu quá lâu. Vui lòng thử lại.');
+                } else if (error.message?.includes('Failed to fetch')) {
+                    toast.error('Không kết nối được server.');
+                } else {
+                    toast.error(error.message || 'Lỗi kết nối');
+                }
             } else {
-                toast.error(error.message || 'Lỗi kết nối');
+                toast.error('Lỗi kết nối');
             }
         } finally {
             setResendLoading(false);
@@ -108,7 +112,7 @@ function LoginContent() {
     };
 
     // Handle Google Login
-    const handleGoogleSuccess = async (credentialResponse: any) => {
+    const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
         try {
             setLoading(true);
             const response = await fetch(`${API_URL}/api/auth/google`, {
@@ -139,14 +143,6 @@ function LoginContent() {
     };
 
     const GOOGLE_CLIENT_ID = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
-
-    const [width, setWidth] = useState('100%');
-
-    useEffect(() => {
-        // Dynamic width calculation or just set to a fixed pixel width if 100% fails
-        // Google Sign-In button sometimes complains about 100% width
-        // Let's try to not set width in props and handle container width instead
-    }, []);
 
     return (
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>

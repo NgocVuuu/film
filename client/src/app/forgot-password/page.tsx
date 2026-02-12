@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Film, Loader2, Mail, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { API_URL } from '@/lib/config';

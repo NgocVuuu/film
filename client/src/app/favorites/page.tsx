@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Trash2, Loader2 } from 'lucide-react';
 
 export default function FavoritesPage() {
-    const [favorites, setFavorites] = useState<any[]>([]);
+    const [favorites, setFavorites] = useState<Record<string, unknown>[]>([]);
     const { user, loading: authLoading } = useAuth();
     const [loading, setLoading] = useState(true);
 
@@ -29,7 +29,7 @@ export default function FavoritesPage() {
                     const data = await res.json();
                     if (data.success) {
                         // Backend returns favorites which has 'movie' populated. Map it to flat structure or meaningful structure
-                        const mapped = data.data.map((fav: any) => ({
+                        const mapped = data.data.map((fav: Record<string, unknown>) => ({
                             ...fav.movie,
                             // Ensure properties exist
                             thumb_url: fav.movie?.thumb_url || fav.thumbUrl,

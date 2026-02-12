@@ -16,7 +16,7 @@ interface ActorPageProps {
 export default function ActorPage({ params }: ActorPageProps) {
     const { name } = use(params);
     const actorName = decodeURIComponent(name);
-    const [movies, setMovies] = useState<any[]>([]);
+    const [movies, setMovies] = useState<Record<string, unknown>[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {

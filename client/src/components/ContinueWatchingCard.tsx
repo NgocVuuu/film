@@ -43,7 +43,7 @@ export function ContinueWatchingCard({ movie }: ContinueWatchingCardProps) {
         <Link
             href={watchUrl}
             className="group relative block w-full rounded-md overflow-hidden bg-card border border-border shadow-md hover:shadow-primary/30 transition-all duration-300 hover:scale-105"
-            onClick={(e) => {
+            onClick={() => {
                 console.log('[ContinueWatchingCard] Click! Navigating to:', watchUrl);
             }}
         >

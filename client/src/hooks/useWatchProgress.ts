@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { API_URL } from '@/lib/config';
 import { customFetch } from '@/lib/api';
 
 interface WatchProgressProps {
@@ -39,7 +38,7 @@ export function useWatchProgress({
                     const data = await response.json();
                     if (data.success && data.data.length > 0) {
                         // Find progress for this specific episode
-                        const progress = data.data.find((p: any) => p.episodeSlug === episodeSlug);
+                        const progress = data.data.find((p: { episodeSlug?: string; currentTime?: number }) => p.episodeSlug === episodeSlug);
                         if (progress && progress.currentTime > 10) { // Only restore if > 10s
                             setInitialProgress(progress.currentTime);
                         }
@@ -65,7 +64,7 @@ export function useWatchProgress({
             const percentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
             // Allow update if movie exists in history
-            const existingIndex = history.findIndex((h: any) => h.slug === movieSlug);
+            const existingIndex = history.findIndex((h: { slug?: string }) => h.slug === movieSlug);
 
             if (existingIndex !== -1) {
                 // Update existing

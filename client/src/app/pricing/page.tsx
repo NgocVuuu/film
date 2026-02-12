@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
-import { Crown, Check, Loader2, ArrowRight, X, Copy, CheckCircle2 } from 'lucide-react';
+import { Crown, Check, Loader2, ArrowRight, X, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -46,6 +46,18 @@ export default function PricingPage() {
         fetchPlans();
         return () => stopPolling();
     }, []);
+
+    // Prevent body scroll when modal is open
+    useEffect(() => {
+        if (showModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [showModal]);
 
     // Polling for payment status
     useEffect(() => {
@@ -120,7 +132,6 @@ export default function PricingPage() {
             setProcessingPlan(plan.id);
 
             // Get token for auth header if using manual fetch wrapper or rely on cookies if setup
-            const token = localStorage.getItem('token');
             const response = await customFetch(`/api/subscriptions/create-payment`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -254,8 +265,8 @@ export default function PricingPage() {
 
             {/* Payment Modal */}
             {showModal && paymentData && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                    <div className="bg-surface-900 border border-white/10 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl relative flex flex-col md:flex-row">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-surface-900 border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col md:flex-row my-8">
                         <button
                             onClick={() => setShowModal(false)}
                             className="absolute top-4 right-4 text-gray-400 hover:text-white p-2 z-10"
@@ -264,32 +275,32 @@ export default function PricingPage() {
                         </button>
 
                         {/* Left: QR Code */}
-                        <div className="w-full md:w-1/2 bg-white p-8 flex flex-col items-center justify-center text-center">
-                            <h3 className="text-black font-bold text-xl mb-4">Quét mã để thanh toán</h3>
-                            <div className="border-4 border-black p-2 rounded-xl mb-4">
+                        <div className="w-full md:w-1/3 bg-white p-4 flex flex-col items-center justify-center text-center shrink-0">
+                            <h3 className="text-black font-bold text-base mb-2">Quét mã để thanh toán</h3>
+                            <div className="border-4 border-black p-2 rounded-xl mb-2">
                                 <img
                                     src={paymentData.qrUrl}
                                     alt="VietQR Payment"
-                                    className="w-full max-w-62.5 aspect-square object-contain"
+                                    className="w-full max-w-44 aspect-square object-contain"
                                 />
                             </div>
-                            <p className="text-gray-600 text-sm mb-4">
+                            <p className="text-gray-600 text-xs mb-2">
                                 Sử dụng App Ngân hàng hoặc Ví MoMo/ZaloPay
                             </p>
-                            <div className="flex items-center gap-2 text-green-600 font-bold bg-green-50 px-4 py-2 rounded-full animate-pulse">
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                            <div className="flex items-center gap-2 text-green-600 font-semibold bg-green-50 px-3 py-1.5 rounded-full animate-pulse text-xs">
+                                <Loader2 className="w-3 h-3 animate-spin" />
                                 Đang chờ thanh toán...
                             </div>
                         </div>
 
                         {/* Right: Info */}
-                        <div className="w-full md:w-1/2 p-8 bg-surface-800 text-white flex flex-col gap-6">
+                        <div className="w-full md:w-2/3 p-6 bg-surface-800 text-white flex flex-col gap-4 overflow-y-auto">
                             <div>
-                                <h3 className="text-xl font-bold mb-1">Thông tin chuyển khoản</h3>
-                                <p className="text-gray-400 text-sm">Nếu không quét được mã, bạn có thể chuyển khoản thủ công.</p>
+                                <h3 className="text-lg font-bold mb-1">Thông tin chuyển khoản</h3>
+                                <p className="text-gray-400 text-xs">Nếu không quét được mã, bạn có thể chuyển khoản thủ công.</p>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 <div className="bg-black/30 p-4 rounded-lg border border-white/5">
                                     <p className="text-gray-400 text-xs uppercase mb-1">Ngân hàng</p>
                                     <p className="font-mono font-bold text-lg">{paymentData.bankInfo.bankCode}</p>

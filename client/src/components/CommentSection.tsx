@@ -28,10 +28,9 @@ interface Comment {
 
 interface CommentSectionProps {
     movieSlug: string;
-    onRatingChange?: (newRating: number, newCount: number) => void;
 }
 
-export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProps) {
+export function CommentSection({ movieSlug }: CommentSectionProps) {
     const { user } = useAuth();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
@@ -133,7 +132,7 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
             } else {
                 toast.error(data.message || 'Lỗi khi gửi bình luận');
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi kết nối');
         } finally {
             setSubmitting(false);
@@ -160,7 +159,7 @@ export function CommentSection({ movieSlug, onRatingChange }: CommentSectionProp
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi khi xóa');
         }
     };

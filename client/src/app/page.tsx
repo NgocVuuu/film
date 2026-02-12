@@ -6,7 +6,6 @@ import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
 import { LazyMovieSection } from '@/components/LazyMovieSection';
 import { TrendingCarousel } from '@/components/TrendingCarousel';
 import LoadingScreen from '@/components/LoadingScreen';
-import { API_URL } from '@/lib/config';
 import { customFetch } from '@/lib/api';
 
 interface Movie {
@@ -130,7 +129,7 @@ export default function Home() {
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
                 {continueWatchingMovies.filter(m => m.progress).map((movie) => (
                   <div key={movie._id} className="shrink-0 w-40 snap-start">
-                    <ContinueWatchingCard movie={movie as any} />
+                    <ContinueWatchingCard movie={movie as Movie} />
                   </div>
                 ))}
               </div>

@@ -19,7 +19,7 @@ function SearchContent() {
     const queryKeyword = searchParams.get('q');
     const [searchQuery, setSearchQuery] = useState(queryKeyword || '');
 
-    const [movies, setMovies] = useState<any[]>([]);
+    const [movies, setMovies] = useState<Record<string, unknown>[]>([]);
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 24,
@@ -82,14 +82,7 @@ function SearchContent() {
 
         // If we want to support keyword search + filters, we should probably stick to DB search for filters.
 
-        const hasFilters = searchParams.has('category') ||
-            searchParams.has('country') ||
-            searchParams.has('year') ||
-            searchParams.has('status') ||
-            searchParams.has('sort') ||
-            searchParams.has('page');
-
-        let endpoint = `${API_URL}/api/movies?${queryString}`; // Default to DB filter
+        const endpoint = `${API_URL}/api/movies?${queryString}`; // Default to DB filter
 
         // If purely keyword search without filters (except maybe page?), use the hybrid search
         // But wait, the user wants "Advanced Search & Filter".
@@ -208,7 +201,7 @@ function SearchContent() {
                             <div className="flex items-center justify-between gap-4 w-full md:w-auto">
                                 <h1 className="text-2xl font-bold text-white">
                                     {queryKeyword ? (
-                                        <>Kết quả tìm kiếm: <span className="text-primary">"{queryKeyword}"</span></>
+                                        <>Kết quả tìm kiếm: <span className="text-primary">&quot;{queryKeyword}&quot;</span></>
                                     ) : (
                                         'Khám phá phim'
                                     )}

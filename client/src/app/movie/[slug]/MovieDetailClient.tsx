@@ -2,13 +2,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Play, Calendar, Star, Clock, Info, Bookmark, ListPlus } from 'lucide-react';
+import { Play, Calendar, Star, Clock, Info, ListPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommentSection } from '@/components/CommentSection';
-import { ReportModal } from '@/components/ReportModal';
 import { AddToListModal } from '@/components/AddToListModal';
 import { useAuth } from '@/contexts/auth-context';
-import LoadingScreen from '@/components/LoadingScreen';
 import { API_URL } from '@/lib/config';
 import { getAuthToken } from '@/lib/api';
 
@@ -60,7 +58,6 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     const [movie, setMovie] = useState<MovieDetail | null>(initialMovie);
     const [loading, setLoading] = useState(!initialMovie);
     const [isFavorite, setIsFavorite] = useState(false);
-    const [isWatchLater, setIsWatchLater] = useState(false);
     const [showListModal, setShowListModal] = useState(false);
 
     useEffect(() => {
@@ -94,7 +91,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
         syncUserData();
     }, [slug, user, initialMovie]);
 
-    const processUserData = async (movieData: any) => {
+    const processUserData = async (movieData: MovieDetail) => {
         if (!movieData) return;
 
         addToHistory(movieData);
@@ -109,13 +106,12 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                 const favRes = await fetch(`${API_URL}/api/favorites/${movieData.slug}/check`, { credentials: 'include', headers });
                 const favData = await favRes.json();
                 setIsFavorite(favData.isFavorite);
-                setIsWatchLater(favData.isWatchLater);
             } catch (e) {
                 console.error('Error checking favorite:', e);
             }
         } else {
             const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-            const isFav = favorites.some((fav: any) => fav.slug === movieData.slug);
+            const isFav = favorites.some((fav: { slug: string }) => fav.slug === movieData.slug);
             setIsFavorite(isFav);
         }
     }
@@ -133,7 +129,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                     year: movieData.year,
                     viewedAt: new Date().toISOString()
                 },
-                ...history.filter((h: any) => h.slug !== movieData.slug)
+                ...history.filter((h: { slug: string }) => h.slug !== movieData.slug)
             ].slice(0, 50);
             localStorage.setItem('history', JSON.stringify(newHistory));
         } catch (error) {
@@ -173,7 +169,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
             try {
                 const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
                 if (isFavorite) {
-                    const newFavs = favorites.filter((fav: any) => fav.slug !== movie.slug);
+                    const newFavs = favorites.filter((fav: { slug: string }) => fav.slug !== movie.slug);
                     localStorage.setItem('favorites', JSON.stringify(newFavs));
                     setIsFavorite(false);
                 } else {
@@ -192,33 +188,6 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
             } catch (error) {
                 console.error('Error saving favorites:', error);
             }
-        }
-    };
-
-    const toggleWatchLater = async () => {
-        if (!movie || !user) return; // Only for logged in users
-
-        try {
-            const token = getAuthToken();
-            const headers: Record<string, string> = {};
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-            if (isWatchLater) {
-                await fetch(`${API_URL}/api/favorites/${movie.slug}?type=watch_later`, { method: 'DELETE', credentials: 'include', headers });
-                setIsWatchLater(false);
-            } else {
-                headers['Content-Type'] = 'application/json';
-                await fetch(`${API_URL}/api/favorites`, {
-                    method: 'POST',
-                    headers,
-                    credentials: 'include',
-                    body: JSON.stringify({ slug: movie.slug, type: 'watch_later' })
-                });
-                setIsWatchLater(true);
-            }
-        } catch (e) {
-            console.error(e);
         }
     };
 
@@ -352,17 +321,6 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                             title="Lưu vào danh sách"
                                         >
                                             <ListPlus className="w-5 h-5 md:w-6 md:h-6" />
-                                        </Button>
-                                    )}
-
-                                    {user && (
-                                        <Button
-                                            variant="outline"
-                                            onClick={toggleWatchLater}
-                                            className={`h-10 md:h-12 px-6 border-2 border-white/20 hover:bg-white/10 text-white text-base md:text-lg font-bold rounded-full backdrop-blur-sm transition-all ${isWatchLater ? 'border-blue-500 text-blue-500' : ''}`}
-                                            title="Xem lại sau"
-                                        >
-                                            <Bookmark className={`w-5 h-5 md:w-6 md:h-6 ${isWatchLater ? 'fill-current' : ''}`} />
                                         </Button>
                                     )}
                                 </div>

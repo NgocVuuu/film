@@ -5,7 +5,6 @@ import { Button } from './ui/button';
 import { Film, Loader2, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { API_URL } from '@/lib/config';
 import { customFetch } from '@/lib/api';
 
 interface RequestMovieButtonProps {

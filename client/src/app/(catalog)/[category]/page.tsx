@@ -17,7 +17,7 @@ interface CatalogPageProps {
 export default function CatalogPage({ params }: CatalogPageProps) {
     const { category } = use(params);
     const categorySlug = category;
-    const [movies, setMovies] = useState<any[]>([]);
+    const [movies, setMovies] = useState<Record<string, unknown>[]>([]);
     const [loading, setLoading] = useState(true);
     const typeMap: Record<string, string> = {
         'phim-bo': 'series',

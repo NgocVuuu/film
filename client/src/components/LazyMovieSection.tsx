@@ -4,7 +4,7 @@ import { MovieCarousel } from './MovieCarousel';
 
 interface LazyMovieSectionProps {
     title: string;
-    movies: any[];
+    movies: Record<string, unknown>[];
     viewAllLink?: string;
 }
 

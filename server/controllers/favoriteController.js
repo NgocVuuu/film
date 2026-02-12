@@ -50,15 +50,14 @@ exports.checkFavorite = async (req, res) => {
         const { slug } = req.params;
         const userId = req.user ? req.user._id : null;
 
-        if (!userId) return res.json({ success: true, isFavorite: false, isWatchLater: false });
+        if (!userId) return res.json({ success: true, isFavorite: false });
 
         const favorite = await Favorite.findOne({ user: userId, movieSlug: slug, type: 'favorite' });
-        const watchLater = await Favorite.findOne({ user: userId, movieSlug: slug, type: 'watch_later' });
 
-        res.json({ success: true, isFavorite: !!favorite, isWatchLater: !!watchLater });
+        res.json({ success: true, isFavorite: !!favorite });
     } catch (err) {
         // Silent fail for check status
-        res.json({ success: true, isFavorite: false, isWatchLater: false });
+        res.json({ success: true, isFavorite: false });
     }
 };
 

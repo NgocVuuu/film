@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Upload, Loader2, CheckCircle } from 'lucide-react';
-import { customFetch } from '@/lib/api';
+import { Send, Loader2, CheckCircle } from 'lucide-react';
+
 import { toast } from 'react-hot-toast';
 
 export default function FeedbackPage() {

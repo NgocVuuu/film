@@ -5,13 +5,12 @@ import { EmptyState } from '@/components/EmptyState';
 import { Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
-import { API_URL } from '@/lib/config';
 import { customFetch } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 export default function HistoryPage() {
     const { user } = useAuth();
-    const [movies, setMovies] = useState<any[]>([]);
+    const [movies, setMovies] = useState<Record<string, unknown>[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchHistory = async () => {
@@ -40,8 +39,8 @@ export default function HistoryPage() {
                 if (data.success && data.data && data.data.length > 0) {
                     // Backend returns WatchProgress objects directly
                     const moviesWithProgress = data.data
-                        .filter((item: any) => item.movieSlug && item.movieName) // Ensure valid data
-                        .map((item: any) => ({
+                        .filter((item: Record<string, unknown>) => item.movieSlug && item.movieName) // Ensure valid data
+                        .map((item: Record<string, unknown>) => ({
                             _id: item.movieId || item.movieSlug,
                             name: item.movieName,
                             slug: item.movieSlug,
@@ -64,8 +63,8 @@ export default function HistoryPage() {
                 console.error('[HistoryPage] Response not OK:', response.status);
                 setMovies([]);
             }
-        } catch (error) {
-            console.error('[HistoryPage] Error fetching history:', error);
+        } catch {
+            console.error('[HistoryPage] Error fetching history');
             // Don't fallback to localStorage for logged-in users - show empty state
             setMovies([]);
         } finally {
