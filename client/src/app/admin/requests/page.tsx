@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Check, X, Loader2, Film, TrendingUp, Download } from 'lucide-react';
+import { X, Loader2, Film, TrendingUp, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
