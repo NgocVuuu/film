@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { XCircle, Loader2, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
@@ -26,11 +26,7 @@ export default function AdminSubscriptionsPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    useEffect(() => {
-        fetchSubscriptions();
-    }, [page, filter]);
-
-    const fetchSubscriptions = async () => {
+    const fetchSubscriptions = useCallback(async () => {
         try {
             setLoading(true);
             const response = await customFetch(
@@ -51,7 +47,11 @@ export default function AdminSubscriptionsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, filter]);
+
+    useEffect(() => {
+        fetchSubscriptions();
+    }, [fetchSubscriptions]);
 
     const handleCancelSubscription = async (userId: string) => {
         if (!confirm('Hủy đăng ký này? User sẽ mất quyền Premium ngay lập tức.')) return;

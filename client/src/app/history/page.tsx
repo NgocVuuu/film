@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
 import { EmptyState } from '@/components/EmptyState';
 import { Clock, Trash2 } from 'lucide-react';
@@ -41,7 +41,7 @@ export default function HistoryPage() {
     const [movies, setMovies] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchHistory = async () => {
+    const fetchHistory = useCallback(async () => {
         if (!user) {
             // If not logged in, use localStorage fallback
             const stored = JSON.parse(localStorage.getItem('history') || '[]');
@@ -100,11 +100,11 @@ export default function HistoryPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
         fetchHistory();
-    }, [user]);
+    }, [fetchHistory]);
 
     const clearHistory = async () => {
         if (!confirm('Bạn có chắc muốn xóa toàn bộ lịch sử?')) return;

@@ -1,6 +1,6 @@
 'use client';
 import { Suspense } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -31,11 +31,7 @@ function HoatHinhContent() {
     const [loading, setLoading] = useState(true);
     const [totalPages, setTotalPages] = useState(1);
 
-    useEffect(() => {
-        fetchMovies();
-    }, [page]);
-
-    const fetchMovies = async () => {
+    const fetchMovies = useCallback(async () => {
         setLoading(true);
         try {
             const res = await fetch(
@@ -52,7 +48,11 @@ function HoatHinhContent() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page]);
+
+    useEffect(() => {
+        fetchMovies();
+    }, [fetchMovies]);
 
     if (loading) return <LoadingScreen />;
 

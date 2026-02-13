@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { X, Loader2, Film, TrendingUp, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
@@ -27,11 +27,7 @@ export default function AdminRequestsPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    useEffect(() => {
-        fetchRequests();
-    }, [page, filter]);
-
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         try {
             setLoading(true);
             const response = await customFetch(
@@ -52,7 +48,11 @@ export default function AdminRequestsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, filter]);
+
+    useEffect(() => {
+        fetchRequests();
+    }, [fetchRequests]);
 
     const handleApprove = async (requestId: string) => {
         try {

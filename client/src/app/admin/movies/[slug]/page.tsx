@@ -2,7 +2,7 @@
 
 export const runtime = 'edge';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import { customFetch } from '@/lib/api';
@@ -71,7 +71,7 @@ interface EditMoviePageProps {
 export default function EditMoviePage({ params }: EditMoviePageProps) {
     const { slug } = use(params);
     const router = useRouter();
-    
+
     const [movie, setMovie] = useState<Movie | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -99,11 +99,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
     const [newActor, setNewActor] = useState('');
     const [newDirector, setNewDirector] = useState('');
 
-    useEffect(() => {
-        fetchMovieDetail();
-    }, [slug]);
-
-    const fetchMovieDetail = async () => {
+    const fetchMovieDetail = useCallback(async () => {
         try {
             setLoading(true);
             const res = await customFetch(`/api/admin/movies/${slug}`, {
@@ -141,7 +137,11 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [slug]);
+
+    useEffect(() => {
+        fetchMovieDetail();
+    }, [fetchMovieDetail]);
 
     const handleInputChange = (field: string, value: string | number) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -251,7 +251,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                 {/* Basic Info */}
                 <div className="bg-surface-900 rounded-lg p-6 space-y-4">
                     <h2 className="text-xl font-semibold text-white mb-4">Thông tin cơ bản</h2>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-400 mb-2">Tên phim</label>
@@ -312,7 +312,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                 {/* Movie Details */}
                 <div className="bg-surface-900 rounded-lg p-6 space-y-4">
                     <h2 className="text-xl font-semibold text-white mb-4">Chi tiết phim</h2>
-                    
+
                     <div className="grid grid-cols-3 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-400 mb-2">Loại</label>
@@ -406,7 +406,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                 {/* Actors */}
                 <div className="bg-surface-900 rounded-lg p-6 space-y-4">
                     <h2 className="text-xl font-semibold text-white mb-4">Diễn viên</h2>
-                    
+
                     <div className="flex gap-2">
                         <Input
                             value={newActor}
@@ -444,7 +444,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                 {/* Directors */}
                 <div className="bg-surface-900 rounded-lg p-6 space-y-4">
                     <h2 className="text-xl font-semibold text-white mb-4">Đạo diễn</h2>
-                    
+
                     <div className="flex gap-2">
                         <Input
                             value={newDirector}

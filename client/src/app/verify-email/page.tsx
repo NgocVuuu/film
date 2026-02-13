@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { API_URL } from '@/lib/config';
@@ -16,6 +16,32 @@ function VerifyEmailContent() {
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [message, setMessage] = useState('Đang xác thực...');
 
+    const verifyToken = useCallback(async () => {
+        try {
+            const response = await fetch(`${API_URL}/api/auth/verify-email?token=${token}`);
+            const data = await response.json();
+
+            if (data.success) {
+                setStatus('success');
+                setMessage('Xác thực tài khoản thành công!');
+                // Auto login if data provided
+                if (data.data && data.data.user && data.data.token) {
+                    login(data.data.user, data.data.token);
+                    setTimeout(() => {
+                        router.push('/');
+                    }, 2000);
+                }
+            } else {
+                setStatus('error');
+                setMessage(data.message || 'Xác thực thất bại.');
+            }
+        } catch (error) {
+            console.error('Verify error:', error);
+            setStatus('error');
+            setMessage('Lỗi kết nối đến máy chủ.');
+        }
+    }, [token, login, router]);
+
     useEffect(() => {
         if (!token) {
             setStatus('error');
@@ -23,34 +49,8 @@ function VerifyEmailContent() {
             return;
         }
 
-        const verifyToken = async () => {
-            try {
-                const response = await fetch(`${API_URL}/api/auth/verify-email?token=${token}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    setStatus('success');
-                    setMessage('Xác thực tài khoản thành công!');
-                    // Auto login if data provided
-                    if (data.data && data.data.user && data.data.token) {
-                        login(data.data.user, data.data.token);
-                        setTimeout(() => {
-                           router.push('/');
-                        }, 2000);
-                    }
-                } else {
-                    setStatus('error');
-                    setMessage(data.message || 'Xác thực thất bại.');
-                }
-            } catch (error) {
-                console.error('Verify error:', error);
-                setStatus('error');
-                setMessage('Lỗi kết nối đến máy chủ.');
-            }
-        };
-
         verifyToken();
-    }, [token]);
+    }, [token, verifyToken]);
 
     return (
         <div className="min-h-screen bg-deep-black flex flex-col items-center justify-center px-4">

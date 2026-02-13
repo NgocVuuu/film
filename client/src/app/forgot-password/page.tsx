@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Mail, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { API_URL } from '@/lib/config';
 
@@ -47,11 +48,16 @@ export default function ForgotPasswordPage() {
         <div className="min-h-screen bg-deep-black flex items-center justify-center px-4">
             <div className="w-full max-w-md">
                 <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-                    <img
-                        src="/logo.png"
-                        alt="Pchill Logo"
-                        className="h-20 w-auto object-contain rounded-md"
-                    />
+                    <div className="relative w-auto h-20">
+                        <Image
+                            src="/logo.png"
+                            alt="Pchill Logo"
+                            width={200}
+                            height={80}
+                            className="h-20 w-auto object-contain rounded-md"
+                            priority
+                        />
+                    </div>
                     <span className="text-4xl font-bold text-gold-gradient ml-2">PCHILL</span>
                 </Link>
 
