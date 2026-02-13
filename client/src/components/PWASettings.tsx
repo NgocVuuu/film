@@ -7,16 +7,16 @@ import { Button } from '@/components/ui/button';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { usePWA } from '@/hooks/usePWA';
 import { toast } from 'react-hot-toast';
-import { 
-  subscribeToPush, 
-  unsubscribeFromPush, 
+import {
+  subscribeToPush,
+  unsubscribeFromPush,
   isPushSupported,
-  getNotificationPermission 
+  getNotificationPermission
 } from '../lib/push-notifications';
 
 export function PWASettings() {
   const { isInstallable, isInstalled, promptInstall } = useInstallPrompt();
-  const { isOnline, isStandalone } = usePWA();
+  const { isOnline, isStandalone, isIOS } = usePWA();
   const [installing, setInstalling] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -26,7 +26,7 @@ export function PWASettings() {
     // Check notification permission
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotificationPermission(Notification.permission);
-      
+
       // Check if already subscribed
       const checkSubscription = async () => {
         if ('serviceWorker' in navigator && Notification.permission === 'granted') {
@@ -125,9 +125,11 @@ export function PWASettings() {
             <div className="flex-1">
               <h3 className="font-semibold text-white mb-1">Cài đặt ứng dụng</h3>
               <p className="text-sm text-gray-400 leading-relaxed">
-                {isInstalled || isStandalone 
+                {isInstalled || isStandalone
                   ? 'App đã được cài đặt trên thiết bị của bạn'
-                  : 'Thêm vào màn hình chính để truy cập nhanh'
+                  : isIOS
+                    ? 'Nhấn nút Chia sẻ (Share) -> Thêm vào màn hình chính để cài đặt app'
+                    : 'Thêm vào màn hình chính để truy cập nhanh'
                 }
               </p>
             </div>
@@ -153,7 +155,10 @@ export function PWASettings() {
         </div>
         {!isInstallable && !isInstalled && !isStandalone && (
           <p className="text-xs text-gray-500 mt-2">
-            App chưa thể cài đặt. Hãy thử sử dụng Chrome hoặc Edge.
+            {isIOS
+              ? 'Trên iOS, bạn cần thêm thủ công từ menu Chia sẻ của trình duyệt.'
+              : 'Trình duyệt hiện tại chưa hỗ trợ cài đặt tự động. Hãy thử Chrome hoặc Edge.'
+            }
           </p>
         )}
       </div>

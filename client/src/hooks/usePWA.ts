@@ -5,10 +5,18 @@ import { useEffect, useState } from 'react';
 export function usePWA() {
   const [isOnline, setIsOnline] = useState(true);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const [displayMode, setDisplayMode] = useState<'browser' | 'standalone' | 'minimal-ui' | 'fullscreen'>('browser');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // Check if iOS
+    const checkIsIOS = () => {
+      const ua = window.navigator.userAgent.toLowerCase();
+      return /ipad|iphone|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    };
+    setIsIOS(checkIsIOS());
 
     // Check display mode
     const checkDisplayMode = () => {
@@ -60,6 +68,7 @@ export function usePWA() {
   return {
     isOnline,
     isStandalone,
+    isIOS,
     displayMode,
     isPWA: isStandalone,
   };
