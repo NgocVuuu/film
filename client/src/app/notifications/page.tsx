@@ -1,5 +1,4 @@
 'use client';
-import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/contexts/notification-context';
 import { customFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,6 @@ import { Check, Trash2, Bell, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function NotificationsPage() {
-    const { loading: authLoading } = useAuth();
     const router = useRouter();
     const {
         notifications,

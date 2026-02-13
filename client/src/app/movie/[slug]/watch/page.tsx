@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
 import { Play, ArrowLeft, AlertTriangle, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,6 @@ import Link from 'next/link';
 import { API_URL } from '@/lib/config';
 
 export const runtime = 'edge';
-import { useAuth } from '@/contexts/auth-context';
 import { usePWA } from '@/hooks/usePWA';
 import { PWAAds } from '@/components/PWAAds';
 
