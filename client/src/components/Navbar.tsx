@@ -69,9 +69,9 @@ export function Navbar() {
             const res = await customFetch('/api/notifications');
             const data = await res.json();
             if (data.success) {
-                const notifs = Array.isArray(data.notifications) ? data.notifications : [];
+                const notifs: Notification[] = Array.isArray(data.notifications) ? data.notifications : [];
                 setNotifications(notifs);
-                setUnreadCount(notifs.filter((n: any) => !n.isRead).length);
+                setUnreadCount(notifs.filter(n => !n.isRead).length);
             }
         } catch (err) {
             console.error('Error fetching notifications:', err);
@@ -94,7 +94,7 @@ export function Navbar() {
                 await customFetch(`/api/notifications/${notif._id}/read`, { method: 'POST' });
                 setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, isRead: true } : n));
                 setUnreadCount(prev => Math.max(0, prev - 1));
-            } catch (err) { }
+            } catch { }
         }
         setShowNotifications(false);
         // Navigate based on type if needed
