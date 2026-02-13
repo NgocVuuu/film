@@ -57,6 +57,7 @@ const movieSchema = new mongoose.Schema({
 
   isFeatured: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
+  lastNotifiedEpisode: { type: String }, // Tránh spam thông báo cho cùng một tập
 
   updatedAt: { type: Date, default: Date.now },
 });

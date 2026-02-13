@@ -6,8 +6,8 @@ import Footer from '@/components/Footer';
 import { BottomNav } from '@/components/BottomNav';
 import { usePWA } from '@/hooks/usePWA';
 import { useAuth } from '@/contexts/auth-context';
-import { PWAAds } from './PWAAds';
 import { useEffect } from 'react';
+import { NotificationProvider } from '@/contexts/notification-context';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -33,13 +33,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     // Hide footer on PWA entirely
     const showFooter = !isAdmin && !isPWA;
 
-    const isNonPremiumPWA = isPWA && !user?.isPremium && !isAdmin;
 
     return (
-        <>
+        <NotificationProvider>
             {showNavbar && <Navbar />}
-            <main className={`flex-1 ${!isAdmin ? `${showNavbar ? 'pt-14 md:pt-16' : 'pt-[env(safe-area-inset-top)]'} ${showFooter ? 'pb-32' : 'pb-24'} lg:pb-8` : ''}`}>
-                {isNonPremiumPWA && <PWAAds />}
+            <main className={`flex-1 ${!isAdmin ? `${showNavbar ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-16' : 'pt-[env(safe-area-inset-top)]'} ${showFooter ? 'pb-32' : 'pb-24'} lg:pb-8` : ''}`}>
                 {children}
             </main>
             {!isAdmin && (
@@ -48,6 +46,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     {showFooter && <Footer />}
                 </>
             )}
-        </>
+        </NotificationProvider>
     );
 }

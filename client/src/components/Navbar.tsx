@@ -6,14 +6,16 @@ import Link from 'next/link';
 import { Button } from './ui/button';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
+import { useNotifications } from '@/contexts/notification-context';
 import { usePWA } from '@/hooks/usePWA';
 import { customFetch } from '@/lib/api';
 
 interface Notification {
     _id: string;
     content: string;
-    type: 'new_movie' | 'premium_expired' | 'admin_message';
+    type: string;
     isRead: boolean;
+    link?: string;
     createdAt: string;
 }
 
@@ -42,7 +44,6 @@ export function Navbar() {
     const [showGenreMenu, setShowGenreMenu] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
     const [imageError, setImageError] = useState(false);
 
     const browserMenuRef = useRef<HTMLDivElement>(null);
@@ -53,52 +54,25 @@ export function Navbar() {
     const { user, loading, logout } = useAuth();
     const { isPWA } = usePWA();
 
-    // Notifications
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-
-    useEffect(() => {
-        if (user) {
-            fetchNotifications();
-            // Optional: poll for new notifications every 2 minutes
-            const interval = setInterval(fetchNotifications, 120000);
-            return () => clearInterval(interval);
-        }
-    }, [user]);
-
-    const fetchNotifications = async () => {
-        try {
-            const res = await customFetch('/api/notifications');
-            const data = await res.json();
-            if (data.success) {
-                const notifs: Notification[] = Array.isArray(data.data) ? data.data : [];
-                setNotifications(notifs);
-                setUnreadCount(data.unreadCount || 0);
-            }
-        } catch (err) {
-            console.error('Error fetching notifications:', err);
-        }
-    };
+    const {
+        notifications,
+        unreadCount: notifUnreadCount,
+        markAsRead,
+        markAllAsRead
+    } = useNotifications();
 
     const handleMarkAllRead = async () => {
-        try {
-            await customFetch('/api/notifications/mark-all-read', { method: 'POST' });
-            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-            setUnreadCount(0);
-        } catch (err) {
-            console.error('Error marking all as read:', err);
-        }
+        await markAllAsRead();
     };
 
     const handleNotificationClick = async (notif: Notification) => {
         if (!notif.isRead) {
-            try {
-                await customFetch(`/api/notifications/${notif._id}/read`, { method: 'POST' });
-                setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, isRead: true } : n));
-                setUnreadCount(prev => Math.max(0, prev - 1));
-            } catch { }
+            await markAsRead(notif._id);
         }
         setShowNotifications(false);
-        // Navigate based on type if needed
+        if (notif.link) {
+            router.push(notif.link);
+        }
     };
 
     const handleLogout = async () => {
@@ -197,6 +171,87 @@ export function Navbar() {
                             >
                                 <Filter className="w-5 h-5 md:w-6 md:h-6" />
                             </button>
+
+                            {/* Browse Menu Content - Moved inside for desktop positioning */}
+                            {showBrowseMenu && (
+                                <>
+                                    <div
+                                        ref={browseMenuContentRef}
+                                        className={`fixed inset-x-0 md:bottom-auto top-auto md:absolute md:top-full md:right-0 md:mt-2 w-full md:w-64 bg-black/95 backdrop-blur-md md:border border-white/10 md:rounded-lg overflow-hidden shadow-2xl z-50 rounded-t-xl transition-all animate-in slide-in-from-bottom-10 md:slide-in-from-top-2 border-t ${isPWA ? 'bottom-[calc(5rem+env(safe-area-inset-bottom))]' : 'bottom-16'
+                                            } md:inset-x-auto`}
+                                    >
+                                        {/* Mobile Handle */}
+                                        <div className="w-12 h-1 bg-white/20 rounded-full mx-auto my-3 md:hidden"></div>
+
+                                        <div className="p-2 space-y-1 pb-2">
+                                            {!showGenreMenu ? (
+                                                <>
+                                                    <Link
+                                                        href="/phim-moi"
+                                                        onClick={() => setShowBrowseMenu(false)}
+                                                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
+                                                    >
+                                                        <Crown className="w-4 h-4 text-primary" />
+                                                        Đề xuất / Phim mới
+                                                    </Link>
+                                                    <Link
+                                                        href="/phim-le"
+                                                        onClick={() => setShowBrowseMenu(false)}
+                                                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
+                                                    >
+                                                        <Film className="w-4 h-4 text-blue-400" />
+                                                        Phim lẻ
+                                                    </Link>
+                                                    <Link
+                                                        href="/phim-bo"
+                                                        onClick={() => setShowBrowseMenu(false)}
+                                                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
+                                                    >
+                                                        <List className="w-4 h-4 text-green-400" />
+                                                        Phim bộ
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => setShowGenreMenu(true)}
+                                                        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
+                                                    >
+                                                        <span className="flex items-center gap-3">
+                                                            <Filter className="w-4 h-4 text-purple-400" />
+                                                            Thể loại
+                                                        </span>
+                                                        <span className="text-gray-500">›</span>
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <div className="h-[50vh] md:h-auto md:max-h-[60vh] flex flex-col overscroll-contain">
+                                                    <button
+                                                        onClick={() => setShowGenreMenu(false)}
+                                                        className="flex items-center gap-2 px-4 py-3 text-sm text-gray-400 hover:text-white border-b border-white/10 mb-2 shrink-0"
+                                                    >
+                                                        ‹ Quay lại
+                                                    </button>
+                                                    <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-1 gap-1 p-2 overscroll-contain">
+                                                        {genres.map((genre) => (
+                                                            <Link
+                                                                key={genre.slug}
+                                                                href={`/search?category=${genre.slug}`}
+                                                                onClick={() => setShowBrowseMenu(false)}
+                                                                className="px-3 py-2 text-sm text-gray-300 hover:text-primary hover:bg-white/5 rounded transition-colors text-center md:text-left"
+                                                            >
+                                                                {genre.name}
+                                                            </Link>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Backdrop */}
+                                    <div
+                                        className="fixed inset-0 bg-black/60 z-40 md:hidden"
+                                        onClick={() => setShowBrowseMenu(false)}
+                                    />
+                                </>
+                            )}
                         </div>
 
                         {/* Notifications */}
@@ -207,7 +262,7 @@ export function Navbar() {
                                     className="relative p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
                                 >
                                     <Bell className="w-5 h-5 md:w-6 md:h-6" />
-                                    {unreadCount > 0 && (
+                                    {notifUnreadCount > 0 && (
                                         <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                                     )}
                                 </button>
@@ -216,7 +271,7 @@ export function Navbar() {
                                     <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-black/95 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden shadow-2xl z-50">
                                         <div className="p-3 border-b border-white/10 flex justify-between items-center bg-white/5">
                                             <h3 className="text-sm font-bold text-white">Thông báo</h3>
-                                            {unreadCount > 0 && (
+                                            {notifUnreadCount > 0 && (
                                                 <button
                                                     onClick={handleMarkAllRead}
                                                     className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
@@ -282,13 +337,16 @@ export function Navbar() {
                                             <p className="text-xs text-gray-400 truncate">{user.email}</p>
                                         </div>
 
-                                        <Link href="/favorites" onClick={() => setShowUserMenu(false)} className="hidden lg:flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
+                                        <Link href="/profile" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
+                                            <User className="w-4 h-4" /> Trang cá nhân
+                                        </Link>
+                                        <Link href="/favorites" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
                                             <Heart className="w-4 h-4" /> Danh sách yêu thích
                                         </Link>
-                                        <Link href="/history" onClick={() => setShowUserMenu(false)} className="hidden lg:flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
-                                            <Clock className="w-4 h-4" /> Đang xem
+                                        <Link href="/history" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
+                                            <Clock className="w-4 h-4" /> Phim đang xem
                                         </Link>
-                                        <Link href="/my-lists" onClick={() => setShowUserMenu(false)} className="hidden lg:flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
+                                        <Link href="/my-lists" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
                                             <List className="w-4 h-4" /> Danh sách của tôi
                                         </Link>
 
@@ -328,86 +386,6 @@ export function Navbar() {
                 </div>
             </header>
 
-            {/* Browse Menu Content - Moved OUTSIDE of header to avoid backdrop-blur container issue */}
-            {showBrowseMenu && (
-                <>
-                    <div
-                        ref={browseMenuContentRef}
-                        className={`fixed inset-x-0 md:bottom-auto top-auto md:absolute md:top-full md:right-0 md:inset-x-auto w-full md:w-64 bg-black/95 backdrop-blur-md md:border border-white/10 md:rounded-lg overflow-hidden shadow-2xl z-50 rounded-t-xl transition-all animate-in slide-in-from-bottom-10 md:slide-in-from-top-2 border-t ${isPWA ? 'bottom-[calc(5rem+env(safe-area-inset-bottom))]' : 'bottom-16'
-                            }`}
-                    >
-                        {/* Mobile Handle */}
-                        <div className="w-12 h-1 bg-white/20 rounded-full mx-auto my-3 md:hidden"></div>
-
-                        <div className="p-2 space-y-1 pb-2">
-                            {!showGenreMenu ? (
-                                <>
-                                    <Link
-                                        href="/phim-moi"
-                                        onClick={() => setShowBrowseMenu(false)}
-                                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
-                                    >
-                                        <Crown className="w-4 h-4 text-primary" />
-                                        Đề xuất / Phim mới
-                                    </Link>
-                                    <Link
-                                        href="/phim-le"
-                                        onClick={() => setShowBrowseMenu(false)}
-                                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
-                                    >
-                                        <Film className="w-4 h-4 text-blue-400" />
-                                        Phim lẻ
-                                    </Link>
-                                    <Link
-                                        href="/phim-bo"
-                                        onClick={() => setShowBrowseMenu(false)}
-                                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
-                                    >
-                                        <List className="w-4 h-4 text-green-400" />
-                                        Phim bộ
-                                    </Link>
-                                    <button
-                                        onClick={() => setShowGenreMenu(true)}
-                                        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
-                                    >
-                                        <span className="flex items-center gap-3">
-                                            <Filter className="w-4 h-4 text-purple-400" />
-                                            Thể loại
-                                        </span>
-                                        <span className="text-gray-500">›</span>
-                                    </button>
-                                </>
-                            ) : (
-                                <div className="h-[50vh] md:h-auto md:max-h-[60vh] flex flex-col overscroll-contain">
-                                    <button
-                                        onClick={() => setShowGenreMenu(false)}
-                                        className="flex items-center gap-2 px-4 py-3 text-sm text-gray-400 hover:text-white border-b border-white/10 mb-2 shrink-0"
-                                    >
-                                        ‹ Quay lại
-                                    </button>
-                                    <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-1 gap-1 p-2 overscroll-contain">
-                                        {genres.map((genre) => (
-                                            <Link
-                                                key={genre.slug}
-                                                href={`/search?category=${genre.slug}`}
-                                                onClick={() => setShowBrowseMenu(false)}
-                                                className="px-3 py-2 text-sm text-gray-300 hover:text-primary hover:bg-white/5 rounded transition-colors text-center md:text-left"
-                                            >
-                                                {genre.name}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    {/* Backdrop */}
-                    <div
-                        className="fixed inset-0 bg-black/60 z-40 md:hidden"
-                        onClick={() => setShowBrowseMenu(false)}
-                    />
-                </>
-            )}
         </>
     );
 }

@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Play, Clock } from 'lucide-react';
+import { Play, Clock, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ContinueWatchingCardProps {
     movie: {
@@ -18,9 +19,10 @@ interface ContinueWatchingCardProps {
             episodeName: string;
         };
     };
+    onRemove?: (slug: string, episodeSlug: string) => void;
 }
 
-export function ContinueWatchingCard({ movie }: ContinueWatchingCardProps) {
+export function ContinueWatchingCard({ movie, onRemove }: ContinueWatchingCardProps) {
     // Safety check
     if (!movie.progress) {
         console.error('[ContinueWatchingCard] Missing progress data:', movie);
@@ -77,15 +79,24 @@ export function ContinueWatchingCard({ movie }: ContinueWatchingCardProps) {
                     </div>
                 </div>
 
-                {/* Play Button Overlay */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-                    <div className="w-14 h-14 rounded-full bg-primary/90 text-black flex items-center justify-center shadow-lg shadow-primary/50 transform group-hover:scale-110 transition-transform">
-                        <Play fill="currentColor" className="ml-1 w-7 h-7" />
-                    </div>
-                </div>
+                {/* Remove Button */}
+                {onRemove && (
+                    <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1.5 right-1.5 z-30 w-7 h-7 rounded-full bg-red-600/90 hover:bg-red-700 text-white shadow-md transition-all active:scale-90"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onRemove(movie.slug, movie.progress.episodeSlug);
+                        }}
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                )}
 
-                {/* HD/Quality Badge */}
-                <div className="absolute top-2 right-2 bg-primary text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow z-20">
+                {/* Status Badge */}
+                <div className={`absolute ${onRemove ? 'top-10' : 'top-2'} right-2 bg-primary/90 text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm z-20 uppercase tracking-tight`}>
                     Xem tiếp
                 </div>
             </div>

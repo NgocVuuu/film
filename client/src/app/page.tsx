@@ -5,6 +5,7 @@ import { MovieCarousel } from '@/components/MovieCarousel';
 import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
 import { LazyMovieSection } from '@/components/LazyMovieSection';
 import { TrendingCarousel } from '@/components/TrendingCarousel';
+import { PWAAds } from '@/components/PWAAds';
 import LoadingScreen from '@/components/LoadingScreen';
 import { customFetch } from '@/lib/api';
 
@@ -210,6 +211,10 @@ export default function Home() {
           movies={familyMovies}
           viewAllLink="/the-loai/gia-dinh"
         />
+
+        <div className="pb-8">
+          <PWAAds />
+        </div>
 
       </div>
     </div>

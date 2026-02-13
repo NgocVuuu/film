@@ -25,7 +25,7 @@ export default function Footer() {
                 <div className="hidden md:flex gap-4 text-xs text-gray-400">
                     <Link href="/terms" className="hover:text-primary transition-colors">Điều khoản</Link>
                     <Link href="/privacy" className="hover:text-primary transition-colors">Chính sách</Link>
-                    <Link href="/contact" className="hover:text-primary transition-colors">Liên hệ</Link>
+                    <Link href="/feedback" className="hover:text-primary transition-colors">Góp ý</Link>
                     <Link href="/dmca" className="hover:text-primary transition-colors">DMCA</Link>
                 </div>
 

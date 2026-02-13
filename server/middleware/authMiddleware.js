@@ -86,11 +86,16 @@ const premiumMiddleware = async (req, res, next) => {
         req.user.subscription.tier === 'premium' &&
         req.user.subscription.status === 'active';
 
-    // Check if subscription has not expired
-    const isNotExpired = req.user.subscription?.endDate &&
+    // Check if subscription has not expired (if endDate exists)
+    const isNotExpired = !req.user.subscription?.endDate ||
         new Date(req.user.subscription.endDate) > new Date();
 
     if (!isPremium || !isNotExpired) {
+        console.log(`[DEBUG] Premium check failed for user: ${req.user.email}`);
+        console.log(`- isPremium: ${isPremium}, isNotExpired: ${isNotExpired}`);
+        console.log(`- Tier: ${req.user.subscription?.tier}, Status: ${req.user.subscription?.status}`);
+        console.log(`- EndDate: ${req.user.subscription?.endDate}`);
+
         return res.status(403).json({
             success: false,
             message: 'Tính năng này chỉ dành cho thành viên Premium',

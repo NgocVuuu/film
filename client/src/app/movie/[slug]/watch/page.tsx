@@ -10,6 +10,7 @@ import { API_URL } from '@/lib/config';
 export const runtime = 'edge';
 import { useAuth } from '@/contexts/auth-context';
 import { usePWA } from '@/hooks/usePWA';
+import { PWAAds } from '@/components/PWAAds';
 
 
 
@@ -306,26 +307,9 @@ export default function WatchPage() {
                 <div className="flex-1 w-full min-w-0">
 
                     {/* AD BANNER (Non-Premium) */}
-                    {user?.subscription?.tier !== 'premium' && (
-                        <div className="w-full bg-surface-900/50 border border-white/10 rounded-xl p-4 mb-4 flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-primary/20 p-2 rounded-lg">
-                                    <Crown className="w-6 h-6 text-primary" />
-                                </div>
-                                <div>
-                                    <p className="text-white font-bold text-sm">Nâng cấp Premium</p>
-                                    <p className="text-xs text-gray-400">Xem phim không quảng cáo & chất lượng cao</p>
-                                </div>
-                            </div>
-                            <Button
-                                size="sm"
-                                className="bg-primary text-black hover:bg-primary/90"
-                                onClick={() => router.push('/pricing')}
-                            >
-                                Nâng cấp ngay
-                            </Button>
-                        </div>
-                    )}
+                    <div className="mb-4">
+                        <PWAAds />
+                    </div>
 
                     <div className="aspect-video bg-black md:rounded-xl overflow-hidden shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (

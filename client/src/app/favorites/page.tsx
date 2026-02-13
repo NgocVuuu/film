@@ -106,12 +106,25 @@ export default function FavoritesPage() {
         }
     };
 
+    const [isEdit, setIsEdit] = useState(false);
+
     if (loading) return <div className="min-h-screen pt-24 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>;
 
     return (
         <div className="min-h-screen bg-deep-black text-white pt-24 pb-10">
             <div className="container mx-auto px-4">
-                <h1 className="text-3xl font-bold mb-8 text-gold-gradient inline-block">Tủ Phim Yêu Thích</h1>
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-3xl font-bold text-gold-gradient inline-block">Tủ Phim Yêu Thích</h1>
+                    {favorites.length > 0 && (
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsEdit(!isEdit)}
+                            className={`border-white/20 h-9 ${isEdit ? 'bg-primary text-black hover:bg-primary/80' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            {isEdit ? 'Hoàn tất' : 'Chỉnh sửa'}
+                        </Button>
+                    )}
+                </div>
 
                 {favorites.length === 0 ? (
                     <EmptyState
@@ -120,21 +133,26 @@ export default function FavoritesPage() {
                         actionLink="/phim-moi"
                     />
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                         {favorites.map((movie) => (
                             <div key={movie.slug} className="relative group">
-                                <MovieCard movie={movie} />
-                                <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        removeFavorite(movie.slug);
-                                    }}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <MovieCard movie={movie} isEditing={isEdit} />
+                                <div className={`absolute inset-0 bg-black/40 pointer-events-none rounded-md transition-opacity ${isEdit ? 'opacity-100 border-2 border-primary/50' : 'opacity-0'}`} />
+                                {(isEdit || true) && (
+                                    <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        className={`absolute top-1.5 right-1.5 z-20 w-7 h-7 rounded-full bg-red-600/90 shadow-md transition-all active:scale-90 
+                                            ${isEdit ? 'opacity-100 pointer-events-auto' : 'opacity-0 md:group-hover:opacity-100 pointer-events-none md:pointer-events-auto'}`}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            removeFavorite(movie.slug);
+                                        }}
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                )}
                             </div>
                         ))}
                     </div>

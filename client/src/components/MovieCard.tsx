@@ -19,9 +19,10 @@ interface MovieCardProps {
             episodeName: string;
         };
     };
+    isEditing?: boolean;
 }
 
-export function MovieCard({ movie }: MovieCardProps) {
+export function MovieCard({ movie, isEditing }: MovieCardProps) {
     return (
         <Link
             href={`/movie/${movie.slug}`}
@@ -63,7 +64,7 @@ export function MovieCard({ movie }: MovieCardProps) {
                 </div>
 
                 {/* Episode/Quality Badge */}
-                <div className="absolute top-2 right-2 bg-primary text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow z-20">
+                <div className={`absolute ${isEditing ? 'top-10' : 'top-2'} right-2 bg-primary text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow z-20 transition-all`}>
                     {movie.episode_current || movie.quality || 'HD'}
                 </div>
             </div>

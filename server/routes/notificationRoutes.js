@@ -11,8 +11,12 @@ router.get('/vapid-public-key', pushNotificationController.getVapidPublicKey);
 router.use(authMiddleware);
 
 router.get('/', notificationController.getNotifications);
-router.put('/:id/read', notificationController.markAsRead);
+router.post('/mark-all-read', notificationController.markAllAsRead);
+router.put('/mark-all-read', notificationController.markAllAsRead);
+router.post('/read-all', notificationController.markAllAsRead);
 router.put('/read-all', notificationController.markAllAsRead);
+router.post('/:id/read', notificationController.markAsRead);
+router.put('/:id/read', notificationController.markAsRead);
 router.delete('/:id', notificationController.deleteNotification);
 
 // Push notification routes (premium only)

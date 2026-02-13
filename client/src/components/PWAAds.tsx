@@ -5,10 +5,13 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import Link from 'next/link';
 
+import { useAuth } from '@/contexts/auth-context';
+
 export function PWAAds() {
+    const { user } = useAuth();
     const [isVisible, setIsVisible] = useState(true);
 
-    if (!isVisible) return null;
+    if (!isVisible || user?.isPremium) return null;
 
     return (
         <div className="mx-4 mt-2 mb-4 animate-in fade-in slide-in-from-top-4 duration-500">

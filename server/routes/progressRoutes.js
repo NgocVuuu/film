@@ -21,4 +21,7 @@ router.delete('/:movieSlug/:episodeSlug', progressController.deleteProgress);
 // Clear all progress for a movie
 router.delete('/movie/:movieSlug', progressController.clearMovieProgress);
 
+// Clear all progress for all movies
+router.delete('/clear-all', progressController.clearAllProgress);
+
 module.exports = router;

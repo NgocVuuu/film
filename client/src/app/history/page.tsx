@@ -106,38 +106,75 @@ export default function HistoryPage() {
         fetchHistory();
     }, [fetchHistory]);
 
+    const removeHistory = async (slug: string, epSlug: string) => {
+        if (user) {
+            try {
+                await customFetch(`/api/progress/${slug}/${epSlug}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                setMovies(prev => prev.filter(m => !(m.slug === slug && m.progress.episodeSlug === epSlug)));
+                toast.success('Đã xóa khỏi lịch sử');
+            } catch {
+                toast.error('Có lỗi xảy ra');
+            }
+        } else {
+            const currentHistory = JSON.parse(localStorage.getItem('history') || '[]');
+            const newHistory = currentHistory.filter((m: any) => !(m.slug === slug && m.progress.episodeSlug === epSlug));
+            setMovies(newHistory);
+            localStorage.setItem('history', JSON.stringify(newHistory));
+            toast.success('Đã xóa khỏi lịch sử');
+        }
+    };
+
     const clearHistory = async () => {
         if (!confirm('Bạn có chắc muốn xóa toàn bộ lịch sử?')) return;
 
         if (user) {
             try {
-                // TODO: Add API endpoint to clear all progress
-                toast.success('Tính năng xóa lịch sử đang được phát triển');
+                await customFetch(`/api/progress/clear-all`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                setMovies([]);
+                toast.success('Đã xóa toàn bộ lịch sử');
             } catch {
                 toast.error('Có lỗi xảy ra');
             }
         } else {
-            // Clear localStorage for non-logged-in users
             setMovies([]);
             localStorage.setItem('history', JSON.stringify([]));
-            toast.success('Đã xóa lịch sử');
+            toast.success('Đã xóa toàn bộ lịch sử');
         }
     };
+
+    const [isEdit, setIsEdit] = useState(false);
 
     return (
         <div className="min-h-screen bg-deep-black text-white pt-24 pb-20 lg:pb-10">
             <div className="container mx-auto px-4">
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                     <h1 className="text-3xl font-bold text-gold-gradient">Đang Xem</h1>
-                    {movies.length > 0 && (
-                        <Button
-                            variant="outline"
-                            onClick={clearHistory}
-                            className="border-red-500/50 text-red-500 hover:bg-red-900/20"
-                        >
-                            <Trash2 className="w-4 h-4 mr-2" /> Xóa Lịch Sử
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {movies.length > 0 && (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsEdit(!isEdit)}
+                                    className={`border-white/20 ${isEdit ? 'bg-primary text-black hover:bg-primary/80' : 'text-gray-400 hover:text-white'}`}
+                                >
+                                    {isEdit ? 'Hoàn tất' : 'Chỉnh sửa'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={clearHistory}
+                                    className="border-red-500/50 text-red-500 hover:bg-red-900/20"
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2" /> Xóa Lịch Sử
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 {loading ? (
@@ -154,7 +191,15 @@ export default function HistoryPage() {
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                         {movies.map((movie) => (
-                            <ContinueWatchingCard key={`${movie.slug}-${movie.progress?.episodeSlug}`} movie={movie} />
+                            <div key={`${movie.slug}-${movie.progress?.episodeSlug}`} className="relative">
+                                <ContinueWatchingCard
+                                    movie={movie}
+                                    onRemove={isEdit ? removeHistory : undefined}
+                                />
+                                {isEdit && (
+                                    <div className="absolute inset-0 bg-black/40 pointer-events-none rounded-md border-2 border-primary/50" />
+                                )}
+                            </div>
                         ))}
                     </div>
                 )}

@@ -119,7 +119,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
 
     return (
         <div
-            className="relative w-full h-[85vh] md:h-screen -mt-14 md:-mt-16 group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing"
+            className="relative w-full h-[85vh] md:h-screen -mt-[calc(3.5rem+env(safe-area-inset-top))] md:-mt-16 group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}

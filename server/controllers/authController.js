@@ -134,7 +134,8 @@ exports.googleLogin = async (req, res) => {
                     displayName: user.displayName,
                     avatar: user.avatar,
                     role: user.role,
-                    subscription: user.subscription
+                    subscription: user.subscription,
+                    isPremium: user.role === 'admin' || (user.subscription?.tier === 'premium' && user.subscription?.status === 'active')
                 },
                 token
             },
@@ -159,10 +160,19 @@ exports.getCurrentUser = async (req, res) => {
         const userFull = await User.findById(user._id).select('password');
         const hasPassword = !!(userFull && userFull.password);
 
-        // Calculate isPremium from subscription
-        const isPremium = user.subscription &&
+        // Calculate isPremium from subscription (or if admin)
+        const isPremium = user.role === 'admin' || (
+            user.subscription &&
             user.subscription.tier === 'premium' &&
-            user.subscription.status === 'active';
+            user.subscription.status === 'active'
+        );
+
+        if (user.email === 'ngocvu14.3.2001@gmail.com') {
+            console.log(`[DEBUG] getCurrentUser for ngocvu:`);
+            console.log(`- Role: ${user.role}`);
+            console.log(`- Sub: ${JSON.stringify(user.subscription)}`);
+            console.log(`- Result: ${isPremium}`);
+        }
 
         res.json({
             success: true,
@@ -258,7 +268,18 @@ exports.register = async (req, res) => {
 
             res.status(201).json({
                 success: true,
-                message: 'Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.'
+                message: 'Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.',
+                data: {
+                    user: {
+                        id: user._id,
+                        email: user.email,
+                        displayName: user.displayName,
+                        avatar: user.avatar,
+                        role: user.role,
+                        subscription: user.subscription,
+                        isPremium: false // New users are free by default
+                    }
+                }
             });
         } catch (emailError) {
             console.error('Email send error:', emailError);
@@ -457,7 +478,8 @@ exports.login = async (req, res) => {
                     displayName: user.displayName,
                     avatar: user.avatar,
                     role: user.role,
-                    subscription: user.subscription
+                    subscription: user.subscription,
+                    isPremium: user.role === 'admin' || (user.subscription?.tier === 'premium' && user.subscription?.status === 'active')
                 },
                 token
             },

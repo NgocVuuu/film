@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useNotifications } from '@/contexts/notification-context';
 import { customFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Check, Trash2, Bell, Loader2 } from 'lucide-react';
@@ -17,61 +18,32 @@ interface Notification {
 
 export default function NotificationsPage() {
     const { user, loading: authLoading } = useAuth();
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [loading, setLoading] = useState(true);
     const router = useRouter();
-
-    useEffect(() => {
-        if (authLoading) return;
-        if (!user) {
-            router.push('/login');
-            return;
-        }
-
-        fetchNotifications();
-    }, [user, authLoading]);
-
-    const fetchNotifications = async () => {
-        try {
-            const res = await customFetch(`/api/notifications?limit=50`, { credentials: 'include' });
-            const data = await res.json();
-            if (data.success) {
-                setNotifications(data.data);
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const {
+        notifications,
+        loading,
+        fetchNotifications,
+        markAsRead,
+        markAllAsRead
+    } = useNotifications();
 
     const handleRead = async (id: string, link?: string) => {
-        try {
-            await customFetch(`/api/notifications/${id}/read`, { method: 'PUT', credentials: 'include' });
-            setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
-            if (link) router.push(link);
-        } catch (e) {
-            console.error(e);
-        }
+        await markAsRead(id);
+        if (link) router.push(link);
     };
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         try {
             await customFetch(`/api/notifications/${id}`, { method: 'DELETE', credentials: 'include' });
-            setNotifications(prev => prev.filter(n => n._id !== id));
+            fetchNotifications(); // Refresh list via context
         } catch (error) {
             console.error(error);
         }
     };
 
     const handleMarkAllRead = async () => {
-        try {
-            await customFetch(`/api/notifications/read-all`, { method: 'PUT', credentials: 'include' });
-            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-        } catch (e) {
-            console.error(e);
-        }
+        await markAllAsRead();
     };
 
     const timeAgo = (dateString: string) => {

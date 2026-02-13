@@ -15,6 +15,7 @@ import {
 import { customFetch } from '@/lib/api';
 import { PWASettings } from '@/components/PWASettings';
 import { PremiumUpsellCard } from '@/components/PremiumUpsellCard';
+import { PWAAds } from '@/components/PWAAds';
 
 function ProfileContent() {
     const { user, loading: authLoading, refresh, logout } = useAuth(); // Changed checkAuth to refresh
@@ -162,9 +163,16 @@ function ProfileContent() {
                                 <Crown className={`w-12 h-12 ${user.isPremium ? 'text-yellow-500' : 'text-gray-600'}`} />
                             </div>
                             <div className="relative z-10">
-                                <p className={`text-sm font-bold mb-1 ${user.isPremium ? 'text-yellow-400' : 'text-gray-300'}`}>
-                                    {user.isPremium ? 'Thành viên Premium' : 'Thành viên Miễn phí'}
-                                </p>
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                    <p className={`text-sm font-bold ${user.isPremium ? 'text-yellow-400' : 'text-gray-300'}`}>
+                                        {user.isPremium ? 'Thành viên Premium' : 'Thành viên Miễn phí'}
+                                    </p>
+                                    {user.isPremium && user.subscription?.endDate && (
+                                        <p className="text-[10px] text-yellow-500/70 font-medium">
+                                            Hết hạn: {new Date(user.subscription.endDate).toLocaleDateString('vi-VN')}
+                                        </p>
+                                    )}
+                                </div>
                                 <p className="text-gray-500 text-xs leading-relaxed font-vietnamese">
                                     {user.isPremium
                                         ? 'Cảm ơn bạn đã "nuôi" ad! Nhờ bạn mà server vẫn chạy phà phà, cùng tận hưởng đặc quyền thôi nào! ✨🙏'
@@ -195,9 +203,13 @@ function ProfileContent() {
                         )}
                     </div>
 
-                    <Link href="/profile?mode=edit" className="block w-full bg-white hover:bg-gray-100 text-black font-bold py-3.5 text-center rounded-xl mb-8 shadow-lg transition-colors">
+                    <Link href="/profile?mode=edit" className="block w-full bg-white hover:bg-gray-100 text-black font-bold py-3.5 text-center rounded-xl mb-4 shadow-lg transition-colors">
                         Quản lý tài khoản
                     </Link>
+
+                    <div className="mb-8">
+                        <PWAAds />
+                    </div>
 
                     <div className="space-y-1">
                         <MobileMenuLink href="/my-lists" icon={Plus} label="Danh sách phim của tôi" />
@@ -205,7 +217,7 @@ function ProfileContent() {
                         <MobileMenuLink href="/dmca" icon={Shield} label="DMCA - Bản quyền" />
                         <MobileMenuLink href="/terms" icon={FileText} label="Điều khoản sử dụng" />
                         <MobileMenuLink href="/privacy" icon={Lock} label="Chính sách bảo mật" />
-                        <MobileMenuLink href="/contact" icon={Mail} label="Liên hệ & Góp ý" />
+                        <MobileMenuLink href="/feedback" icon={Mail} label="Liên hệ & Góp ý" />
                     </div>
 
                     <button onClick={handleLogout} className="mt-8 flex items-center gap-4 text-red-500 font-medium px-4 w-full py-4 hover:bg-surface-900/50 rounded-xl transition-colors">

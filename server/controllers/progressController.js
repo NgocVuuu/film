@@ -220,3 +220,22 @@ exports.clearMovieProgress = async (req, res) => {
         });
     }
 };
+// Clear all progress for all movies
+exports.clearAllProgress = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        await WatchProgress.deleteMany({ userId });
+
+        res.json({
+            success: true,
+            message: 'Đã xóa toàn bộ lịch sử xem'
+        });
+    } catch (error) {
+        console.error('Clear all progress error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi xóa lịch sử xem'
+        });
+    }
+};

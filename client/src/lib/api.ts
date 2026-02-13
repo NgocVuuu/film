@@ -25,7 +25,7 @@ interface FetchOptions extends RequestInit {
 
 export const customFetch = async (endpoint: string, options: FetchOptions = {}) => {
     const token = getAuthToken();
-    
+
     // Create headers object
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -41,10 +41,11 @@ export const customFetch = async (endpoint: string, options: FetchOptions = {}) 
     // But usually API_URL doesn't have trailing slash, and endpoint starts with /. 
     // If input endpoint is full URL, we normally wouldn't use this helper or we'd handle it.
     // Assuming this helper is for our API.
-    
+
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
 
     const response = await fetch(url, {
+        cache: 'no-store', // Always fetch fresh data
         ...options,
         headers
     });

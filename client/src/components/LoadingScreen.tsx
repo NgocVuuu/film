@@ -108,7 +108,7 @@ export default function LoadingScreen() {
     };
 
     return (
-        <div className="fixed inset-0 z-100 bg-deep-black flex flex-col items-center justify-center p-4">
+        <div className="absolute inset-0 z-100 bg-deep-black flex flex-col items-center justify-center p-4 min-h-screen">
 
             {/* Main Visual */}
             <div className="relative mb-8">

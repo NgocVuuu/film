@@ -224,14 +224,29 @@ async function processMovie(adapter, slug, retryCount = 0) {
             const oldEpCount = existingMovie.episodes ? existingMovie.episodes.reduce((acc, cur) => acc + (cur.server_data ? cur.server_data.length : 0), 0) : 0;
             const newEpCount = finalEpisodes.reduce((acc, cur) => acc + (cur.server_data ? cur.server_data.length : 0), 0);
 
-            // Notify if episode count increased OR status changed
-            if (newEpCount > oldEpCount || (existingMovie.episode_current !== movie.episode_current && movie.episode_current !== 'Full' && movie.episode_current !== '')) {
+            // Determine best episode name to display (fallback to last episode if current is missing)
+            // Use a clean display identifier for lastNotifiedEpisode check
+            const currentEpName = movie.episode_current ||
+                (finalEpisodes[0]?.server_data?.length > 0 ?
+                    finalEpisodes[0].server_data[finalEpisodes[0].server_data.length - 1].name : '');
+
+            // Clean display identifier (avoid 'undefined' string)
+            const displayEp = currentEpName && currentEpName !== 'undefined' ? currentEpName : null;
+
+            // Notify if:
+            // 1. Episode count increased OR status changed OR current episode name changed
+            // 2. AND we haven't notified for this specific episode yet
+            const hasChange = newEpCount > oldEpCount ||
+                (existingMovie.episode_current !== movie.episode_current && movie.episode_current && movie.episode_current !== 'Full');
+
+            const isNewEpisode = displayEp && displayEp !== existingMovie.lastNotifiedEpisode;
+
+            if (hasChange && isNewEpisode) {
                 // Find all users interested in this movie:
                 // 1. Users who favorited it
                 const favorites = await Favorite.find({ movieSlug: slug }).select('user');
 
-                // 2. Users who are currently watching it (and haven't finished? or just recently watched)
-                // We'll notify users who have watch progress from the last 30 days
+                // 2. Users who are currently watching it
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -249,13 +264,19 @@ async function processMovie(adapter, slug, retryCount = 0) {
                     const uniqueUserIds = Array.from(userIds);
                     await sendToMultiple(uniqueUserIds, {
                         title: '🎬 Cập nhật tập mới',
-                        content: `Phim "${movie.name}" vừa cập nhật tập mới (${movie.episode_current})!`,
+                        content: `Phim "${movie.name || 'Phim mới'}" vừa cập nhật tập mới${displayEp ? ` (${displayEp})` : ''}!`,
                         link: `/movie/${slug}`,
                         type: 'episode',
                         icon: thumb || '/logo.png'
                     });
-                    console.log(`[NOTIFY] Sent notifications to ${uniqueUserIds.length} users for ${slug} (${movie.name})`);
+                    console.log(`[NOTIFY] Sent notifications to ${uniqueUserIds.length} users for ${slug} (${movie.name || 'Unknown'}) - Ep: ${displayEp}`);
                 }
+
+                // Update lastNotifiedEpisode to prevent spamming this same episode in next crawl
+                coreData.lastNotifiedEpisode = displayEp;
+            } else {
+                // Keep the old lastNotifiedEpisode if we didn't send a new one
+                coreData.lastNotifiedEpisode = existingMovie.lastNotifiedEpisode;
             }
         }
 
@@ -369,6 +390,12 @@ const setupCrawler = () => {
 async function syncSpecificMovie(slug, sourceName = null) {
     try {
         console.log(`[FETCH-SPECIFIC] Attempting to fetch movie: ${slug} from ${sourceName || 'all sources'}`);
+
+        // IMPORTANT: Clear from blacklist if explicitly requested
+        if (blacklist.has(slug)) {
+            console.log(`[FETCH-SPECIFIC] Removing ${slug} from blacklist for explicit sync.`);
+            blacklist.delete(slug);
+        }
 
         let results = [];
 
@@ -523,7 +550,7 @@ async function processPendingRequests() {
                         .filter(req => req.userId && req.userId._id)
                         .map(req => ({
                             recipient: req.userId._id,
-                            content: `Phim "${request.movieName}" bạn yêu cầu đã có sẵn! Xem ngay`,
+                            content: `Phim "${request.movieName || 'bạn yêu cầu'}" đã có sẵn! Xem ngay`,
                             link: `/movie/${slug}`,
                             type: 'movie_request',
                             isRead: false

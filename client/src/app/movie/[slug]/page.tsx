@@ -36,14 +36,16 @@ export async function generateMetadata(
         };
     }
 
+    const description = movie.content ? movie.content.substring(0, 150) : 'Xem phim miễn phí chất lượng cao tại Pchill';
+    const ogDescription = movie.content ? movie.content.substring(0, 200) : 'Xem phim miễn phí tại Pchill - Nền tảng xem phim chất lượng cao.';
     const previousImages = (await parent).openGraph?.images || [];
 
     return {
         title: `Xem phim ${movie.name} (${movie.year}) ${movie.quality} ${movie.lang} - Pchill`,
-        description: `Xem phim ${movie.name} - ${movie.origin_name} (${movie.year}) ${movie.quality} ${movie.lang}. ${movie.content.substring(0, 150)}...`,
+        description: `Xem phim ${movie.name} - ${movie.origin_name} (${movie.year}) ${movie.quality} ${movie.lang}. ${description}...`,
         openGraph: {
             title: `${movie.name} (${movie.year}) - Xem phim miễn phí tại Pchill`,
-            description: movie.content.substring(0, 200),
+            description: ogDescription,
             url: `https://pchill.com/movie/${movie.slug}`,
             siteName: 'Pchill',
             images: [
