@@ -1,4 +1,4 @@
-const { syncAll, addToBlacklist, removeFromBlacklist, getBlacklist, getStatus } = require('../crawler');
+const { syncAll, syncSpecificMovie, searchMovieByName, addToBlacklist, removeFromBlacklist, getBlacklist, getStatus } = require('../crawler');
 
 // Manual sync trigger
 exports.triggerSync = async (req, res) => {
@@ -69,4 +69,73 @@ exports.removeFromBlacklist = (req, res) => {
         success: true,
         message: `Đã xóa ${slug} khỏi blacklist`
     });
+};
+
+// Fetch specific movie by slug
+exports.fetchSpecificMovie = async (req, res) => {
+    try {
+        const { slug, source } = req.body;
+        
+        if (!slug) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Vui lòng nhập slug của phim' 
+            });
+        }
+
+        const result = await syncSpecificMovie(slug, source);
+
+        if (result.success) {
+            res.json({
+                success: true,
+                message: `Đã tải phim thành công từ ${result.source}!`,
+                data: result.movie
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: result.error || 'Không thể tải phim'
+            });
+        }
+    } catch (error) {
+        console.error('Fetch specific movie error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
+    }
+};
+
+// Search movies by name
+exports.searchMovie = async (req, res) => {
+    try {
+        const { query, source } = req.query;
+        
+        if (!query) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Vui lòng nhập tên phim để tìm kiếm' 
+            });
+        }
+
+        const result = await searchMovieByName(query, source || 'OPHIM');
+
+        if (result.success) {
+            res.json({
+                success: true,
+                data: result.results
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: result.error || 'Không tìm thấy phim'
+            });
+        }
+    } catch (error) {
+        console.error('Search movie error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
+    }
 };

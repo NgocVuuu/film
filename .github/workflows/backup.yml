@@ -32,10 +32,15 @@ jobs:
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
 
-      - name: Setup Rclone
-        uses: animmustafa/setup-rclone@v1
-        with:
-          rclone_config: ${{ secrets.RCLONE_CONFIG }}
+      - name: Install Rclone
+        run: |
+          sudo -v
+          curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configure Rclone
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONFIG }}" > ~/.config/rclone/rclone.conf
 
       - name: Sync Backup to OneDrive
         run: |

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Play, Loader2, RefreshCw, Trash2, ShieldAlert } from 'lucide-react';
+import { Play, Loader2, RefreshCw, Trash2, ShieldAlert, Download, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
@@ -17,6 +17,11 @@ export default function AdminCrawlerPage() {
     const [blacklist, setBlacklist] = useState<string[]>([]);
     const [newItem, setNewItem] = useState('');
     const [totalPages, setTotalPages] = useState('50');
+    
+    // Fetch specific movie states
+    const [movieSlug, setMovieSlug] = useState('');
+    const [movieSource, setMovieSource] = useState('');
+    const [fetching, setFetching] = useState(false);
 
     useEffect(() => {
         fetchStatus();
@@ -135,6 +140,44 @@ export default function AdminCrawlerPage() {
         }
     };
 
+    const handleFetchMovie = async () => {
+        if (!movieSlug.trim()) {
+            toast.error('Vui lòng nhập slug của phim');
+            return;
+        }
+
+        try {
+            setFetching(true);
+            toast.loading('Đang tải phim từ nguồn...', { id: 'fetch-movie' });
+            
+            const response = await customFetch(`/api/admin/crawler/fetch-movie`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ 
+                    slug: movieSlug.trim(),
+                    source: movieSource || null
+                })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                toast.success(data.message, { id: 'fetch-movie' });
+                setMovieSlug('');
+                setMovieSource('');
+            } else {
+                toast.error(data.message, { id: 'fetch-movie' });
+            }
+        } catch (error) {
+            console.error('Fetch movie error:', error);
+            toast.error('Lỗi khi tải phim', { id: 'fetch-movie' });
+        } finally {
+            setFetching(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center py-20">
@@ -146,6 +189,69 @@ export default function AdminCrawlerPage() {
     return (
         <div>
             <h1 className="text-3xl font-bold text-white mb-8">Crawler Management</h1>
+
+            {/* Fetch Specific Movie Section */}
+            <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 rounded-xl p-6 mb-8">
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <Download className="w-5 h-5 text-primary" />
+                    Tải phim cụ thể
+                </h2>
+                
+                <div className="space-y-4">
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <input
+                            type="text"
+                            placeholder="Nhập slug của phim (vd: avatar-2024)"
+                            value={movieSlug}
+                            onChange={(e) => setMovieSlug(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleFetchMovie()}
+                            className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                            disabled={fetching}
+                        />
+                        
+                        <select
+                            value={movieSource}
+                            onChange={(e) => setMovieSource(e.target.value)}
+                            className="px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary"
+                            disabled={fetching}
+                        >
+                            <option value="">Tự động (Tất cả nguồn)</option>
+                            <option value="OPHIM">OPHIM</option>
+                            <option value="KKPHIM">KKPHIM</option>
+                            <option value="NGUONC">NGUONC</option>
+                        </select>
+                        
+                        <Button
+                            onClick={handleFetchMovie}
+                            disabled={fetching || !movieSlug.trim()}
+                            className="bg-primary text-black hover:bg-primary/90 min-w-[120px]"
+                        >
+                            {fetching ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Đang tải...
+                                </>
+                            ) : (
+                                <>
+                                    <Download className="w-4 h-4 mr-2" />
+                                    Tải phim
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                    
+                    <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+                        <p className="text-sm text-gray-400">
+                            <span className="text-white font-bold">Hướng dẫn:</span>
+                            <br />1. Nhập <b>slug</b> của phim từ nguồn (OPHIM, KKPHIM, NGUONC)
+                            <br />2. Chọn nguồn cụ thể hoặc để <b>Tự động</b> để hệ thống thử tất cả nguồn
+                            <br />3. Hệ thống sẽ tự động tải phim và lưu vào database
+                            <br />
+                            <br /><span className="text-primary">💡 Mẹo:</span> Truy cập ophim1.com, phimapi.com hoặc phim.nguonc.com để tìm slug phim bạn muốn thêm
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             {/* Status Card */}
             <div className="bg-surface-900 border border-white/10 rounded-xl p-6 mb-8">

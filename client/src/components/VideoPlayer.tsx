@@ -21,6 +21,11 @@ interface VideoPlayerProps {
     episodeName?: string;
     serverName?: string;
     startTime?: number;  // Optional start time from URL param
+    onEnded?: () => void;  // Callback when video ends
+    nextEpisodeInfo?: {
+        name: string;
+        serverName: string;
+    };
 }
 
 const formatTime = (seconds: number) => {
@@ -46,7 +51,9 @@ export default function VideoPlayer({
     episodeSlug,
     episodeName,
     serverName,
-    startTime = 0
+    startTime = 0,
+    onEnded,
+    nextEpisodeInfo
 }: VideoPlayerProps) {
     const { user } = useAuth();
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -67,6 +74,11 @@ export default function VideoPlayer({
     const [useEmbed] = useState(false);
     const [hoverTime, setHoverTime] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<number>(0);
+    
+    // Next Episode Countdown
+    const [showNextEpisode, setShowNextEpisode] = useState(false);
+    const [countdown, setCountdown] = useState(10);
+    const [cancelledAutoPlay, setCancelledAutoPlay] = useState(false);
 
     // Quality State
     const [qualityLevels, setQualityLevels] = useState<{ height: number; bitrate: number; index: number }[]>([]);
@@ -116,6 +128,14 @@ export default function VideoPlayer({
             if (user && movieSlug && episodeSlug) {
                 debouncedSave(time, dur);
             }
+
+            // Show next episode countdown 10 seconds before end
+            if (onEnded && nextEpisodeInfo && !cancelledAutoPlay && dur > 0 && dur - time <= 10 && dur - time > 0) {
+                if (!showNextEpisode) {
+                    setShowNextEpisode(true);
+                    setCountdown(Math.ceil(dur - time));
+                }
+            }
         }
     };
 
@@ -143,11 +163,30 @@ export default function VideoPlayer({
         }
     };
 
+    // Seek forward/backward
+    const seekVideo = (seconds: number) => {
+        if (!videoRef.current) return;
+        const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
+        videoRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+        
+        // Show feedback
+        setSeekFeedback({
+            direction: seconds > 0 ? 'forward' : 'backward',
+            amount: Math.abs(seconds)
+        });
+        setTimeout(() => setSeekFeedback(null), 500);
+    };
+
     // -- Mobile Gestures & Orientation --
     const touchStartRef = useRef<{ x: number, y: number } | null>(null);
     const touchStartTimeRef = useRef<number>(0);
     const [brightness, setBrightness] = useState(1);
     const [gestureFeedback, setGestureFeedback] = useState<{ type: 'volume' | 'brightness' | 'error', value: number } | null>(null);
+    
+    // Seek Feedback
+    const [seekFeedback, setSeekFeedback] = useState<{ direction: 'forward' | 'backward', amount: number } | null>(null);
+    const lastTapRef = useRef<{ time: number, x: number, side: 'left' | 'right' } | null>(null);
 
     const handleTouchStart = (e: React.TouchEvent) => {
         touchStartRef.current = {
@@ -200,7 +239,50 @@ export default function VideoPlayer({
         }
     };
 
-    const handleTouchEnd = () => {
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        const now = Date.now();
+        const touch = e.changedTouches[0];
+        const x = touch.clientX;
+        const y = touch.clientY;
+        const container = containerRef.current;
+        
+        // Check if this was a quick tap (not a long press or swipe)
+        const touchDuration = now - touchStartTimeRef.current;
+        const wasTap = touchDuration < 200; // Quick tap < 200ms
+        
+        // Check if touch moved significantly (swipe vs tap)
+        const touchMoved = touchStartRef.current && (
+            Math.abs(x - touchStartRef.current.x) > 10 ||
+            Math.abs(y - touchStartRef.current.y) > 10
+        );
+        
+        if (container && wasTap && !touchMoved) {
+            const rect = container.getBoundingClientRect();
+            const side = x < rect.width / 2 ? 'left' : 'right';
+            
+            // Double tap detection (within 300ms and same side)
+            if (lastTapRef.current && 
+                now - lastTapRef.current.time < 300 && 
+                lastTapRef.current.side === side) {
+                
+                // Prevent default click/play behavior on double tap
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Double tap detected - seek video
+                if (side === 'left') {
+                    seekVideo(-10);
+                } else {
+                    seekVideo(10);
+                }
+                
+                lastTapRef.current = null; // Reset to prevent triple tap
+            } else {
+                // First tap - record time and position
+                lastTapRef.current = { time: now, x, side };
+            }
+        }
+        
         touchStartRef.current = null;
         setTimeout(() => setGestureFeedback(null), 1000);
     };
@@ -292,6 +374,18 @@ export default function VideoPlayer({
         const video = videoRef.current;
         if (!video) return;
 
+        // Set WebKit-specific attributes for iOS compatibility
+        // These ensure video plays inline instead of fullscreen on iOS
+        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('x-webkit-airplay', 'allow');
+        video.setAttribute('playsinline', 'true');
+        
+        // Prevent iOS from automatically entering fullscreen
+        video.setAttribute('preload', 'metadata');
+        
+        // Disable Picture-in-Picture on iOS (can interfere with inline playback)
+        video.disablePictureInPicture = false;
+
         if (!src) {
             setError(true);
             setIsLoading(false);
@@ -309,6 +403,12 @@ export default function VideoPlayer({
             setIsPlaying(true);
         };
         const onVideoPause = () => setIsPlaying(false);
+        const onVideoEnded = () => {
+            // Trigger onEnded callback if exists
+            if (onEnded && !cancelledAutoPlay) {
+                onEnded();
+            }
+        };
         const onLoadedMetadata = () => {
             // Priority: 1. startTime from URL param, 2. saved progress
             if (startTime > 0) {
@@ -328,6 +428,7 @@ export default function VideoPlayer({
         video.addEventListener('waiting', onVideoWaiting);
         video.addEventListener('playing', onVideoPlaying);
         video.addEventListener('pause', onVideoPause);
+        video.addEventListener('ended', onVideoEnded);
         video.addEventListener('loadedmetadata', onLoadedMetadata);
         video.addEventListener('timeupdate', handleTimeUpdate);
 
@@ -401,6 +502,7 @@ export default function VideoPlayer({
             video.removeEventListener('waiting', onVideoWaiting);
             video.removeEventListener('playing', onVideoPlaying);
             video.removeEventListener('pause', onVideoPause);
+            video.removeEventListener('ended', onVideoEnded);
             video.removeEventListener('timeupdate', handleTimeUpdate);
             // Cleanup fullscreen listeners
             document.removeEventListener('fullscreenchange', onFullscreenChange);
@@ -408,6 +510,65 @@ export default function VideoPlayer({
             video.removeEventListener('webkitendfullscreen', () => setIsFullscreen(false));
         };
     }, [src, autoPlay]);
+
+    // Countdown timer for next episode
+    useEffect(() => {
+        if (!showNextEpisode || countdown <= 0) return;
+
+        const timer = setInterval(() => {
+            setCountdown(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [showNextEpisode, countdown]);
+
+    // Reset next episode states when src changes
+    useEffect(() => {
+        setShowNextEpisode(false);
+        setCountdown(10);
+        setCancelledAutoPlay(false);
+    }, [src]);
+
+    // Keyboard controls for seeking
+    useEffect(() => {
+        const handleKeyPress = (e: KeyboardEvent) => {
+            // Only handle if video player is focused or visible
+            if (!videoRef.current) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    seekVideo(-10);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    seekVideo(10);
+                    break;
+                case ' ':
+                case 'k':
+                    e.preventDefault();
+                    togglePlay();
+                    break;
+                case 'f':
+                    e.preventDefault();
+                    toggleFullscreen();
+                    break;
+                case 'm':
+                    e.preventDefault();
+                    toggleMute();
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, [currentTime, duration, isPlaying]);
 
 
     if (error || (useEmbed && embedUrl)) {
@@ -487,6 +648,50 @@ export default function VideoPlayer({
                         {gestureFeedback.type === 'error' && (
                             <span className="text-xs text-center text-gray-300">iPhone không hỗ trợ<br />chỉnh âm lượng cảm ứng</span>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Seek Feedback Overlay */}
+            {seekFeedback && (
+                <div className={`absolute inset-0 flex items-center z-40 pointer-events-none ${isLandscape ? '-rotate-90' : ''} ${
+                    seekFeedback.direction === 'forward' ? 'justify-end pr-8' : 'justify-start pl-8'
+                }`}>
+                    <div className="bg-black/20 backdrop-blur-xl p-4 rounded-2xl text-white/80 flex flex-col items-center gap-1.5 animate-in fade-in zoom-in duration-200">
+                        {seekFeedback.direction === 'forward' ? (
+                            <FastForward className="w-10 h-10 text-primary opacity-80" />
+                        ) : (
+                            <Rewind className="w-10 h-10 text-primary opacity-80" />
+                        )}
+                        <span className="text-xl font-bold">
+                            {seekFeedback.direction === 'forward' ? '+' : '-'}{seekFeedback.amount}s
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Next Episode Countdown Overlay */}
+            {showNextEpisode && nextEpisodeInfo && !cancelledAutoPlay && (
+                <div className={`absolute inset-0 flex items-center justify-center z-50 bg-black/60 backdrop-blur-sm pointer-events-auto ${isLandscape ? '-rotate-90' : ''}`}
+                    onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-gradient-to-br from-gray-900 to-black border border-primary/30 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+                        <div className="text-center space-y-4">
+                            <div className="text-primary text-4xl font-bold">{countdown}</div>
+                            <div className="space-y-2">
+                                <p className="text-gray-300 text-sm">Tập tiếp theo sẽ phát tự động</p>
+                                <p className="text-white font-semibold text-lg">{nextEpisodeInfo.name}</p>
+                            </div>
+                            <Button
+                                onClick={() => {
+                                    setCancelledAutoPlay(true);
+                                    setShowNextEpisode(false);
+                                }}
+                                variant="outline"
+                                className="w-full border-white/20 hover:border-primary hover:bg-primary/10"
+                            >
+                                Hủy tự động phát
+                            </Button>
+                        </div>
                     </div>
                 </div>
             )}

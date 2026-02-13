@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Check, X, Loader2, Film, TrendingUp } from 'lucide-react';
+import { Check, X, Loader2, Film, TrendingUp, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
@@ -56,6 +56,7 @@ export default function AdminRequestsPage() {
 
     const handleApprove = async (requestId: string) => {
         try {
+            toast.loading('Đang tự động tải phim...', { id: 'fetch-request' });
             const response = await customFetch(
                 `/api/admin/movie-requests/${requestId}/approve`,
                 {
@@ -66,14 +67,14 @@ export default function AdminRequestsPage() {
 
             const data = await response.json();
             if (data.success) {
-                toast.success('Đang xử lý yêu cầu...');
+                toast.success(data.message, { id: 'fetch-request' });
                 fetchRequests();
             } else {
-                toast.error(data.message);
+                toast.error(data.message, { id: 'fetch-request' });
             }
         } catch (error) {
             console.error('Approve request error:', error);
-            toast.error('Lỗi khi phê duyệt');
+            toast.error('Lỗi khi xử lý yêu cầu', { id: 'fetch-request' });
         }
     };
 
@@ -217,15 +218,15 @@ export default function AdminRequestsPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
-                                                {request.status === 'pending' && (
+                                                {(request.status === 'pending' || request.status === 'failed') && (
                                                     <>
                                                         <Button
                                                             size="sm"
                                                             onClick={() => handleApprove(request._id)}
-                                                            className="bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                                                            className="bg-primary/20 text-primary hover:bg-primary/30"
                                                         >
-                                                            <Check className="w-4 h-4 mr-1" />
-                                                            Approve
+                                                            <Download className="w-4 h-4 mr-1" />
+                                                            {request.status === 'failed' ? 'Retry' : 'Fetch Now'}
                                                         </Button>
                                                         <Button
                                                             size="sm"
@@ -237,6 +238,22 @@ export default function AdminRequestsPage() {
                                                             Reject
                                                         </Button>
                                                     </>
+                                                )}
+                                                {request.status === 'processing' && (
+                                                    <div className="flex items-center gap-2 text-sm text-blue-400">
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                        <span>Đang xử lý...</span>
+                                                    </div>
+                                                )}
+                                                {request.status === 'completed' && request.movieSlug && (
+                                                    <a
+                                                        href={`/movie/${request.movieSlug}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-sm text-green-400 hover:underline"
+                                                    >
+                                                        Xem phim →
+                                                    </a>
                                                 )}
                                             </div>
                                         </td>

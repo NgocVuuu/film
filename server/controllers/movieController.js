@@ -85,8 +85,13 @@ const getHomeData = async (req, res) => {
                 const WatchProgress = require('../models/WatchProgress');
                 // Use aggregation to get unique movies (most recently watched episode per movie)
                 const recentProgress = await WatchProgress.aggregate([
-                    { $match: { userId: req.user._id } },
-                    { $sort: { updatedAt: -1 } },
+                    { 
+                        $match: { 
+                            userId: req.user._id,
+                            completed: false  // Only show incomplete episodes
+                        } 
+                    },
+                    { $sort: { lastWatched: -1 } },
                     {
                         $group: {
                             _id: "$movieSlug",
@@ -94,7 +99,7 @@ const getHomeData = async (req, res) => {
                         }
                     },
                     { $replaceRoot: { newRoot: "$doc" } },
-                    { $sort: { updatedAt: -1 } },
+                    { $sort: { lastWatched: -1 } },
                     { $limit: 10 }
                 ]);
 
@@ -145,7 +150,7 @@ const getMovies = async (req, res) => {
         const skip = (page - 1) * limit;
 
         // Filters
-        const { category, country, year, status, sort, type, chieurap, q } = req.query;
+        const { category, country, year, status, sort, type, chieurap, q, actor } = req.query;
         let query = {};
 
         // Text search (if 'q' is present)
@@ -163,6 +168,7 @@ const getMovies = async (req, res) => {
         if (status) query.status = status; // 'completed' | 'ongoing'
         if (type) query.type = type; // 'series' | 'single' | 'hoathinh' | 'tvshows'
         if (chieurap === 'true') query.chieurap = true;
+        if (actor) query.actor = actor; // Filter by actor name
 
         // Sorting
         let sortOption = { updatedAt: -1 }; // Default: Newest update

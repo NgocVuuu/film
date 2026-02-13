@@ -38,7 +38,8 @@ exports.getAllMovieRequests = async (req, res) => {
     }
 };
 
-// Approve movie request
+// Approve/Fetch movie request (auto-fetch from sources)
+// This provides immediate processing for admin - manual trigger
 exports.approveRequest = async (req, res) => {
     try {
         const requestId = req.params.requestId;
@@ -51,25 +52,33 @@ exports.approveRequest = async (req, res) => {
             });
         }
 
-        if (request.status !== 'pending') {
+        if (request.status === 'completed') {
             return res.status(400).json({
                 success: false,
-                message: 'Yêu cầu đã được xử lý'
+                message: 'Yêu cầu đã được xử lý thành công'
             });
         }
 
-        // Process request in background
+        // Reset status to pending if failed before
+        if (request.status === 'failed') {
+            request.status = 'pending';
+            request.errorMessage = null;
+            await request.save();
+        }
+
+        // Process request immediately (manual admin trigger)
+        // Note: Regular user requests are processed by GitHub Actions
         setImmediate(() => processMovieRequest(requestId));
 
         res.json({
             success: true,
-            message: 'Đang xử lý yêu cầu...'
+            message: 'Đang tự động tải phim từ các nguồn (Manual trigger - xử lý ngay)...'
         });
     } catch (error) {
         console.error('Approve request error:', error);
         res.status(500).json({
             success: false,
-            message: 'Lỗi khi phê duyệt yêu cầu'
+            message: 'Lỗi khi xử lý yêu cầu'
         });
     }
 };

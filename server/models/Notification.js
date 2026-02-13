@@ -16,7 +16,14 @@ const notificationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['episode', 'system', 'comment', 'security'],
+        enum: [
+            'episode',        // Phim có tập mới
+            'movie_request',  // Phim được yêu cầu đã có sẵn
+            'system',         // Thông báo hệ thống từ admin
+            'subscription',   // Thông báo về gói VIP/thanh toán
+            'comment',        // Thông báo về bình luận
+            'security'        // Thông báo bảo mật
+        ],
         default: 'system'
     },
     isRead: {

@@ -39,6 +39,8 @@ router.get('/crawler/status', adminCrawlerController.getCrawlerStatus);
 router.get('/crawler/blacklist', adminCrawlerController.getBlacklist);
 router.post('/crawler/blacklist', adminCrawlerController.addToBlacklist);
 router.delete('/crawler/blacklist', adminCrawlerController.removeFromBlacklist);
+router.post('/crawler/fetch-movie', adminCrawlerController.fetchSpecificMovie);
+router.get('/crawler/search-movie', adminCrawlerController.searchMovie);
 
 // Comment management
 router.get('/comments', adminCommentController.getAllComments);
@@ -51,6 +53,7 @@ router.patch('/reports/:reportId/resolve', adminReportController.resolveReport);
 
 // Movie management
 router.get('/movies', adminMovieController.getAllMovies);
+router.get('/movies/:slug', adminMovieController.getMovieDetail);
 router.patch('/movies/:slug', adminMovieController.updateMovie);
 router.delete('/movies/:slug', adminMovieController.deleteMovie);
 router.patch('/movies/:slug/featured', adminMovieController.toggleFeatured);

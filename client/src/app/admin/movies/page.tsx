@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { customFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Trash2, Star, StarOff } from 'lucide-react';
+import { Loader2, Trash2, Star, StarOff, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Movie {
@@ -21,6 +22,7 @@ interface Movie {
 }
 
 export default function AdminMoviesPage() {
+    const router = useRouter();
     const [movies, setMovies] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -166,6 +168,13 @@ export default function AdminMoviesPage() {
                                 </td>
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => router.push(`/admin/movies/${movie.slug}`)}
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                        </Button>
                                         <Button
                                             variant="outline"
                                             size="sm"

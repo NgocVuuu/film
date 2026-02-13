@@ -40,14 +40,36 @@ exports.getAllMovies = async (req, res) => {
     }
 };
 
-// Update movie info
+// Get single movie detail (Admin)
+exports.getMovieDetail = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const movie = await Movie.findOne({ slug });
+
+        if (!movie) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
+        }
+
+        res.json({ success: true, data: movie });
+    } catch (error) {
+        console.error('Get movie detail error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Update movie info (Full update)
 exports.updateMovie = async (req, res) => {
     try {
         const { slug } = req.params;
         const updates = req.body;
 
         // Allowed fields to update
-        const allowedFields = ['name', 'origin_name', 'content', 'thumb_url', 'poster_url', 'trailer_url', 'year', 'quality', 'lang', 'status', 'type'];
+        const allowedFields = [
+            'name', 'origin_name', 'content', 'thumb_url', 'poster_url', 'trailer_url',
+            'year', 'quality', 'lang', 'status', 'type', 'time', 'episode_current',
+            'episode_total', 'notify', 'showtimes', 'is_copyright', 'sub_docquyen',
+            'chieurap', 'actor', 'director', 'category', 'country', 'episodes'
+        ];
         const filteredUpdates = {};
 
         allowedFields.forEach(field => {

@@ -127,12 +127,37 @@ exports.getContinueWatching = async (req, res) => {
         const userId = req.user._id;
         const limit = parseInt(req.query.limit) || 12;
 
-        const progress = await WatchProgress.find({
-            userId,
-            completed: false // Only incomplete episodes
-        })
-            .sort({ lastWatched: -1 })
-            .limit(limit);
+        // Use aggregation to group by movieSlug and get only the most recent episode for each movie
+        const progress = await WatchProgress.aggregate([
+            {
+                $match: {
+                    userId: userId,
+                    completed: false // Only incomplete episodes
+                }
+            },
+            {
+                // Sort by lastWatched descending to get most recent first
+                $sort: { lastWatched: -1 }
+            },
+            {
+                // Group by movieSlug and take the first (most recent) document
+                $group: {
+                    _id: '$movieSlug',
+                    doc: { $first: '$$ROOT' }
+                }
+            },
+            {
+                // Replace root with the document
+                $replaceRoot: { newRoot: '$doc' }
+            },
+            {
+                // Sort again by lastWatched after grouping
+                $sort: { lastWatched: -1 }
+            },
+            {
+                $limit: limit
+            }
+        ]);
 
         res.json({
             success: true,

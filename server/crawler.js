@@ -347,14 +347,211 @@ const setupCrawler = () => {
     console.log('Crawler: Manual Mode Only (Auto-run moved to GitHub Actions).');
 };
 
+// Sync a specific movie by slug from all sources
+async function syncSpecificMovie(slug, sourceName = null) {
+    try {
+        console.log(`[FETCH-SPECIFIC] Attempting to fetch movie: ${slug} from ${sourceName || 'all sources'}`);
+
+        let results = [];
+        
+        // If specific source is provided, try only that source
+        if (sourceName) {
+            const adapter = ADAPTERS[sourceName.toUpperCase()];
+            if (!adapter) {
+                return { success: false, error: `Nguồn '${sourceName}' không hợp lệ. Chọn: OPHIM, KKPHIM, NGUONC` };
+            }
+            const result = await processMovie(adapter, slug);
+            return result;
+        }
+
+        // Try all sources in priority order: KKPHIM -> NGUONC -> OPHIM
+        const sources = [ADAPTERS.KKPHIM, ADAPTERS.NGUONC, ADAPTERS.OPHIM];
+        
+        for (const adapter of sources) {
+            console.log(`[FETCH-SPECIFIC] Trying ${adapter.name}...`);
+            const result = await processMovie(adapter, slug, 0);
+            
+            if (result.success) {
+                console.log(`[FETCH-SPECIFIC] ✓ Successfully fetched from ${adapter.name}: ${result.name}`);
+                return { success: true, source: adapter.name, movie: result };
+            }
+            
+            // Small delay between attempts
+            await sleep(500);
+        }
+
+        console.log(`[FETCH-SPECIFIC] ✗ Failed to fetch ${slug} from all sources`);
+        return { success: false, error: 'Không tìm thấy phim từ bất kỳ nguồn nào (OPHIM, KKPHIM, NGUONC)' };
+
+    } catch (error) {
+        console.error(`[FETCH-SPECIFIC] Error:`, error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Search for movies by name from all sources
+async function searchMovieByName(searchQuery, source = 'OPHIM') {
+    try {
+        console.log(`[SEARCH] Searching for: ${searchQuery} in ${source}`);
+        
+        const adapter = ADAPTERS[source.toUpperCase()];
+        if (!adapter) {
+            return { success: false, error: 'Nguồn không hợp lệ' };
+        }
+
+        // Get first page and filter by name
+        const movies = await adapter.getPage(1);
+        
+        const matches = movies.filter(movie => {
+            const name = (movie.name || '').toLowerCase();
+            const originName = (movie.origin_name || '').toLowerCase();
+            const query = searchQuery.toLowerCase();
+            return name.includes(query) || originName.includes(query);
+        });
+
+        if (matches.length === 0) {
+            return { success: false, error: 'Không tìm thấy phim phù hợp' };
+        }
+
+        return { 
+            success: true, 
+            results: matches.map(m => ({
+                name: m.name,
+                origin_name: m.origin_name,
+                slug: m.slug,
+                year: m.year,
+                thumb_url: m.thumb_url
+            }))
+        };
+
+    } catch (error) {
+        console.error(`[SEARCH] Error:`, error);
+        return { success: false, error: error.message };
+    }
+}
+
 const addToBlacklist = (slug) => blacklist.add(slug);
 const removeFromBlacklist = (slug) => blacklist.delete(slug);
 const getBlacklist = () => Array.from(blacklist);
 const getStatus = () => ({ isRunning, blacklistSize: blacklist.size, currentPage });
 
+// Process pending movie requests from database
+async function processPendingRequests() {
+    try {
+        const MovieRequest = require('./models/MovieRequest');
+        const Notification = require('./models/Notification');
+
+        // Get all pending requests sorted by priority
+        const pendingRequests = await MovieRequest.find({ 
+            status: 'pending' 
+        })
+        .sort({ priority: -1, createdAt: 1 }) // Higher priority first, then oldest
+        .limit(50) // Process max 50 requests per run
+        .populate('userId', 'displayName');
+
+        if (pendingRequests.length === 0) {
+            console.log('[REQUESTS] No pending requests to process');
+            return { processed: 0, successful: 0, failed: 0 };
+        }
+
+        console.log(`[REQUESTS] Found ${pendingRequests.length} pending requests. Processing...`);
+
+        let successful = 0;
+        let failed = 0;
+
+        for (const request of pendingRequests) {
+            try {
+                // Update to processing
+                request.status = 'processing';
+                await request.save();
+
+                let slug = request.movieSlug;
+
+                // Auto-generate slug if not provided
+                if (!slug && request.movieName) {
+                    slug = request.movieName
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/đ/g, 'd')
+                        .replace(/[^a-z0-9\s-]/g, '')
+                        .trim()
+                        .replace(/\s+/g, '-');
+                }
+
+                if (!slug) {
+                    throw new Error('Không có slug để tìm phim');
+                }
+
+                console.log(`[REQUESTS] Processing: ${request.movieName} (${slug})`);
+
+                // Try to fetch from all sources
+                const result = await syncSpecificMovie(slug, null);
+
+                if (result.success) {
+                    // Mark as completed
+                    request.status = 'completed';
+                    request.processedAt = new Date();
+                    request.movieSlug = slug;
+                    await request.save();
+
+                    // Send notifications to all users who requested this movie
+                    const allRequests = await MovieRequest.find({
+                        movieSlug: slug,
+                        status: 'completed'
+                    }).populate('userId');
+
+                    const notifications = allRequests
+                        .filter(req => req.userId && req.userId._id)
+                        .map(req => ({
+                            recipient: req.userId._id,
+                            content: `Phim "${request.movieName}" bạn yêu cầu đã có sẵn! Xem ngay`,
+                            link: `/movie/${slug}`,
+                            type: 'movie_request',
+                            isRead: false
+                        }));
+
+                    if (notifications.length > 0) {
+                        await Notification.insertMany(notifications);
+                        console.log(`[REQUESTS] ✓ Sent ${notifications.length} notifications for ${request.movieName}`);
+                    }
+
+                    successful++;
+                    console.log(`[REQUESTS] ✓ Success: ${request.movieName} from ${result.source}`);
+                } else {
+                    throw new Error(result.error || 'Không thể tải phim từ bất kỳ nguồn nào');
+                }
+
+            } catch (error) {
+                // Mark as failed
+                request.status = 'failed';
+                request.errorMessage = error.message;
+                request.processedAt = new Date();
+                await request.save();
+                
+                failed++;
+                console.error(`[REQUESTS] ✗ Failed: ${request.movieName} - ${error.message}`);
+            }
+
+            // Small delay between requests
+            await sleep(1000);
+        }
+
+        console.log(`[REQUESTS] Completed: ${successful} successful, ${failed} failed`);
+        return { processed: pendingRequests.length, successful, failed };
+
+    } catch (error) {
+        console.error('[REQUESTS] Error processing pending requests:', error);
+        return { processed: 0, successful: 0, failed: 0 };
+    }
+}
+
 module.exports = {
     setupCrawler,
     syncAll,
+    syncSpecificMovie,
+    searchMovieByName,
+    processPendingRequests,
     addToBlacklist,
     removeFromBlacklist,
     getBlacklist,

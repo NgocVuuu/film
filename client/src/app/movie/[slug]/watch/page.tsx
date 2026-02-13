@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
-import { Play, ArrowLeft, AlertTriangle, Crown } from 'lucide-react';
+import { Play, ArrowLeft, AlertTriangle, Crown, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
@@ -62,6 +62,9 @@ export default function WatchPage() {
     const [availableSources, setAvailableSources] = useState<string[]>([]);
     const [currentSource, setCurrentSource] = useState<string>('');
     const [filteredServers, setFilteredServers] = useState<Episode[]>([]);
+    
+    // Next Episode State
+    const [nextEpisode, setNextEpisode] = useState<{ server: string; episode: { name: string; slug: string; link_m3u8: string; link_embed: string } } | null>(null);
 
     // Get query params
     const episodeParam = searchParams.get('episode');
@@ -173,11 +176,63 @@ export default function WatchPage() {
 
     }, [movie, currentSource, episodeParam, timestampParam]);
 
+    // Find next episode
+    useEffect(() => {
+        if (!currentEpisode || !currentServerName || filteredServers.length === 0) {
+            setNextEpisode(null);
+            return;
+        }
+
+        // Find current server and episode index
+        for (const server of filteredServers) {
+            if (server.server_name === currentServerName) {
+                const currentIndex = server.server_data.findIndex(ep => ep.slug === currentEpisode.slug);
+                
+                if (currentIndex !== -1 && currentIndex < server.server_data.length - 1) {
+                    // Next episode in same server
+                    setNextEpisode({
+                        server: server.server_name,
+                        episode: server.server_data[currentIndex + 1]
+                    });
+                    return;
+                }
+                
+                // No next episode in current server, try next server
+                const serverIndex = filteredServers.findIndex(s => s.server_name === currentServerName);
+                if (serverIndex !== -1 && serverIndex < filteredServers.length - 1) {
+                    const nextServer = filteredServers[serverIndex + 1];
+                    if (nextServer.server_data.length > 0) {
+                        setNextEpisode({
+                            server: nextServer.server_name,
+                            episode: nextServer.server_data[0]
+                        });
+                        return;
+                    }
+                }
+                break;
+            }
+        }
+
+        setNextEpisode(null);
+    }, [currentEpisode, currentServerName, filteredServers]);
+
     const handleEpisodeClick = (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string }) => {
         setCurrentServerName(serverName);
         setCurrentEpisode(episode);
         setShouldAutoPlay(true);
+        setStartTime(0); // Reset start time when changing episode
+        
+        // Update URL
+        const newUrl = `/movie/${slug}/watch?episode=${episode.slug}`;
+        window.history.pushState({}, '', newUrl);
+        
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleNextEpisode = () => {
+        if (nextEpisode) {
+            handleEpisodeClick(nextEpisode.server, nextEpisode.episode);
+        }
     };
 
     const getCleanServerName = (rawName: string) => {
@@ -215,8 +270,18 @@ export default function WatchPage() {
                             {currentEpisode ? `Đang xem: ${currentEpisode.name}` : movie.origin_name}
                         </p>
                     </div>
-                    {/* Optional: Add minimal controls or report button here */}
-                    <div className="hidden sm:flex items-center gap-2">
+                    {/* Next Episode Button */}
+                    {nextEpisode && (
+                        <Button
+                            onClick={handleNextEpisode}
+                            size="sm"
+                            className="bg-primary/20 text-primary hover:bg-primary hover:text-black border border-primary/30 hidden sm:flex items-center gap-2"
+                        >
+                            <SkipForward className="w-4 h-4" />
+                            <span className="hidden md:inline">Tập tiếp theo</span>
+                        </Button>
+                    )}
+                    <div className="hidden md:flex items-center gap-2">
                         <Button variant="ghost" size="sm" className="text-xs text-gray-400 hover:text-red-400">
                             <AlertTriangle className="w-4 h-4 mr-1" /> Báo lỗi
                         </Button>
@@ -266,6 +331,11 @@ export default function WatchPage() {
                                 episodeName={currentEpisode.name}
                                 serverName={currentServerName}
                                 startTime={startTime}
+                                onEnded={nextEpisode ? handleNextEpisode : undefined}
+                                nextEpisodeInfo={nextEpisode ? {
+                                    name: nextEpisode.episode.name,
+                                    serverName: getCleanServerName(nextEpisode.server)
+                                } : undefined}
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-surface-900">

@@ -1,6 +1,7 @@
-const axios = require('axios');
 const MovieRequest = require('../models/MovieRequest');
 const Movie = require('../models/Movie');
+const Notification = require('../models/Notification');
+const { syncSpecificMovie } = require('../crawler');
 
 // Submit a movie request
 exports.requestMovie = async (req, res) => {
@@ -54,13 +55,13 @@ exports.requestMovie = async (req, res) => {
             priority: 1
         });
 
-        // Try to process immediately in background
-        setImmediate(() => processMovieRequest(request._id));
+        // Note: Processing moved to GitHub Actions (runs every 30 min)
+        // Admin can manually trigger immediate processing if needed
 
         res.json({
             success: true,
             data: request,
-            message: 'Yêu cầu của bạn đã được ghi nhận. Phim sẽ được cập nhật trong ít phút!'
+            message: 'Yêu cầu của bạn đã được ghi nhận. Phim sẽ được cập nhật trong vòng 30 phút (hoặc sớm hơn nếu admin xử lý ngay)!'
         });
     } catch (error) {
         console.error('Request movie error:', error);
@@ -108,60 +109,74 @@ exports.getMyRequests = async (req, res) => {
 // Background processor for movie requests
 async function processMovieRequest(requestId) {
     try {
-        const request = await MovieRequest.findById(requestId);
-        if (!request || request.status !== 'pending') return;
+        const request = await MovieRequest.findById(requestId).populate('userId', 'displayName');
+        if (!request) return;
+        
+        // Skip if already processed
+        if (request.status !== 'pending' && request.status !== 'processing') return;
 
         // Update status to processing
         request.status = 'processing';
         await request.save();
 
-        // Try to find and crawl from ophim
-        let movieData;
+        console.log(`[REQUEST] Processing request: ${request.movieName} (${request.movieSlug || 'no slug'})`);
 
-        if (request.movieSlug) {
-            // Direct slug provided
-            const response = await axios.get(`https://ophim1.com/phim/${request.movieSlug}`, {
-                timeout: 10000
-            });
-            if (response.data.status === 'success') {
-                movieData = response.data.movie;
-            }
-        } else {
-            // Search by name
-            const searchResponse = await axios.get(`https://ophim1.com/v1/api/tim-kiem`, {
-                params: { keyword: request.movieName },
-                timeout: 10000
-            });
+        let slug = request.movieSlug;
 
-            if (searchResponse.data.status === 'success' && searchResponse.data.data.items.length > 0) {
-                const firstResult = searchResponse.data.data.items[0];
-                const detailResponse = await axios.get(`https://ophim1.com/phim/${firstResult.slug}`);
-                if (detailResponse.data.status === 'success') {
-                    movieData = detailResponse.data.movie;
-                }
-            }
+        // If no slug provided, try to search and find one
+        if (!slug && request.movieName) {
+            // Try to auto-generate slug from movie name
+            slug = request.movieName
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd')
+                .replace(/[^a-z0-9\s-]/g, '')
+                .trim()
+                .replace(/\s+/g, '-');
+            
+            console.log(`[REQUEST] Generated slug from name: ${slug}`);
         }
 
-        if (movieData) {
-            // Save to database
-            await Movie.findOneAndUpdate(
-                { slug: movieData.slug },
-                { $set: movieData },
-                { upsert: true, new: true }
-            );
+        if (!slug) {
+            throw new Error('Không có slug để tìm phim. Vui lòng cung cấp tên phim chính xác.');
+        }
 
-            // Update request status
+        // Use the new crawler to fetch movie from all sources
+        const result = await syncSpecificMovie(slug, null);
+
+        if (result.success) {
+            // Update request status to completed
             request.status = 'completed';
             request.processedAt = new Date();
-            request.movieSlug = movieData.slug;
+            request.movieSlug = slug;
             await request.save();
 
-            console.log(`[REQUEST] Successfully added: ${movieData.name}`);
+            // Send notification to all users who requested this movie
+            const allRequests = await MovieRequest.find({
+                movieSlug: slug,
+                status: 'completed'
+            }).populate('userId');
+
+            const notifications = allRequests.map(req => ({
+                recipient: req.userId._id,
+                content: `Phim "${request.movieName}" bạn yêu cầu đã có sẵn! Xem ngay`,
+                link: `/movie/${slug}`,
+                type: 'movie_request',
+                isRead: false
+            }));
+
+            if (notifications.length > 0) {
+                await Notification.insertMany(notifications);
+                console.log(`[REQUEST] Sent ${notifications.length} notifications for ${request.movieName}`);
+            }
+
+            console.log(`[REQUEST] ✓ Successfully added: ${request.movieName} from ${result.source}`);
         } else {
-            throw new Error('Không tìm thấy phim trên nguồn');
+            throw new Error(result.error || 'Không thể tải phim từ bất kỳ nguồn nào');
         }
     } catch (error) {
-        console.error(`[REQUEST] Error processing ${requestId}:`, error.message);
+        console.error(`[REQUEST] ✗ Error processing ${requestId}:`, error.message);
 
         // Update request with error
         await MovieRequest.findByIdAndUpdate(requestId, {
