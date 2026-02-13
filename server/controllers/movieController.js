@@ -1,7 +1,98 @@
 const Movie = require('../models/Movie');
 const mongoose = require('mongoose');
+const axios = require('axios');
+const NodeCache = require('node-cache');
+const searchCache = new NodeCache({ stdTTL: 1200 }); // 20 minutes search cache
 
 const { attachProgressToMovies } = require('../utils/movieUtils');
+// Delay import to avoid circular dependency if any, but since we only need syncSpecificMovie
+// it might be safer to define a simple helper or use it directly
+const { syncSpecificMovie } = require('../crawler');
+
+const multiSourceSearch = async (keyword) => {
+    const cacheKey = `search_${keyword}`;
+    const cached = searchCache.get(cacheKey);
+    if (cached) return cached;
+
+    // Parallel search across 3 sources
+    const results = await Promise.allSettled([
+        axios.get(`https://ophim1.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}`, { timeout: 5000 }),
+        axios.get(`https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}`, { timeout: 5000 }),
+        axios.get(`https://phim.nguonc.com/api/films/search?keyword=${encodeURIComponent(keyword)}`, { timeout: 5000 })
+    ]);
+
+    const allMovies = new Map(); // Use Map to merge by slug
+
+    // 1. Process KKPhim (Priority 1)
+    if (results[1].status === 'fulfilled' && results[1].value.data.status === 'success') {
+        const items = results[1].value.data.data.items || [];
+        items.forEach(m => {
+            allMovies.set(m.slug, {
+                _id: m._id,
+                name: m.name,
+                slug: m.slug,
+                origin_name: m.origin_name,
+                thumb_url: m.thumb_url,
+                poster_url: m.poster_url,
+                year: m.year,
+                type: m.type,
+                quality: m.quality,
+                episode_current: m.episode_current,
+                fromExternal: true,
+                source: 'KKPhim'
+            });
+        });
+    }
+
+    // 2. Process NguonC (Priority 2)
+    if (results[2].status === 'fulfilled' && results[2].value.data.status === 'success') {
+        const items = results[2].value.data.items || [];
+        items.forEach(m => {
+            if (!allMovies.has(m.slug)) {
+                allMovies.set(m.slug, {
+                    name: m.name,
+                    slug: m.slug,
+                    origin_name: m.original_name,
+                    thumb_url: m.thumb_url,
+                    poster_url: m.poster_url,
+                    year: m.year,
+                    type: m.type,
+                    quality: m.quality,
+                    episode_current: m.episode_current,
+                    fromExternal: true,
+                    source: 'NguonC'
+                });
+            }
+        });
+    }
+
+    // 3. Process Ophim (Priority 3)
+    if (results[0].status === 'fulfilled' && (results[0].value.data.status === 'success' || results[0].value.data.status === true)) {
+        const items = results[0].value.data.data.items || [];
+        items.forEach(m => {
+            if (!allMovies.has(m.slug)) {
+                allMovies.set(m.slug, {
+                    _id: m._id,
+                    name: m.name,
+                    slug: m.slug,
+                    origin_name: m.origin_name,
+                    thumb_url: m.thumb_url,
+                    poster_url: m.poster_url,
+                    year: m.year,
+                    type: m.type,
+                    quality: m.quality,
+                    episode_current: m.episode_current,
+                    fromExternal: true,
+                    source: 'Ophim'
+                });
+            }
+        });
+    }
+
+    const finalResults = Array.from(allMovies.values());
+    searchCache.set(cacheKey, finalResults);
+    return finalResults;
+};
 
 // 1. Get Home Data (Aggregated)
 const getHomeData = async (req, res) => {
@@ -85,11 +176,11 @@ const getHomeData = async (req, res) => {
                 const WatchProgress = require('../models/WatchProgress');
                 // Use aggregation to get unique movies (most recently watched episode per movie)
                 const recentProgress = await WatchProgress.aggregate([
-                    { 
-                        $match: { 
+                    {
+                        $match: {
                             userId: req.user._id,
                             completed: false  // Only show incomplete episodes
-                        } 
+                        }
                     },
                     { $sort: { lastWatched: -1 } },
                     {
@@ -176,13 +267,40 @@ const getMovies = async (req, res) => {
         if (sort === 'view') sortOption = { view: -1 };
         if (sort === 'rating') sortOption = { rating_average: -1 };
 
-        const movies = await Movie.find(query)
+        let movies = await Movie.find(query)
             .sort(sortOption)
             .skip(skip)
             .limit(limit)
             .select('name slug thumb_url origin_name year type quality episode_current view rating_average');
 
-        const total = await Movie.countDocuments(query);
+        let total = await Movie.countDocuments(query);
+
+        // Hybrid Search: If q is present, page is 1, and no local results found
+        if (q && movies.length === 0 && page === 1) {
+            try {
+                const externalMovies = await multiSourceSearch(q);
+
+                if (externalMovies.length > 0) {
+                    movies = externalMovies;
+                    total = externalMovies.length;
+
+                    // Background sync (gentle queue)
+                    setImmediate(async () => {
+                        for (const movie of externalMovies) {
+                            try {
+                                await syncSpecificMovie(movie.slug);
+                                // Small delay between syncs during search to be VPS friendly
+                                await new Promise(r => setTimeout(r, 1000));
+                            } catch (e) {
+                                console.error(`[HYBRID SYNC] Failed for ${movie.slug}:`, e.message);
+                            }
+                        }
+                    });
+                }
+            } catch (externalError) {
+                console.error('[HYBRID] Multi-source search error:', externalError.message);
+            }
+        }
 
         // Attach progress if logged in
         let finalMovies = movies;
@@ -210,7 +328,20 @@ const getMovies = async (req, res) => {
 // 3. Get Movie Detail
 const getMovieDetail = async (req, res) => {
     try {
-        const movie = await Movie.findOne({ slug: req.params.slug });
+        let movie = await Movie.findOne({ slug: req.params.slug });
+
+        // If not found in DB, try fetching from external API (Hybrid Detail)
+        if (!movie) {
+            try {
+                const syncResult = await syncSpecificMovie(req.params.slug);
+                if (syncResult.success) {
+                    movie = await Movie.findOne({ slug: req.params.slug });
+                }
+            } catch (error) {
+                console.error('[HYBRID DETAIL] Sync error:', error.message);
+            }
+        }
+
         if (!movie) return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
 
         // Get related movies (same category)

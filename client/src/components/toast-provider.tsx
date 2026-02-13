@@ -5,6 +5,9 @@ export function ToastProvider() {
     return (
         <Toaster
             position="top-right"
+            containerStyle={{
+                top: 'calc(1rem + env(safe-area-inset-top, 0px))',
+            }}
             toastOptions={{
                 duration: 4000,
                 style: {

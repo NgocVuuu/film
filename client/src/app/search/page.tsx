@@ -141,7 +141,7 @@ function SearchContent() {
     }, [queryString]);
 
     return (
-        <div className="min-h-screen bg-deep-black text-foreground pt-8 pb-20">
+        <div className="min-h-screen bg-deep-black text-foreground pt-12 md:pt-8 pb-20">
             <div className="container mx-auto px-4">
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Sidebar Filters */}
@@ -152,8 +152,8 @@ function SearchContent() {
                     {/* Mobile Filters Drawer */}
                     {showMobileFilter && (
                         <div className="fixed inset-0 z-100 lg:hidden flex justify-end">
-                            <div 
-                                className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+                            <div
+                                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                                 onClick={() => setShowMobileFilter(false)}
                                 aria-hidden="true"
                             />
@@ -164,8 +164,8 @@ function SearchContent() {
                                         <Filter className="w-5 h-5 text-primary" />
                                         Bộ lọc tìm kiếm
                                     </h2>
-                                    <button 
-                                        onClick={() => setShowMobileFilter(false)} 
+                                    <button
+                                        onClick={() => setShowMobileFilter(false)}
                                         className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 bg-white/5"
                                     >
                                         <X className="w-5 h-5" />
@@ -179,8 +179,8 @@ function SearchContent() {
 
                                 {/* Footer Button */}
                                 <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 bg-surface-900/95 backdrop-blur shadow-[0_-4px_12px_rgba(0,0,0,0.5)] z-20 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-                                    <Button 
-                                        className="w-full text-base font-bold py-6 shadow-lg shadow-primary/20" 
+                                    <Button
+                                        className="w-full text-base font-bold py-6 shadow-lg shadow-primary/20"
                                         onClick={() => setShowMobileFilter(false)}
                                     >
                                         Xem kết quả
@@ -204,8 +204,8 @@ function SearchContent() {
                                 />
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors duration-300" />
                                 <div className="absolute right-1.5 top-1.5 bottom-1.5">
-                                    <Button 
-                                        type="submit" 
+                                    <Button
+                                        type="submit"
                                         className="h-full px-6 rounded-lg bg-primary hover:bg-gold-600 text-black font-bold shadow-md hover:shadow-primary/20 transition-all duration-300 transform active:scale-95"
                                         size="sm"
                                     >
@@ -224,7 +224,7 @@ function SearchContent() {
                                         'Khám phá phim'
                                     )}
                                 </h1>
-                                <button 
+                                <button
                                     className="lg:hidden flex items-center gap-2 px-3 py-2 bg-surface-800 text-white rounded-lg border border-white/10 hover:bg-surface-700 transition-colors text-sm font-medium ml-auto md:ml-0"
                                     onClick={() => setShowMobileFilter(true)}
                                 >
