@@ -67,10 +67,40 @@ const optionalAuthMiddleware = async (req, res, next) => {
     next();
 };
 
+// Middleware to check if user has premium subscription
+const premiumMiddleware = async (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({
+            success: false,
+            message: 'Vui lòng đăng nhập để tiếp tục'
+        });
+    }
+
+    // Check if user has active premium subscription
+    const isPremium = req.user.subscription && 
+                     req.user.subscription.tier === 'premium' && 
+                     req.user.subscription.status === 'active';
+
+    // Check if subscription has not expired
+    const isNotExpired = req.user.subscription.endDate && 
+                        new Date(req.user.subscription.endDate) > new Date();
+
+    if (!isPremium || !isNotExpired) {
+        return res.status(403).json({
+            success: false,
+            message: 'Tính năng này chỉ dành cho thành viên Premium',
+            requiresPremium: true
+        });
+    }
+
+    next();
+};
+
 module.exports = {
     authMiddleware,
     adminMiddleware,
     optionalAuthMiddleware,
+    premiumMiddleware,
     protect: authMiddleware, // Alias
     admin: adminMiddleware   // Alias
 };

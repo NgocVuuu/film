@@ -49,7 +49,7 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
     return (
         <div className="py-8 space-y-4">
             <div className="flex items-center justify-between px-4">
-                <h2 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-yellow-200 flex items-center gap-3">
+                <h2 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-linear-to-r from-primary to-yellow-200 flex items-center gap-3">
                     {icon && <span className="text-primary">{icon}</span>}
                     {title}
                 </h2>
@@ -85,17 +85,17 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
                         <Link
                             key={movie._id}
                             href={`/movie/${movie.slug}`}
-                            className="bg-surface-800 rounded-lg overflow-hidden border border-border/50 shadow-lg relative snap-start w-[40vw] md:w-[200px] flex-shrink-0 group hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 will-change-transform"
+                            className="bg-surface-800 rounded-lg overflow-hidden border border-border/50 shadow-lg relative snap-start w-[40vw] md:w-50 shrink-0 group hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 will-change-transform"
                         >
                             {/* Image */}
-                            <div className="aspect-[2/3] w-full relative overflow-hidden">
+                            <div className="aspect-2/3 w-full relative overflow-hidden">
                                 <img
                                     src={movie.thumb_url}
                                     alt={movie.name}
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                     loading="lazy"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+                                <div className="absolute inset-0 bg-linear-to-t from-black via-transparent to-transparent opacity-80" />
 
                                 {/* Badge */}
                                 <div className="absolute top-2 left-2 bg-primary text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow">

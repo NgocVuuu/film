@@ -276,7 +276,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                         <Textarea
                             value={formData.content}
                             onChange={(e) => handleInputChange('content', e.target.value)}
-                            className="bg-surface-800 border-white/10 text-white min-h-[120px]"
+                            className="bg-surface-800 border-white/10 text-white min-h-30"
                         />
                     </div>
 

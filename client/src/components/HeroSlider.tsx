@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Play, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,72 @@ interface HeroSliderProps {
 
 export function HeroSlider({ movies }: HeroSliderProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    
+    // Use refs for touch coordinates to avoid re-renders during swipe
+    const touchStartX = useRef<number | null>(null);
+    const touchEndX = useRef<number | null>(null);
+
+    // Minimum swipe distance (in px)
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        touchEndX.current = null;
+        touchStartX.current = e.targetTouches[0].clientX;
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        touchEndX.current = e.targetTouches[0].clientX;
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStartX.current || !touchEndX.current) return;
+        
+        const distance = touchStartX.current - touchEndX.current;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            handleNext();
+        } else if (isRightSwipe) {
+            handlePrev();
+        }
+    };
+
+    const onMouseDown = (e: React.MouseEvent) => {
+        setIsDragging(true);
+        touchStartX.current = e.clientX;
+    };
+
+    const onMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging) return;
+        touchEndX.current = e.clientX;
+    };
+
+    const onMouseUp = (e: React.MouseEvent) => {
+        if (!isDragging) return;
+        setIsDragging(false);
+        const endX = e.clientX;
+        
+        if (!touchStartX.current) return;
+        
+        const distance = touchStartX.current - endX;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            handleNext();
+        } else if (isRightSwipe) {
+            handlePrev();
+        }
+        
+        touchStartX.current = null;
+        touchEndX.current = null;
+    };
+
+    const onMouseLeave = () => {
+        if (isDragging) setIsDragging(false);
+    };
 
     // Auto-play
     useEffect(() => {
@@ -51,7 +117,16 @@ export function HeroSlider({ movies }: HeroSliderProps) {
     const currentMovie = movies[currentIndex];
 
     return (
-        <div className="relative w-full h-[75vh] md:h-[95vh] group overflow-hidden bg-black">
+        <div 
+            className="relative w-full h-[75vh] md:h-[95vh] group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseLeave}
+        >
             {/* Background Slider */}
             {movies.map((movie, index) => (
                 <div
@@ -64,8 +139,8 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                         alt={movie.name}
                         className="w-full h-full object-cover object-top opacity-90"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/20 to-transparent"></div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/80 via-[#050505]/30 to-transparent"></div>
+                    <div className="absolute inset-0 bg-linear-to-t from-[#050505] via-[#050505]/20 to-transparent"></div>
+                    <div className="absolute inset-0 bg-linear-to-r from-[#050505]/80 via-[#050505]/30 to-transparent"></div>
 
                     {/* Progress Bar for Hero */}
                     {movie.progress && movie.progress.percentage > 0 && (

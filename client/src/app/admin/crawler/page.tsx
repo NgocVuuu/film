@@ -191,7 +191,7 @@ export default function AdminCrawlerPage() {
             <h1 className="text-3xl font-bold text-white mb-8">Crawler Management</h1>
 
             {/* Fetch Specific Movie Section */}
-            <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 rounded-xl p-6 mb-8">
+            <div className="bg-linear-to-br from-primary/10 to-primary/5 border-2 border-primary/30 rounded-xl p-6 mb-8">
                 <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     <Download className="w-5 h-5 text-primary" />
                     Tải phim cụ thể
@@ -224,7 +224,7 @@ export default function AdminCrawlerPage() {
                         <Button
                             onClick={handleFetchMovie}
                             disabled={fetching || !movieSlug.trim()}
-                            className="bg-primary text-black hover:bg-primary/90 min-w-[120px]"
+                            className="bg-primary text-black hover:bg-primary/90 min-w-30"
                         >
                             {fetching ? (
                                 <>

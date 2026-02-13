@@ -59,6 +59,10 @@ export default function VideoPlayer({
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const hlsRef = useRef<Hls | null>(null);
+    
+    // Track previous episode/movie to detect changes
+    const prevEpisodeRef = useRef<{ movie: string, episode: string } | null>(null);
+    const savedTimeRef = useRef<number>(0);
 
     // State
     const [isPlaying, setIsPlaying] = useState(false);
@@ -122,6 +126,8 @@ export default function VideoPlayer({
             const time = videoRef.current.currentTime;
             const dur = videoRef.current.duration || 0;
             setCurrentTime(time);
+            // Update ref for restoring position on source change
+            savedTimeRef.current = time;
             setDuration(dur);
 
             // Auto-save progress (debounced)
@@ -410,12 +416,30 @@ export default function VideoPlayer({
             }
         };
         const onLoadedMetadata = () => {
-            // Priority: 1. startTime from URL param, 2. saved progress
-            if (startTime > 0) {
-                video.currentTime = startTime;
-            } else if (initialProgress !== null && initialProgress > 10) {
-                video.currentTime = initialProgress;
+            // Logic to restore time or start fresh
+            const isSameEpisode = prevEpisodeRef.current?.movie === movieSlug && 
+                                  prevEpisodeRef.current?.episode === episodeSlug;
+            
+            // Priority:
+            // 1. If switching source within same episode -> restore savedTimeRef
+            // 2. startTime from URL param
+            // 3. saved progress (initialProgress)
+            
+            if (isSameEpisode && savedTimeRef.current > 0) {
+                 // Restore time when switching source (Vietsub <-> Thuyết minh)
+                 video.currentTime = savedTimeRef.current;
+            } else {
+                // New episode or first load
+                savedTimeRef.current = 0; // Reset saved time for safety
+                if (startTime > 0) {
+                    video.currentTime = startTime;
+                } else if (initialProgress !== null && initialProgress > 10) {
+                    video.currentTime = initialProgress;
+                }
             }
+
+            // Update ref for next time
+            prevEpisodeRef.current = { movie: movieSlug || '', episode: episodeSlug || '' };
         };
         const onFullscreenChange = () => {
             const isFS = !!document.fullscreenElement || !!(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement;
@@ -674,7 +698,7 @@ export default function VideoPlayer({
             {showNextEpisode && nextEpisodeInfo && !cancelledAutoPlay && (
                 <div className={`absolute inset-0 flex items-center justify-center z-50 bg-black/60 backdrop-blur-sm pointer-events-auto ${isLandscape ? '-rotate-90' : ''}`}
                     onClick={(e) => e.stopPropagation()}>
-                    <div className="bg-gradient-to-br from-gray-900 to-black border border-primary/30 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+                    <div className="bg-linear-to-br from-gray-900 to-black border border-primary/30 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
                         <div className="text-center space-y-4">
                             <div className="text-primary text-4xl font-bold">{countdown}</div>
                             <div className="space-y-2">

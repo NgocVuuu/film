@@ -10,9 +10,11 @@ import { toast } from 'react-hot-toast';
 import { 
     User, Lock, Save, Loader2, LogOut, Crown, 
     ChevronRight, FileText, Shield, 
-    Plus, ArrowLeft, Mail
+    Plus, ArrowLeft, Mail, Smartphone
 } from 'lucide-react';
 import { customFetch } from '@/lib/api';
+import { PWASettings } from '@/components/PWASettings';
+import { PremiumUpsellCard } from '@/components/PremiumUpsellCard';
 
 function ProfileContent() {
     const { user, loading: authLoading, refresh, logout } = useAuth(); // Changed checkAuth to refresh
@@ -20,7 +22,7 @@ function ProfileContent() {
     const searchParams = useSearchParams();
     const mode = searchParams.get('mode');
     const isEditMode = mode === 'edit';
-    const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'pwa'>('profile');
 
     // ... (rest of state)
 
@@ -155,7 +157,7 @@ function ProfileContent() {
                     </div>
 
                     <div className="mb-8">
-                        <div className={`p-4 rounded-xl border flex flex-col justify-between h-32 relative overflow-hidden group ${user.isPremium ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/30' : 'bg-surface-900/50 border-white/10'}`}>
+                        <div className={`p-4 rounded-xl border flex flex-col justify-between h-32 relative overflow-hidden group ${user.isPremium ? 'bg-linear-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/30' : 'bg-surface-900/50 border-white/10'}`}>
                             <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <Crown className={`w-12 h-12 ${user.isPremium ? 'text-yellow-500' : 'text-gray-600'}`}/>
                             </div>
@@ -175,6 +177,22 @@ function ProfileContent() {
                                 </Button>
                             </Link>
                         </div>
+                    </div>
+
+                    {/* PWA Features Section */}
+                    <div className="mb-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Smartphone className="w-5 h-5 text-primary" />
+                            <h2 className="text-lg font-bold text-white">Tính năng PWA</h2>
+                            {user.isPremium && (
+                                <span className="bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">PREMIUM</span>
+                            )}
+                        </div>
+                        {user.isPremium ? (
+                            <PWASettings />
+                        ) : (
+                            <PremiumUpsellCard feature="Progressive Web App" compact />
+                        )}
                     </div>
 
                     <Link href="/profile?mode=edit" className="block w-full bg-white hover:bg-gray-100 text-black font-bold py-3.5 text-center rounded-xl mb-8 shadow-lg transition-colors">
@@ -233,6 +251,16 @@ function ProfileContent() {
                                 >
                                     <Lock className="w-4 h-4" />
                                     Bảo mật & Mật khẩu
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('pwa')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'pwa' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                >
+                                    <Smartphone className="w-4 h-4" />
+                                    <span className="flex-1 text-left">PWA</span>
+                                    {user.isPremium && (
+                                        <Crown className="w-3 h-3 text-yellow-500" />
+                                    )}
                                 </button>
 
                                 {/* Mobile Only Links - Removed as now handled by Dashboard View */}
@@ -301,7 +329,7 @@ function ProfileContent() {
                                         </div>
                                     </form>
                                 </div>
-                            ) : (
+                            ) : activeTab === 'security' ? (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                     <h2 className="text-xl font-bold text-white border-b border-white/10 pb-4 mb-6">Đổi mật khẩu</h2>
                                     {/* Warning for Google Users */}
@@ -352,7 +380,25 @@ function ProfileContent() {
                                         </div>
                                     </form>
                                 </div>
-                            )}
+                            ) : activeTab === 'pwa' ? (
+                                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                    <div className="border-b border-white/10 pb-4 mb-6">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <Smartphone className="w-6 h-6 text-primary" />
+                                            <h2 className="text-xl font-bold text-white">Progressive Web App</h2>
+                                        </div>
+                                        <p className="text-sm text-gray-400">
+                                            Cài đặt app lên thiết bị và trải nghiệm xem phim mượt mà hơn
+                                        </p>
+                                    </div>
+
+                                    {user.isPremium ? (
+                                        <PWASettings />
+                                    ) : (
+                                        <PremiumUpsellCard feature="Progressive Web App (PWA)" />
+                                    )}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>
