@@ -26,6 +26,7 @@ interface VideoPlayerProps {
         name: string;
         serverName: string;
     };
+    onTimeUpdate?: (time: number) => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -53,13 +54,14 @@ export default function VideoPlayer({
     serverName,
     startTime = 0,
     onEnded,
-    nextEpisodeInfo
+    nextEpisodeInfo,
+    onTimeUpdate
 }: VideoPlayerProps) {
     const { user } = useAuth();
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const hlsRef = useRef<Hls | null>(null);
-    
+
     // Track previous episode/movie to detect changes
     const prevEpisodeRef = useRef<{ movie: string, episode: string } | null>(null);
     const savedTimeRef = useRef<number>(0);
@@ -78,7 +80,7 @@ export default function VideoPlayer({
     const [useEmbed] = useState(false);
     const [hoverTime, setHoverTime] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<number>(0);
-    
+
     // Next Episode Countdown
     const [showNextEpisode, setShowNextEpisode] = useState(false);
     const [countdown, setCountdown] = useState(10);
@@ -130,6 +132,8 @@ export default function VideoPlayer({
             savedTimeRef.current = time;
             setDuration(dur);
 
+            if (onTimeUpdate) onTimeUpdate(time);
+
             // Auto-save progress (debounced)
             if (user && movieSlug && episodeSlug) {
                 debouncedSave(time, dur);
@@ -175,7 +179,7 @@ export default function VideoPlayer({
         const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
         videoRef.current.currentTime = newTime;
         setCurrentTime(newTime);
-        
+
         // Show feedback
         setSeekFeedback({
             direction: seconds > 0 ? 'forward' : 'backward',
@@ -189,7 +193,7 @@ export default function VideoPlayer({
     const touchStartTimeRef = useRef<number>(0);
     const [brightness, setBrightness] = useState(1);
     const [gestureFeedback, setGestureFeedback] = useState<{ type: 'volume' | 'brightness' | 'error', value: number } | null>(null);
-    
+
     // Seek Feedback
     const [seekFeedback, setSeekFeedback] = useState<{ direction: 'forward' | 'backward', amount: number } | null>(null);
     const lastTapRef = useRef<{ time: number, x: number, side: 'left' | 'right' } | null>(null);
@@ -251,44 +255,44 @@ export default function VideoPlayer({
         const x = touch.clientX;
         const y = touch.clientY;
         const container = containerRef.current;
-        
+
         // Check if this was a quick tap (not a long press or swipe)
         const touchDuration = now - touchStartTimeRef.current;
         const wasTap = touchDuration < 200; // Quick tap < 200ms
-        
+
         // Check if touch moved significantly (swipe vs tap)
         const touchMoved = touchStartRef.current && (
             Math.abs(x - touchStartRef.current.x) > 10 ||
             Math.abs(y - touchStartRef.current.y) > 10
         );
-        
+
         if (container && wasTap && !touchMoved) {
             const rect = container.getBoundingClientRect();
             const side = x < rect.width / 2 ? 'left' : 'right';
-            
+
             // Double tap detection (within 300ms and same side)
-            if (lastTapRef.current && 
-                now - lastTapRef.current.time < 300 && 
+            if (lastTapRef.current &&
+                now - lastTapRef.current.time < 300 &&
                 lastTapRef.current.side === side) {
-                
+
                 // Prevent default click/play behavior on double tap
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 // Double tap detected - seek video
                 if (side === 'left') {
                     seekVideo(-10);
                 } else {
                     seekVideo(10);
                 }
-                
+
                 lastTapRef.current = null; // Reset to prevent triple tap
             } else {
                 // First tap - record time and position
                 lastTapRef.current = { time: now, x, side };
             }
         }
-        
+
         touchStartRef.current = null;
         setTimeout(() => setGestureFeedback(null), 1000);
     };
@@ -385,10 +389,10 @@ export default function VideoPlayer({
         video.setAttribute('webkit-playsinline', 'true');
         video.setAttribute('x-webkit-airplay', 'allow');
         video.setAttribute('playsinline', 'true');
-        
+
         // Prevent iOS from automatically entering fullscreen
         video.setAttribute('preload', 'metadata');
-        
+
         // Disable Picture-in-Picture on iOS (can interfere with inline playback)
         video.disablePictureInPicture = false;
 
@@ -417,17 +421,17 @@ export default function VideoPlayer({
         };
         const onLoadedMetadata = () => {
             // Logic to restore time or start fresh
-            const isSameEpisode = prevEpisodeRef.current?.movie === movieSlug && 
-                                  prevEpisodeRef.current?.episode === episodeSlug;
-            
+            const isSameEpisode = prevEpisodeRef.current?.movie === movieSlug &&
+                prevEpisodeRef.current?.episode === episodeSlug;
+
             // Priority:
             // 1. If switching source within same episode -> restore savedTimeRef
             // 2. startTime from URL param
             // 3. saved progress (initialProgress)
-            
+
             if (isSameEpisode && savedTimeRef.current > 0) {
-                 // Restore time when switching source (Vietsub <-> Thuyết minh)
-                 video.currentTime = savedTimeRef.current;
+                // Restore time when switching source (Vietsub <-> Thuyết minh)
+                video.currentTime = savedTimeRef.current;
             } else {
                 // New episode or first load
                 savedTimeRef.current = 0; // Reset saved time for safety
@@ -564,8 +568,8 @@ export default function VideoPlayer({
         const handleKeyPress = (e: KeyboardEvent) => {
             // Only handle if video player is focused or visible
             if (!videoRef.current) return;
-            
-            switch(e.key) {
+
+            switch (e.key) {
                 case 'ArrowLeft':
                     e.preventDefault();
                     seekVideo(-10);
@@ -678,9 +682,8 @@ export default function VideoPlayer({
 
             {/* Seek Feedback Overlay */}
             {seekFeedback && (
-                <div className={`absolute inset-0 flex items-center z-40 pointer-events-none ${isLandscape ? '-rotate-90' : ''} ${
-                    seekFeedback.direction === 'forward' ? 'justify-end pr-8' : 'justify-start pl-8'
-                }`}>
+                <div className={`absolute inset-0 flex items-center z-40 pointer-events-none ${isLandscape ? '-rotate-90' : ''} ${seekFeedback.direction === 'forward' ? 'justify-end pr-8' : 'justify-start pl-8'
+                    }`}>
                     <div className="bg-black/20 backdrop-blur-xl p-4 rounded-2xl text-white/80 flex flex-col items-center gap-1.5 animate-in fade-in zoom-in duration-200">
                         {seekFeedback.direction === 'forward' ? (
                             <FastForward className="w-10 h-10 text-primary opacity-80" />

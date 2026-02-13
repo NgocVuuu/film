@@ -59,6 +59,7 @@ export default function WatchPage() {
     const [currentServerName, setCurrentServerName] = useState<string>('');
     const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
     const [startTime, setStartTime] = useState<number>(0);
+    const [playerTime, setPlayerTime] = useState<number>(0);
 
     // Source State
     const [availableSources, setAvailableSources] = useState<string[]>([]);
@@ -219,10 +220,18 @@ export default function WatchPage() {
     }, [currentEpisode, currentServerName, filteredServers]);
 
     const handleEpisodeClick = (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string }) => {
+        const isSameEpisode = currentEpisode?.slug === episode.slug;
+
         setCurrentServerName(serverName);
         setCurrentEpisode(episode);
         setShouldAutoPlay(true);
-        setStartTime(0); // Reset start time when changing episode
+
+        // Restore time if switching versions of the same episode
+        if (isSameEpisode) {
+            setStartTime(playerTime);
+        } else {
+            setStartTime(0);
+        }
 
         // Update URL
         const newUrl = `/movie/${slug}/watch?episode=${episode.slug}`;
@@ -333,6 +342,7 @@ export default function WatchPage() {
                                 episodeName={currentEpisode.name}
                                 serverName={currentServerName}
                                 startTime={startTime}
+                                onTimeUpdate={(time) => setPlayerTime(time)}
                                 onEnded={nextEpisode ? handleNextEpisode : undefined}
                                 nextEpisodeInfo={nextEpisode ? {
                                     name: nextEpisode.episode.name,

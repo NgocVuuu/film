@@ -3,6 +3,8 @@ const cron = require('node-cron');
 const Movie = require('./models/Movie');
 const Favorite = require('./models/Favorite');
 const Notification = require('./models/Notification');
+const WatchProgress = require('./models/WatchProgress');
+const { sendToMultiple } = require('./utils/notificationService');
 
 const OPHIM_API_HOME = 'https://ophim1.com/v1/api/home';
 const OPHIM_API_DETAIL = 'https://ophim1.com/v1/api/phim';
@@ -222,21 +224,37 @@ async function processMovie(adapter, slug, retryCount = 0) {
             const oldEpCount = existingMovie.episodes ? existingMovie.episodes.reduce((acc, cur) => acc + (cur.server_data ? cur.server_data.length : 0), 0) : 0;
             const newEpCount = finalEpisodes.reduce((acc, cur) => acc + (cur.server_data ? cur.server_data.length : 0), 0);
 
-            // Notify if episode count increased AND it's not a fresh crawl of same content (naive check)
-            // Better: Check if episode_current changed string
-            if (newEpCount > oldEpCount || (existingMovie.episode_current !== movie.episode_current && movie.episode_current !== 'Full')) {
-                // Find users to notify
-                const favorites = await Favorite.find({ movieSlug: slug });
-                if (favorites.length > 0) {
-                    const notifications = favorites.map(fav => ({
-                        recipient: fav.user,
-                        content: `Phim ${movie.name} vừa cập nhật tập mới (${movie.episode_current})!`,
+            // Notify if episode count increased OR status changed
+            if (newEpCount > oldEpCount || (existingMovie.episode_current !== movie.episode_current && movie.episode_current !== 'Full' && movie.episode_current !== '')) {
+                // Find all users interested in this movie:
+                // 1. Users who favorited it
+                const favorites = await Favorite.find({ movieSlug: slug }).select('user');
+
+                // 2. Users who are currently watching it (and haven't finished? or just recently watched)
+                // We'll notify users who have watch progress from the last 30 days
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+                const viewers = await WatchProgress.find({
+                    movieSlug: slug,
+                    updatedAt: { $gte: thirtyDaysAgo }
+                }).select('userId');
+
+                // Combine and de-duplicate user IDs
+                const userIds = new Set();
+                favorites.forEach(f => userIds.add(f.user.toString()));
+                viewers.forEach(v => userIds.add(v.userId.toString()));
+
+                if (userIds.size > 0) {
+                    const uniqueUserIds = Array.from(userIds);
+                    await sendToMultiple(uniqueUserIds, {
+                        title: '🎬 Cập nhật tập mới',
+                        content: `Phim "${movie.name}" vừa cập nhật tập mới (${movie.episode_current})!`,
                         link: `/movie/${slug}`,
                         type: 'episode',
-                        isRead: false
-                    }));
-                    await Notification.insertMany(notifications);
-                    console.log(`[NOTIFY] Sent ${notifications.length} notifications for ${slug} (${movie.name})`);
+                        icon: thumb || '/logo.png'
+                    });
+                    console.log(`[NOTIFY] Sent notifications to ${uniqueUserIds.length} users for ${slug} (${movie.name})`);
                 }
             }
         }
@@ -353,7 +371,7 @@ async function syncSpecificMovie(slug, sourceName = null) {
         console.log(`[FETCH-SPECIFIC] Attempting to fetch movie: ${slug} from ${sourceName || 'all sources'}`);
 
         let results = [];
-        
+
         // If specific source is provided, try only that source
         if (sourceName) {
             const adapter = ADAPTERS[sourceName.toUpperCase()];
@@ -366,16 +384,16 @@ async function syncSpecificMovie(slug, sourceName = null) {
 
         // Try all sources in priority order: KKPHIM -> NGUONC -> OPHIM
         const sources = [ADAPTERS.KKPHIM, ADAPTERS.NGUONC, ADAPTERS.OPHIM];
-        
+
         for (const adapter of sources) {
             console.log(`[FETCH-SPECIFIC] Trying ${adapter.name}...`);
             const result = await processMovie(adapter, slug, 0);
-            
+
             if (result.success) {
                 console.log(`[FETCH-SPECIFIC] ✓ Successfully fetched from ${adapter.name}: ${result.name}`);
                 return { success: true, source: adapter.name, movie: result };
             }
-            
+
             // Small delay between attempts
             await sleep(500);
         }
@@ -393,7 +411,7 @@ async function syncSpecificMovie(slug, sourceName = null) {
 async function searchMovieByName(searchQuery, source = 'OPHIM') {
     try {
         console.log(`[SEARCH] Searching for: ${searchQuery} in ${source}`);
-        
+
         const adapter = ADAPTERS[source.toUpperCase()];
         if (!adapter) {
             return { success: false, error: 'Nguồn không hợp lệ' };
@@ -401,7 +419,7 @@ async function searchMovieByName(searchQuery, source = 'OPHIM') {
 
         // Get first page and filter by name
         const movies = await adapter.getPage(1);
-        
+
         const matches = movies.filter(movie => {
             const name = (movie.name || '').toLowerCase();
             const originName = (movie.origin_name || '').toLowerCase();
@@ -413,8 +431,8 @@ async function searchMovieByName(searchQuery, source = 'OPHIM') {
             return { success: false, error: 'Không tìm thấy phim phù hợp' };
         }
 
-        return { 
-            success: true, 
+        return {
+            success: true,
             results: matches.map(m => ({
                 name: m.name,
                 origin_name: m.origin_name,
@@ -442,12 +460,12 @@ async function processPendingRequests() {
         const Notification = require('./models/Notification');
 
         // Get all pending requests sorted by priority
-        const pendingRequests = await MovieRequest.find({ 
-            status: 'pending' 
+        const pendingRequests = await MovieRequest.find({
+            status: 'pending'
         })
-        .sort({ priority: -1, createdAt: 1 }) // Higher priority first, then oldest
-        .limit(50) // Process max 50 requests per run
-        .populate('userId', 'displayName');
+            .sort({ priority: -1, createdAt: 1 }) // Higher priority first, then oldest
+            .limit(50) // Process max 50 requests per run
+            .populate('userId', 'displayName');
 
         if (pendingRequests.length === 0) {
             console.log('[REQUESTS] No pending requests to process');
@@ -528,7 +546,7 @@ async function processPendingRequests() {
                 request.errorMessage = error.message;
                 request.processedAt = new Date();
                 await request.save();
-                
+
                 failed++;
                 console.error(`[REQUESTS] ✗ Failed: ${request.movieName} - ${error.message}`);
             }

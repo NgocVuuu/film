@@ -11,6 +11,8 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   );
 }
 
+const { sendNotification, sendToMultiple } = require('../utils/notificationService');
+
 // Get VAPID public key (public endpoint)
 exports.getVapidPublicKey = async (req, res) => {
   try {
@@ -143,69 +145,23 @@ exports.sendToUser = async (req, res) => {
       });
     }
 
-    // Get all subscriptions for user
-    const subscriptions = await PushSubscription.getByUserId(userId);
-
-    if (subscriptions.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'User không có subscription nào'
-      });
-    }
-
-    // Send to all subscriptions
-    const payload = JSON.stringify({
+    await sendNotification(userId, {
       title,
-      body,
-      icon: icon || '/logo.png',
-      badge: '/logo.png',
-      url: url || '/',
-      timestamp: Date.now()
+      content: body,
+      link: url,
+      icon,
+      type: 'system'
     });
-
-    const results = await Promise.allSettled(
-      subscriptions.map(sub => 
-        webPush.sendNotification({
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.keys.p256dh,
-            auth: sub.keys.auth
-          }
-        }, payload)
-      )
-    );
-
-    // Remove failed subscriptions (expired/invalid)
-    const failedIndices = [];
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        failedIndices.push(index);
-      }
-    });
-
-    if (failedIndices.length > 0) {
-      const failedEndpoints = failedIndices.map(i => subscriptions[i].endpoint);
-      await PushSubscription.deleteMany({
-        endpoint: { $in: failedEndpoints }
-      });
-    }
-
-    const successCount = results.filter(r => r.status === 'fulfilled').length;
 
     res.json({
       success: true,
-      message: `Đã gửi push notification thành công đến ${successCount}/${subscriptions.length} thiết bị`,
-      data: {
-        total: subscriptions.length,
-        success: successCount,
-        failed: failedIndices.length
-      }
+      message: 'Đã gửi thông báo thành công'
     });
   } catch (error) {
     console.error('Error sending push notification:', error);
     res.status(500).json({
       success: false,
-      message: 'Lỗi khi gửi push notification'
+      message: 'Lỗi khi gửi thông báo'
     });
   }
 };
@@ -228,74 +184,32 @@ exports.sendToAllPremium = async (req, res) => {
       'subscription.status': 'active'
     }).select('_id');
 
-    const premiumUserIds = premiumUsers.map(u => u._id);
+    const premiumUserIds = premiumUsers.map(u => u._id.toString());
 
-    // Get all subscriptions for premium users
-    const subscriptions = await PushSubscription.find({
-      userId: { $in: premiumUserIds }
-    });
-
-    if (subscriptions.length === 0) {
+    if (premiumUserIds.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Không có premium user nào có subscription'
+        message: 'Không có premium user nào'
       });
     }
 
-    // Send to all subscriptions
-    const payload = JSON.stringify({
+    await sendToMultiple(premiumUserIds, {
       title,
-      body,
-      icon: icon || '/logo.png',
-      badge: '/logo.png',
-      url: url || '/',
-      timestamp: Date.now()
+      content: body,
+      link: url,
+      icon,
+      type: 'subscription'
     });
-
-    const results = await Promise.allSettled(
-      subscriptions.map(sub => 
-        webPush.sendNotification({
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.keys.p256dh,
-            auth: sub.keys.auth
-          }
-        }, payload)
-      )
-    );
-
-    // Remove failed subscriptions
-    const failedIndices = [];
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        failedIndices.push(index);
-      }
-    });
-
-    if (failedIndices.length > 0) {
-      const failedEndpoints = failedIndices.map(i => subscriptions[i].endpoint);
-      await PushSubscription.deleteMany({
-        endpoint: { $in: failedEndpoints }
-      });
-    }
-
-    const successCount = results.filter(r => r.status === 'fulfilled').length;
 
     res.json({
       success: true,
-      message: `Đã gửi push notification đến ${successCount}/${subscriptions.length} thiết bị`,
-      data: {
-        premiumUsers: premiumUsers.length,
-        totalSubscriptions: subscriptions.length,
-        success: successCount,
-        failed: failedIndices.length
-      }
+      message: `Đã gửi thông báo đến ${premiumUserIds.length} premium users`
     });
   } catch (error) {
     console.error('Error sending push to all premium:', error);
     res.status(500).json({
       success: false,
-      message: 'Lỗi khi gửi push notification'
+      message: 'Lỗi khi gửi thông báo'
     });
   }
 };
@@ -305,47 +219,17 @@ exports.sendTest = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    // Get user's subscriptions
-    const subscriptions = await PushSubscription.getByUserId(userId);
-
-    if (subscriptions.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Bạn chưa đăng ký push notification'
-      });
-    }
-
-    // Send test notification
-    const payload = JSON.stringify({
+    await sendNotification(userId, {
       title: '🎬 Test Notification',
-      body: 'Push notification đang hoạt động! Bạn sẽ nhận được thông báo khi có phim mới.',
+      content: 'Push notification đang hoạt động! Bạn sẽ nhận được thông báo khi có phim mới.',
       icon: '/logo.png',
-      badge: '/logo.png',
-      url: '/',
-      timestamp: Date.now()
+      link: '/',
+      type: 'system'
     });
-
-    const results = await Promise.allSettled(
-      subscriptions.map(sub => 
-        webPush.sendNotification({
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.keys.p256dh,
-            auth: sub.keys.auth
-          }
-        }, payload)
-      )
-    );
-
-    const successCount = results.filter(r => r.status === 'fulfilled').length;
 
     res.json({
       success: true,
-      message: `Đã gửi test notification đến ${successCount}/${subscriptions.length} thiết bị`,
-      data: {
-        total: subscriptions.length,
-        success: successCount
-      }
+      message: 'Đã gửi test notification'
     });
   } catch (error) {
     console.error('Error sending test notification:', error);
