@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { AlertTriangle, RefreshCw, Home, VideoOff, Siren } from 'lucide-react';
+import { Power, RefreshCw, VideoOff, Siren } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -57,7 +57,7 @@ export default function Error({
           
           <Link href="/" className="w-full">
             <Button variant="ghost" className="w-full gap-2 text-gray-400 hover:text-white hover:bg-white/5 h-12 rounded-xl">
-              <Home className="w-4 h-4" />
+              <Power className="w-4 h-4" />
               Thôi, về trang chủ cho lành
             </Button>
           </Link>

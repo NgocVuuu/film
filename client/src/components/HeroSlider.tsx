@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Play, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 
 interface Movie {
     _id: string;
@@ -134,10 +135,13 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                     className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
                         }`}
                 >
-                    <img
+                    <Image
                         src={movie.poster_url || movie.thumb_url}
                         alt={movie.name}
                         className="w-full h-full object-cover object-top opacity-90"
+                        fill
+                        sizes="100vw"
+                        priority={index === 0}
                     />
                     <div className="absolute inset-0 bg-linear-to-t from-[#050505] via-[#050505]/20 to-transparent"></div>
                     <div className="absolute inset-0 bg-linear-to-r from-[#050505]/80 via-[#050505]/30 to-transparent"></div>

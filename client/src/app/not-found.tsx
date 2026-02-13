@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, MoveLeft, Ghost, Film, Clapperboard } from 'lucide-react';
+import { MoveLeft, Ghost, Film, Clapperboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function NotFound() {

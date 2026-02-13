@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Power, ZapOff, Skull } from 'lucide-react';
-import Link from 'next/link';
+import { Power, ZapOff, Skull } from 'lucide-react';
 
 // Global Error must define its own <html> and <body> tags
 export default function GlobalError({
@@ -61,7 +60,7 @@ export default function GlobalError({
               href="/"
               className="w-full sm:w-auto px-8 py-4 rounded-full border border-white/10 text-gray-300 font-bold hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-2"
             >
-              <AlertTriangle className="w-5 h-5" />
+              <ZapOff className="w-5 h-5" />
               Thoát hiểm
             </a>
           </div>
