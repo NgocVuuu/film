@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { BottomNav } from '@/components/BottomNav';
 import { usePWA } from '@/hooks/usePWA';
@@ -20,7 +20,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return (
         <>
             {showNavbar && <Navbar />}
-            <main className={`flex-1 ${!isAdmin ? `${showNavbar ? 'pt-14 md:pt-16' : 'pt-0'} pb-24 lg:pb-8` : ''}`}>
+            <main className={`flex-1 ${!isAdmin ? `${showNavbar ? 'pt-14 md:pt-16' : 'pt-0'} ${showFooter ? 'pb-32' : 'pb-24'} lg:pb-8` : ''}`}>
                 {children}
             </main>
             {!isAdmin && (
