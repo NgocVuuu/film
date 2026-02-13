@@ -7,9 +7,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'react-hot-toast';
-import { 
-    User, Lock, Save, Loader2, LogOut, Crown, 
-    ChevronRight, FileText, Shield, 
+import {
+    User, Lock, Save, Loader2, LogOut, Crown,
+    ChevronRight, FileText, Shield,
     Plus, ArrowLeft, Mail, Smartphone
 } from 'lucide-react';
 import { customFetch } from '@/lib/api';
@@ -122,7 +122,7 @@ function ProfileContent() {
     return (
         <div className="min-h-screen bg-deep-black text-foreground pt-24 pb-20">
             <div className="container mx-auto px-4 max-w-4xl">
-                
+
                 <h1 className={`text-3xl font-bold mb-8 text-white items-center gap-3 ${isEditMode ? 'flex' : 'hidden md:flex'}`}>
                     {isEditMode && (
                         <Link href="/profile" className="md:hidden mr-2">
@@ -137,9 +137,9 @@ function ProfileContent() {
                 <div className={`md:hidden ${isEditMode ? 'hidden' : 'block'} pb-8`}>
                     <div className="flex items-center gap-4 mb-8">
                         <div className="relative shrink-0">
-                            <img 
-                                src={user.avatar || `https://ui-avatars.com/api/?name=${user.displayName}`} 
-                                alt={user.displayName} 
+                            <img
+                                src={user.avatar || `https://ui-avatars.com/api/?name=${user.displayName}`}
+                                alt={user.displayName}
                                 className="w-16 h-16 rounded-full border-2 border-primary object-cover"
                             />
                         </div>
@@ -159,16 +159,16 @@ function ProfileContent() {
                     <div className="mb-8">
                         <div className={`p-4 rounded-xl border flex flex-col justify-between h-32 relative overflow-hidden group ${user.isPremium ? 'bg-linear-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/30' : 'bg-surface-900/50 border-white/10'}`}>
                             <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Crown className={`w-12 h-12 ${user.isPremium ? 'text-yellow-500' : 'text-gray-600'}`}/>
+                                <Crown className={`w-12 h-12 ${user.isPremium ? 'text-yellow-500' : 'text-gray-600'}`} />
                             </div>
                             <div className="relative z-10">
                                 <p className={`text-sm font-bold mb-1 ${user.isPremium ? 'text-yellow-400' : 'text-gray-300'}`}>
                                     {user.isPremium ? 'Thành viên Premium' : 'Thành viên Miễn phí'}
                                 </p>
-                                <p className="text-gray-500 text-xs leading-relaxed">
-                                    {user.isPremium 
-                                        ? 'Cảm ơn bạn đã ủng hộ ad! Server còn chạy nhờ bạn đó 🙏' 
-                                        : 'Chiều lòng ad chút đi mà, tiền server đắt lắm 🥺'}
+                                <p className="text-gray-500 text-xs leading-relaxed font-vietnamese">
+                                    {user.isPremium
+                                        ? 'Cảm ơn bạn đã "nuôi" ad! Nhờ bạn mà server vẫn chạy phà phà, cùng tận hưởng đặc quyền thôi nào! ✨🙏'
+                                        : 'Sếp ơi, nâng cấp Premium để ad có thêm bát phở, còn sếp được hưởng đặc quyền thượng lưu nhé! 🥺🍜👑'}
                                 </p>
                             </div>
                             <Link href="/pricing">
@@ -183,7 +183,7 @@ function ProfileContent() {
                     <div className="mb-8">
                         <div className="flex items-center gap-2 mb-4">
                             <Smartphone className="w-5 h-5 text-primary" />
-                            <h2 className="text-lg font-bold text-white">Tính năng PWA</h2>
+                            <h2 className="text-lg font-bold text-white">Ứng dụng di động</h2>
                             {user.isPremium && (
                                 <span className="bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">PREMIUM</span>
                             )}
@@ -191,7 +191,7 @@ function ProfileContent() {
                         {user.isPremium ? (
                             <PWASettings />
                         ) : (
-                            <PremiumUpsellCard feature="Progressive Web App" compact />
+                            <PremiumUpsellCard feature="Ứng dụng di động" compact />
                         )}
                     </div>
 
@@ -207,9 +207,9 @@ function ProfileContent() {
                         <MobileMenuLink href="/privacy" icon={Lock} label="Chính sách bảo mật" />
                         <MobileMenuLink href="/contact" icon={Mail} label="Liên hệ & Góp ý" />
                     </div>
-                    
+
                     <button onClick={handleLogout} className="mt-8 flex items-center gap-4 text-red-500 font-medium px-4 w-full py-4 hover:bg-surface-900/50 rounded-xl transition-colors">
-                        <LogOut className="w-5 h-5"/> 
+                        <LogOut className="w-5 h-5" />
                         <span>Đăng xuất</span>
                     </button>
                 </div>
@@ -257,7 +257,7 @@ function ProfileContent() {
                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'pwa' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                                 >
                                     <Smartphone className="w-4 h-4" />
-                                    <span className="flex-1 text-left">PWA</span>
+                                    <span className="flex-1 text-left">Ứng dụng di động</span>
                                     {user.isPremium && (
                                         <Crown className="w-3 h-3 text-yellow-500" />
                                     )}
@@ -385,7 +385,7 @@ function ProfileContent() {
                                     <div className="border-b border-white/10 pb-4 mb-6">
                                         <div className="flex items-center gap-3 mb-2">
                                             <Smartphone className="w-6 h-6 text-primary" />
-                                            <h2 className="text-xl font-bold text-white">Progressive Web App</h2>
+                                            <h2 className="text-xl font-bold text-white">Ứng dụng di động</h2>
                                         </div>
                                         <p className="text-sm text-gray-400">
                                             Cài đặt app lên thiết bị và trải nghiệm xem phim mượt mà hơn
@@ -395,7 +395,7 @@ function ProfileContent() {
                                     {user.isPremium ? (
                                         <PWASettings />
                                     ) : (
-                                        <PremiumUpsellCard feature="Progressive Web App (PWA)" />
+                                        <PremiumUpsellCard feature="Tải ứng dụng di động" />
                                     )}
                                 </div>
                             ) : null}

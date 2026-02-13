@@ -171,9 +171,9 @@ export function PWASettings() {
               <Bell className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-white mb-1">Thông báo Push</h3>
+              <h3 className="font-semibold text-white mb-1">Thông báo ứng dụng</h3>
               <p className="text-sm text-gray-400 leading-relaxed mb-2">
-                Nhận thông báo về phim mới, tập mới
+                Nhận thông báo khi có phim mới, tập mới
               </p>
               {notificationPermission === 'denied' && (
                 <p className="text-xs text-red-400 flex items-center gap-1">
@@ -198,12 +198,7 @@ export function PWASettings() {
         </div>
       </div>
 
-      {/* Info Card */}
-      <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
-        <p className="text-xs text-blue-300 leading-relaxed">
-          💡 <span className="font-semibold">Mẹo:</span> Sau khi cài app, bạn có thể xem phim ngay cả khi offline (danh sách phim, favorites, history).
-        </p>
-      </div>
+      {/* Info Card - Removed offline tip as it's not supported */}
     </div>
   );
 }

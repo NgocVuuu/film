@@ -161,9 +161,13 @@
   }
 
   body {
+    background-color: var(--background-hex);
+    @apply text-foreground min-h-screen;
+  }
+
+  body.premium-theme {
     background: var(--metallic-gradient);
     background-attachment: fixed;
-    @apply text-foreground min-h-screen;
   }
 
   /* Prevent Zoom on Focus (Mobile) */
@@ -176,10 +180,11 @@
     }
   }
 
-  /* Custom Scrollbar - Gold Theme */
+  html,
+  body,
   * {
     scrollbar-width: thin;
-    scrollbar-color: #eab308 #1a1a1a;
+    scrollbar-color: #eab308 #050505;
   }
 
   *::-webkit-scrollbar {

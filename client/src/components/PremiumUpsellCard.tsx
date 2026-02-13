@@ -18,8 +18,8 @@ export function PremiumUpsellCard({ feature, compact = false }: PremiumUpsellCar
             <Crown className="w-5 h-5 text-yellow-500" />
           </div>
           <div className="flex-1">
-            <h3 className="text-sm font-bold text-yellow-400">Tính năng Premium</h3>
-            <p className="text-xs text-gray-400">{feature} chỉ dành cho Premium</p>
+            <h3 className="text-sm font-bold text-yellow-400">Đặc quyền Premium ✨</h3>
+            <p className="text-xs text-gray-400">Nâng cấp để mở khóa tính năng này sếp ơi!</p>
           </div>
         </div>
         <Link href="/pricing">
@@ -36,15 +36,15 @@ export function PremiumUpsellCard({ feature, compact = false }: PremiumUpsellCar
       <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
         <Crown className="w-20 h-20 text-yellow-500" />
       </div>
-      
+
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-3 bg-yellow-500/20 rounded-xl">
             <Crown className="w-6 h-6 text-yellow-500" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-yellow-400">Tính năng Premium</h3>
-            <p className="text-xs text-gray-400">Độc quyền cho thành viên Premium</p>
+            <h3 className="text-lg font-bold text-yellow-400">Đặc quyền Thượng lưu 👑</h3>
+            <p className="text-xs text-gray-400">Mở khóa siêu năng lực cho app của bạn!</p>
           </div>
         </div>
 
@@ -57,15 +57,15 @@ export function PremiumUpsellCard({ feature, compact = false }: PremiumUpsellCar
             </li>
             <li className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
-              <span>Xem phim offline không cần mạng</span>
+              <span>Nền ánh kim (Metallic) cực phẩm - Duy nhất Premium</span>
             </li>
             <li className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
-              <span>Nhận thông báo phim mới</span>
+              <span>Phim mới ra là 'ting ting' thông báo ngay 🔔</span>
             </li>
             <li className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
-              <span>Trải nghiệm app-like không quảng cáo</span>
+              <span>Trải nghiệm mượt mà, không quảng cáo quấy rầy 🍿</span>
             </li>
           </ul>
         </div>
