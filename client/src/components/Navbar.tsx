@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/contexts/notification-context';
 import { usePWA } from '@/hooks/usePWA';
-import { customFetch } from '@/lib/api';
 
 interface Notification {
     _id: string;

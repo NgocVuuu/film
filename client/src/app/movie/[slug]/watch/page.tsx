@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
-import { Play, ArrowLeft, AlertTriangle, Crown, SkipForward } from 'lucide-react';
+import { Play, ArrowLeft, AlertTriangle, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
@@ -47,10 +47,8 @@ interface MovieDetail {
 }
 
 export default function WatchPage() {
-    const { user } = useAuth();
     const { isPWA } = usePWA();
     const { slug } = useParams();
-    const router = useRouter();
     const searchParams = useSearchParams();
     const [movie, setMovie] = useState<MovieDetail | null>(null);
     const [loading, setLoading] = useState(true);

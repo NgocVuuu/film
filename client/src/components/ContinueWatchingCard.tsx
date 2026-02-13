@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Play, Clock, Trash2 } from 'lucide-react';
+import { Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ContinueWatchingCardProps {

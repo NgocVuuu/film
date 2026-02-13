@@ -84,11 +84,11 @@ export function PWASettings() {
       }
     } catch (error) {
       console.error('Push toggle error:', error);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((error as any).requiresPremium) {
+      const pushError = error as { requiresPremium?: boolean; message?: string };
+      if (pushError.requiresPremium) {
         toast.error('Tính năng này dành cho thành viên Premium');
-      } else if ((error as any).message) {
-        toast.error((error as any).message);
+      } else if (pushError.message) {
+        toast.error(pushError.message);
       } else {
         toast.error(enabled ? 'Không thể bật thông báo. Hãy thử lại sau.' : 'Không thể tắt thông báo');
       }

@@ -120,7 +120,7 @@ export default function HistoryPage() {
             }
         } else {
             const currentHistory = JSON.parse(localStorage.getItem('history') || '[]');
-            const newHistory = currentHistory.filter((m: any) => !(m.slug === slug && m.progress.episodeSlug === epSlug));
+            const newHistory = currentHistory.filter((m: Movie) => !(m.slug === slug && m.progress.episodeSlug === epSlug));
             setMovies(newHistory);
             localStorage.setItem('history', JSON.stringify(newHistory));
             toast.success('Đã xóa khỏi lịch sử');
