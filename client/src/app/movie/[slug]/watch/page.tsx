@@ -9,6 +9,7 @@ import { API_URL } from '@/lib/config';
 
 export const runtime = 'edge';
 import { useAuth } from '@/contexts/auth-context';
+import { usePWA } from '@/hooks/usePWA';
 
 
 
@@ -46,6 +47,7 @@ interface MovieDetail {
 
 export default function WatchPage() {
     const { user } = useAuth();
+    const { isPWA } = usePWA();
     const { slug } = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -62,7 +64,7 @@ export default function WatchPage() {
     const [availableSources, setAvailableSources] = useState<string[]>([]);
     const [currentSource, setCurrentSource] = useState<string>('');
     const [filteredServers, setFilteredServers] = useState<Episode[]>([]);
-    
+
     // Next Episode State
     const [nextEpisode, setNextEpisode] = useState<{ server: string; episode: { name: string; slug: string; link_m3u8: string; link_embed: string } } | null>(null);
 
@@ -187,7 +189,7 @@ export default function WatchPage() {
         for (const server of filteredServers) {
             if (server.server_name === currentServerName) {
                 const currentIndex = server.server_data.findIndex(ep => ep.slug === currentEpisode.slug);
-                
+
                 if (currentIndex !== -1 && currentIndex < server.server_data.length - 1) {
                     // Next episode in same server
                     setNextEpisode({
@@ -196,7 +198,7 @@ export default function WatchPage() {
                     });
                     return;
                 }
-                
+
                 // No next episode in current server, try next server
                 const serverIndex = filteredServers.findIndex(s => s.server_name === currentServerName);
                 if (serverIndex !== -1 && serverIndex < filteredServers.length - 1) {
@@ -221,11 +223,11 @@ export default function WatchPage() {
         setCurrentEpisode(episode);
         setShouldAutoPlay(true);
         setStartTime(0); // Reset start time when changing episode
-        
+
         // Update URL
         const newUrl = `/movie/${slug}/watch?episode=${episode.slug}`;
         window.history.pushState({}, '', newUrl);
-        
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -256,10 +258,10 @@ export default function WatchPage() {
     if (!movie) return <div className="min-h-screen flex items-center justify-center bg-black text-red-500">Phim không tồn tại.</div>;
 
     return (
-        <div className="min-h-screen bg-black text-white font-sans -mt-16">
+        <div className={`min-h-screen bg-black text-white font-sans ${isPWA ? 'mt-0' : '-mt-16'}`}>
 
             {/* Header / Nav Back */}
-            <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5 py-3 px-4">
+            <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5 py-3 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))]">
                 <div className="container mx-auto flex items-center gap-4">
                     <Link href={`/movie/${movie.slug}`} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white">
                         <ArrowLeft className="w-6 h-6" />

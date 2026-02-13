@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { CommentSection } from '@/components/CommentSection';
 import { AddToListModal } from '@/components/AddToListModal';
 import { useAuth } from '@/contexts/auth-context';
+import { usePWA } from '@/hooks/usePWA';
 import { API_URL } from '@/lib/config';
 import { getAuthToken } from '@/lib/api';
 
@@ -55,6 +56,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     const { slug } = useParams();
     const router = useRouter();
     const { user } = useAuth();
+    const { isPWA } = usePWA();
     const [movie, setMovie] = useState<MovieDetail | null>(initialMovie);
     const [loading, setLoading] = useState(!initialMovie);
     const [isFavorite, setIsFavorite] = useState(false);
@@ -211,10 +213,10 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     if (!movie) return null;
 
     return (
-        <div className="min-h-screen bg-deep-black text-white font-sans -mt-16">
+        <div className={`min-h-screen bg-deep-black text-white font-sans ${isPWA ? 'mt-0' : '-mt-16'}`}>
 
             {/* FULL SCREEN HERO SECTION */}
-            <div className="relative w-full h-[70vh] lg:h-[80vh]">
+            <div className={`relative w-full h-[70vh] lg:h-[80vh] ${isPWA ? 'pt-[env(safe-area-inset-top)]' : ''}`}>
 
                 {/* Backdrop Image */}
                 <div className="absolute inset-0">
@@ -315,7 +317,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                         <Star className={`mr-2 w-5 h-5 md:w-6 md:h-6 ${isFavorite ? 'fill-current' : ''}`} />
                                         {isFavorite ? 'Đã Thêm' : 'Yêu Thích'}
                                     </Button>
-                                    
+
                                     {user && (
                                         <Button
                                             variant="outline"
@@ -434,10 +436,10 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
             </div>
 
             {movie && (
-                <AddToListModal 
-                    isOpen={showListModal} 
-                    onClose={() => setShowListModal(false)} 
-                    movieId={movie._id} 
+                <AddToListModal
+                    isOpen={showListModal}
+                    onClose={() => setShowListModal(false)}
+                    movieId={movie._id}
                 />
             )}
         </div>
