@@ -31,7 +31,7 @@ interface HeroSliderProps {
 export function HeroSlider({ movies }: HeroSliderProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
-    
+
     // Use refs for touch coordinates to avoid re-renders during swipe
     const touchStartX = useRef<number | null>(null);
     const touchEndX = useRef<number | null>(null);
@@ -50,7 +50,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
 
     const onTouchEnd = () => {
         if (!touchStartX.current || !touchEndX.current) return;
-        
+
         const distance = touchStartX.current - touchEndX.current;
         const isLeftSwipe = distance > minSwipeDistance;
         const isRightSwipe = distance < -minSwipeDistance;
@@ -76,9 +76,9 @@ export function HeroSlider({ movies }: HeroSliderProps) {
         if (!isDragging) return;
         setIsDragging(false);
         const endX = e.clientX;
-        
+
         if (!touchStartX.current) return;
-        
+
         const distance = touchStartX.current - endX;
         const isLeftSwipe = distance > minSwipeDistance;
         const isRightSwipe = distance < -minSwipeDistance;
@@ -88,7 +88,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
         } else if (isRightSwipe) {
             handlePrev();
         }
-        
+
         touchStartX.current = null;
         touchEndX.current = null;
     };
@@ -118,8 +118,8 @@ export function HeroSlider({ movies }: HeroSliderProps) {
     const currentMovie = movies[currentIndex];
 
     return (
-        <div 
-            className="relative w-full h-[75vh] md:h-[95vh] group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing"
+        <div
+            className="relative w-full h-[85vh] md:h-screen -mt-14 md:-mt-16 group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -138,7 +138,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                     <Image
                         src={movie.poster_url || movie.thumb_url}
                         alt={movie.name}
-                        className="w-full h-full object-cover object-top opacity-90"
+                        className="w-full h-full object-cover object-center opacity-90"
                         fill
                         sizes="100vw"
                         priority={index === 0}
@@ -159,7 +159,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             ))}
 
             {/* Content */}
-            <div className="absolute inset-0 z-20 container mx-auto px-4 flex flex-col justify-center pt-12 md:pt-20 pb-12 md:pb-32">
+            <div className="absolute inset-0 z-20 container mx-auto px-4 flex flex-col justify-center pt-24 md:pt-40 pb-12 md:pb-32">
                 <div className="max-w-2xl space-y-4 md:space-y-6 animate-fade-in-up">
                     <span className="text-gold-500 font-bold tracking-widest text-xs md:text-sm uppercase border border-gold-500/50 px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-black/40 backdrop-blur-md shadow-glow inline-block">
                         #{currentIndex + 1} Phim Nổi Bật
