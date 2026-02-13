@@ -61,7 +61,7 @@ export function PremiumUpsellCard({ feature, compact = false }: PremiumUpsellCar
             </li>
             <li className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
-              <span>Phim mới ra là 'ting ting' thông báo ngay 🔔</span>
+              <span>Phim mới ra là &apos;ting ting&apos; thông báo ngay 🔔</span>
             </li>
             <li className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>

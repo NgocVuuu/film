@@ -30,10 +30,10 @@ export function PWAAds() {
 
                     <div className="flex-1 min-w-0 font-vietnamese">
                         <h4 className="text-sm font-bold text-white flex items-center gap-1.5 leading-tight mb-0.5 font-vietnamese">
-                            Lên đời Premium, 'Buff' App cực đỉnh! <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                            Lên đời Premium, &apos;Buff&apos; App cực đỉnh! <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
                         </h4>
                         <p className="text-[11px] text-gray-400 leading-tight font-vietnamese">
-                            Nâng cấp ngay để 'thay áo' ánh kim sang trọng, xóa mọi quảng cáo và nhận tin phim hot tức thì sếp ơi!
+                            Nâng cấp ngay để &apos;thay áo&apos; ánh kim sang trọng, xóa mọi quảng cáo và nhận tin phim hot tức thì sếp ơi!
                         </p>
                     </div>
 
