@@ -46,6 +46,7 @@ export function Navbar() {
     const [imageError, setImageError] = useState(false);
 
     const browserMenuRef = useRef<HTMLDivElement>(null);
+    const browseMenuContentRef = useRef<HTMLDivElement>(null);
     const notificationRef = useRef<HTMLDivElement>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
@@ -122,7 +123,10 @@ export function Navbar() {
     // Close menus when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (browserMenuRef.current && !browserMenuRef.current.contains(event.target as Node)) {
+            const isClickInsideTrigger = browserMenuRef.current?.contains(event.target as Node);
+            const isClickInsideContent = browseMenuContentRef.current?.contains(event.target as Node);
+
+            if (!isClickInsideTrigger && !isClickInsideContent) {
                 setShowBrowseMenu(false);
                 setShowGenreMenu(false);
             }
@@ -327,8 +331,11 @@ export function Navbar() {
             {/* Browse Menu Content - Moved OUTSIDE of header to avoid backdrop-blur container issue */}
             {showBrowseMenu && (
                 <>
-                    <div className={`fixed inset-x-0 md:bottom-auto top-auto md:absolute md:top-full md:right-0 md:inset-x-auto w-full md:w-64 bg-black/95 backdrop-blur-md md:border border-white/10 md:rounded-lg overflow-hidden shadow-2xl z-50 rounded-t-xl transition-all animate-in slide-in-from-bottom-10 md:slide-in-from-top-2 border-t ${isPWA ? 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]' : 'bottom-16'
-                        }`}>
+                    <div
+                        ref={browseMenuContentRef}
+                        className={`fixed inset-x-0 md:bottom-auto top-auto md:absolute md:top-full md:right-0 md:inset-x-auto w-full md:w-64 bg-black/95 backdrop-blur-md md:border border-white/10 md:rounded-lg overflow-hidden shadow-2xl z-50 rounded-t-xl transition-all animate-in slide-in-from-bottom-10 md:slide-in-from-top-2 border-t ${isPWA ? 'bottom-[calc(5rem+env(safe-area-inset-bottom))]' : 'bottom-16'
+                            }`}
+                    >
                         {/* Mobile Handle */}
                         <div className="w-12 h-1 bg-white/20 rounded-full mx-auto my-3 md:hidden"></div>
 

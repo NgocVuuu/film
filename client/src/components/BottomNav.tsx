@@ -35,7 +35,7 @@ export function BottomNav() {
 
     return (
         <div className={`fixed bottom-0 left-0 right-0 z-50 px-4 lg:hidden pointer-events-none ${isPWA ? 'pb-[env(safe-area-inset-bottom)]' : 'pb-0'}`}>
-            <div className={`bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-primary/20 p-2 pointer-events-auto ${isPWA ? 'mb-2' : 'mb-0'}`}>
+            <div className={`bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-primary/20 p-2 pointer-events-auto mb-0`}>
                 <div className="flex justify-around items-center h-12">
                     {links.map((link) => {
                         const Icon = link.icon;
