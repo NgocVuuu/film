@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { customFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
@@ -27,7 +27,7 @@ export default function AdminReportsPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    const fetchReports = async () => {
+    const fetchReports = useCallback(async () => {
         try {
             setLoading(true);
             const res = await customFetch(`/api/admin/reports?status=${filter}&page=${page}&limit=20`, {
@@ -47,11 +47,11 @@ export default function AdminReportsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, filter]);
 
     useEffect(() => {
         fetchReports();
-    }, [page, filter]);
+    }, [fetchReports]);
 
     const handleResolve = async (reportId: string, status: 'fixed' | 'rejected') => {
         try {

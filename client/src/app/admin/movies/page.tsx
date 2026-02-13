@@ -1,11 +1,12 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { customFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Trash2, Star, StarOff, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Image from 'next/image';
 
 interface Movie {
     _id: string;
@@ -29,7 +30,7 @@ export default function AdminMoviesPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    const fetchMovies = async () => {
+    const fetchMovies = useCallback(async () => {
         try {
             setLoading(true);
             const queryParams = new URLSearchParams({
@@ -55,11 +56,11 @@ export default function AdminMoviesPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, search]);
 
     useEffect(() => {
         fetchMovies();
-    }, [page]);
+    }, [fetchMovies]);
 
     const handleSearch = () => {
         setPage(1);
@@ -150,7 +151,13 @@ export default function AdminMoviesPage() {
                         {movies.map((movie) => (
                             <tr key={movie._id} className="hover:bg-surface-800/50">
                                 <td className="px-4 py-3">
-                                    <img src={movie.thumb_url} alt={movie.name} className="w-16 h-24 object-cover rounded" />
+                                    <Image
+                                        src={movie.thumb_url}
+                                        alt={movie.name}
+                                        width={64}
+                                        height={96}
+                                        className="w-16 h-24 object-cover rounded"
+                                    />
                                 </td>
                                 <td className="px-4 py-3 text-sm text-white">
                                     <div className="font-medium">{movie.name}</div>

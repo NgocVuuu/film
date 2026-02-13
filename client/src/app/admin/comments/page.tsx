@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { customFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Loader2, Trash2, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Image from 'next/image';
 
 interface Comment {
     _id: string;
@@ -24,7 +25,7 @@ export default function AdminCommentsPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    const fetchComments = async () => {
+    const fetchComments = useCallback(async () => {
         try {
             setLoading(true);
             const res = await customFetch(`/api/admin/comments?page=${page}&limit=20`, {
@@ -44,11 +45,11 @@ export default function AdminCommentsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page]);
 
     useEffect(() => {
         fetchComments();
-    }, [page]);
+    }, [fetchComments]);
 
     const handleToggleHide = async (commentId: string) => {
         try {
@@ -123,10 +124,12 @@ export default function AdminCommentsPage() {
                             <tr key={comment._id} className="hover:bg-surface-800/50">
                                 <td className="px-4 py-3 text-sm text-white">
                                     <div className="flex items-center gap-3">
-                                        <img
+                                        <Image
                                             src={comment.user.avatar || '/default-avatar.png'}
                                             alt={comment.user.displayName}
-                                            className="w-8 h-8 rounded-full"
+                                            width={32}
+                                            height={32}
+                                            className="w-8 h-8 rounded-full object-cover"
                                         />
                                         <div>
                                             <div className="font-medium">{comment.user.displayName}</div>
