@@ -29,7 +29,7 @@ export default function Navbar() {
     const [showNotifications, setShowNotifications] = useState(false);
     const notificationRef = useRef<HTMLDivElement>(null);
     const [imageError, setImageError] = useState(false);
-    
+
     // Browse Menu
     const [showBrowseMenu, setShowBrowseMenu] = useState(false);
     const [showGenreMenu, setShowGenreMenu] = useState(false);
@@ -165,7 +165,7 @@ export default function Navbar() {
 
     return (
         <header
-            className={`fixed top-0 z-50 w-full transition-all duration-300 ${isScrolled ? 'bg-deep-black/95 backdrop-blur-sm shadow-md shadow-primary/10' : 'bg-transparent'
+            className={`fixed top-0 z-50 w-full transition-all duration-300 pt-[env(safe-area-inset-top)] ${isScrolled ? 'bg-deep-black/95 backdrop-blur-sm shadow-md shadow-primary/10' : 'bg-transparent'
                 }`}
         >
             <div className="container mx-auto flex h-14 md:h-16 items-center justify-between px-4 gap-4">
@@ -184,8 +184,8 @@ export default function Navbar() {
                 {/* Actions - Right */}
                 <div className="flex items-center gap-1 md:gap-3 shrink-0 ml-auto">
                     {/* Search Icon */}
-                    <Link 
-                        href="/search" 
+                    <Link
+                        href="/search"
                         className="p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
                     >
                         <Search className="w-5 h-5 md:w-6 md:h-6" />
@@ -208,35 +208,35 @@ export default function Navbar() {
                             <div className="fixed inset-x-0 bottom-[calc(3rem+env(safe-area-inset-bottom))] md:bottom-auto top-auto md:absolute md:top-full md:right-0 md:inset-x-auto w-full md:w-64 bg-black/95 backdrop-blur-md md:border border-white/10 md:rounded-lg overflow-hidden shadow-2xl z-50 rounded-t-xl transition-all animate-in slide-in-from-bottom-10 md:slide-in-from-top-2 border-t">
                                 {/* Mobile Handle */}
                                 <div className="w-12 h-1 bg-white/20 rounded-full mx-auto my-3 md:hidden"></div>
-                                
+
                                 <div className="p-2 space-y-1 pb-2">
                                     {!showGenreMenu ? (
                                         <>
-                                            <Link 
-                                                href="/phim-moi" 
+                                            <Link
+                                                href="/phim-moi"
                                                 onClick={() => setShowBrowseMenu(false)}
                                                 className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
                                             >
                                                 <Crown className="w-4 h-4 text-primary" />
                                                 Đề xuất / Phim mới
                                             </Link>
-                                            <Link 
-                                                href="/phim-le" 
+                                            <Link
+                                                href="/phim-le"
                                                 onClick={() => setShowBrowseMenu(false)}
                                                 className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
                                             >
                                                 <Film className="w-4 h-4 text-blue-400" />
                                                 Phim lẻ
                                             </Link>
-                                            <Link 
-                                                href="/phim-bo" 
+                                            <Link
+                                                href="/phim-bo"
                                                 onClick={() => setShowBrowseMenu(false)}
                                                 className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
                                             >
                                                 <List className="w-4 h-4 text-green-400" />
                                                 Phim bộ
                                             </Link>
-                                            <button 
+                                            <button
                                                 onClick={() => setShowGenreMenu(true)}
                                                 className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
                                             >
@@ -249,7 +249,7 @@ export default function Navbar() {
                                         </>
                                     ) : (
                                         <div className="h-[50vh] md:h-auto md:max-h-[60vh] flex flex-col overscroll-contain">
-                                            <button 
+                                            <button
                                                 onClick={() => setShowGenreMenu(false)}
                                                 className="flex items-center gap-2 px-4 py-3 text-sm text-gray-400 hover:text-white border-b border-white/10 mb-2 shrink-0"
                                             >
@@ -272,10 +272,10 @@ export default function Navbar() {
                                 </div>
                             </div>
                         )}
-                        
+
                         {/* Backdrop for Mobile */}
                         {showBrowseMenu && (
-                            <div 
+                            <div
                                 className="fixed inset-0 bg-black/60 z-40 md:hidden"
                                 onClick={() => setShowBrowseMenu(false)}
                             />
@@ -345,9 +345,9 @@ export default function Navbar() {
                                 className="flex items-center gap-2 p-1 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
                             >
                                 {user.avatar && !imageError ? (
-                                    <img 
-                                        src={user.avatar} 
-                                        alt={user.displayName || user.email} 
+                                    <img
+                                        src={user.avatar}
+                                        alt={user.displayName || user.email}
                                         className="w-8 h-8 rounded-full object-cover"
                                         onError={() => setImageError(true)}
                                     />

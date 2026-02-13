@@ -35,23 +35,45 @@ const generateToken = (userId) => {
 // Google OAuth Login
 exports.googleLogin = async (req, res) => {
     try {
-        const { idToken } = req.body;
+        const { idToken, accessToken } = req.body;
 
-        if (!idToken) {
+        if (!idToken && !accessToken) {
             return res.status(400).json({
                 success: false,
                 message: 'Token Google không được cung cấp'
             });
         }
 
-        // Verify Google token
-        const ticket = await googleClient.verifyIdToken({
-            idToken,
-            audience: process.env.GOOGLE_CLIENT_ID
-        });
+        let googleId, email, name, picture;
 
-        const payload = ticket.getPayload();
-        const { sub: googleId, email, name, picture } = payload;
+        if (idToken) {
+            // Verify Google idToken
+            const ticket = await googleClient.verifyIdToken({
+                idToken,
+                audience: process.env.GOOGLE_CLIENT_ID
+            });
+            const payload = ticket.getPayload();
+            googleId = payload.sub;
+            email = payload.email;
+            name = payload.name;
+            picture = payload.picture;
+        } else if (accessToken) {
+            // Fetch user info using accessToken
+            const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+            const data = await response.json();
+
+            if (data.error || !data.sub) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Access Token không hợp lệ'
+                });
+            }
+
+            googleId = data.sub;
+            email = data.email;
+            name = data.name;
+            picture = data.picture;
+        }
 
         // Find or create user
         let user = await User.findOne({ googleId });
@@ -138,9 +160,9 @@ exports.getCurrentUser = async (req, res) => {
         const hasPassword = !!(userFull && userFull.password);
 
         // Calculate isPremium from subscription
-        const isPremium = user.subscription && 
-                         user.subscription.tier === 'premium' && 
-                         user.subscription.status === 'active';
+        const isPremium = user.subscription &&
+            user.subscription.tier === 'premium' &&
+            user.subscription.status === 'active';
 
         res.json({
             success: true,
