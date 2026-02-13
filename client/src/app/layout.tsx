@@ -16,13 +16,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pchill - Xem Phim Online Miễn Phí",
+  title: "Pchill Movie - Xem Phim Online Miễn Phí",
   description: "Web xem phim miễn phí với giao diện đẹp mắt, cập nhật liên tục.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Pchill",
+    title: "Pchill Movie",
   },
   icons: {
     icon: [
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ef4444",
+  themeColor: "#eab308",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

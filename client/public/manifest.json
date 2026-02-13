@@ -1,13 +1,16 @@
 {
-  "name": "Film - Xem Phim Online",
-  "short_name": "Film",
+  "name": "Pchill Movie",
+  "short_name": "Pchill Movie",
   "description": "Xem phim online miễn phí, chất lượng cao với phụ đề tiếng Việt",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#ef4444",
+  "background_color": "#050505",
+  "theme_color": "#eab308",
   "orientation": "portrait-primary",
-  "categories": ["entertainment", "video"],
+  "categories": [
+    "entertainment",
+    "video"
+  ],
   "icons": [
     {
       "src": "/logo.png",
@@ -85,21 +88,36 @@
       "short_name": "Tìm kiếm",
       "description": "Tìm kiếm phim yêu thích",
       "url": "/?search=true",
-      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
     },
     {
       "name": "Yêu thích",
       "short_name": "Yêu thích",
       "description": "Xem danh sách phim yêu thích",
       "url": "/favorites",
-      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
     },
     {
       "name": "Lịch sử",
       "short_name": "Lịch sử",
       "description": "Xem lịch sử xem phim",
       "url": "/history",
-      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
     }
   ]
 }

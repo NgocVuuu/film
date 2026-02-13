@@ -70,9 +70,9 @@ export function Navbar() {
             const res = await customFetch('/api/notifications');
             const data = await res.json();
             if (data.success) {
-                const notifs: Notification[] = Array.isArray(data.notifications) ? data.notifications : [];
+                const notifs: Notification[] = Array.isArray(data.data) ? data.data : [];
                 setNotifications(notifs);
-                setUnreadCount(notifs.filter(n => !n.isRead).length);
+                setUnreadCount(data.unreadCount || 0);
             }
         } catch (err) {
             console.error('Error fetching notifications:', err);

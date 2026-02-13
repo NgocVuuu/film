@@ -37,6 +37,7 @@ app.use(cors({
     origin: [
         'http://localhost:3000',
         'https://film-xt3.pages.dev',
+        'https://pchill.online',
         (process.env.CLIENT_URL || '').replace(/\/$/, '')
     ].filter(Boolean),
     credentials: true

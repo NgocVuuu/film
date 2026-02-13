@@ -5,7 +5,7 @@ const PushSubscription = require('../models/PushSubscription');
 // Configure web-push
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     webPush.setVapidDetails(
-        process.env.VAPID_EMAIL || 'mailto:admin@film-xt3.pages.dev',
+        process.env.VAPID_EMAIL || 'mailto:admin@pchill.online',
         process.env.VAPID_PUBLIC_KEY,
         process.env.VAPID_PRIVATE_KEY
     );

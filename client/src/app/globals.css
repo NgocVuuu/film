@@ -32,8 +32,9 @@
 .dark,
 :root {
   /* Background: Deep Black */
-  --background: oklch(0.1 0 0);
+  --background: oklch(0.08 0 0);
   --background-hex: #050505;
+  --metallic-gradient: linear-gradient(135deg, #050505 0%, #0a0a0a 25%, #111111 50%, #0a0a0a 75%, #050505 100%);
 
   --foreground: oklch(0.985 0 0);
 
@@ -160,12 +161,17 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    background: var(--metallic-gradient);
+    background-attachment: fixed;
+    @apply text-foreground min-h-screen;
   }
 
   /* Prevent Zoom on Focus (Mobile) */
   @media screen and (max-width: 768px) {
-    input, select, textarea {
+
+    input,
+    select,
+    textarea {
       font-size: 16px !important;
     }
   }
