@@ -103,9 +103,11 @@ export function ContinueWatchingCard({ movie, onRemove }: ContinueWatchingCardPr
 
             {/* Content */}
             <div className="absolute bottom-0 left-0 w-full p-3 bg-gradient-to-t from-black via-black/80 to-transparent pt-6">
-                <h3 className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors uppercase leading-tight">
-                    {movie.name}
-                </h3>
+                <div className="truncate marquee-container">
+                    <h3 className="text-sm font-bold text-white group-hover:text-primary transition-colors uppercase leading-tight hover-marquee">
+                        {movie.name}
+                    </h3>
+                </div>
                 <div className="flex items-center justify-between mt-1">
                     <p className="text-xs text-gray-400 truncate max-w-[70%]">{movie.origin_name}</p>
                     <span className="text-xs text-primary font-medium border border-primary/30 px-1 rounded bg-black/50">

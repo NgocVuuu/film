@@ -54,8 +54,8 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
                     {title}
                 </h2>
                 {viewAllLink && (
-                    <Link href={viewAllLink} className="text-sm text-gray-400 hover:text-primary transition-colors flex items-center gap-1 group">
-                        Xem tất cả <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    <Link href={viewAllLink} className="text-gray-400 hover:text-primary transition-all group p-1">
+                        <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                     </Link>
                 )}
             </div>
@@ -112,7 +112,9 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
 
                             {/* Info */}
                             <div className="p-3">
-                                <h3 className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">{movie.name}</h3>
+                                <div className="truncate marquee-container">
+                                    <h3 className="text-sm font-bold text-white group-hover:text-primary transition-colors hover-marquee">{movie.name}</h3>
+                                </div>
                                 <p className="text-xs text-gray-400 truncate">{movie.origin_name}</p>
                                 <div className="flex items-center justify-between mt-2 text-[10px] text-gray-500 uppercase font-medium">
                                     <span>{movie.year}</span>

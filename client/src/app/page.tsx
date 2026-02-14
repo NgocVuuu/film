@@ -42,11 +42,25 @@ export default function Home() {
   const [cartoonMovies, setCartoonMovies] = useState<Movie[]>([]);
   const [horrorMovies, setHorrorMovies] = useState<Movie[]>([]);
   const [familyMovies, setFamilyMovies] = useState<Movie[]>([]);
-
   const [thailandMovies, setThailandMovies] = useState<Movie[]>([]);
   const [japanMovies, setJapanMovies] = useState<Movie[]>([]);
   const [actionMovies, setActionMovies] = useState<Movie[]>([]);
   const [romanceMovies, setRomanceMovies] = useState<Movie[]>([]);
+  const [comedyMovies, setComedyMovies] = useState<Movie[]>([]);
+  const [adventureMovies, setAdventureMovies] = useState<Movie[]>([]);
+  const [scifiMovies, setScifiMovies] = useState<Movie[]>([]);
+  const [crimeMovies, setCrimeMovies] = useState<Movie[]>([]);
+  const [historyDramaMovies, setHistoryDramaMovies] = useState<Movie[]>([]);
+  const [martialArtsMovies, setMartialArtsMovies] = useState<Movie[]>([]);
+  const [shortDramaMovies, setShortDramaMovies] = useState<Movie[]>([]);
+  const [tvShows, setTvShows] = useState<Movie[]>([]);
+  const [warMovies, setWarMovies] = useState<Movie[]>([]);
+  const [mysteryMovies, setMysteryMovies] = useState<Movie[]>([]);
+  const [schoolMovies, setSchoolMovies] = useState<Movie[]>([]);
+  const [documentaryMovies, setDocumentaryMovies] = useState<Movie[]>([]);
+  const [fantasyMovies, setFantasyMovies] = useState<Movie[]>([]);
+  const [hkMovies, setHkMovies] = useState<Movie[]>([]);
+  const [vnMovies, setVnMovies] = useState<Movie[]>([]);
 
   useEffect(() => {
     // Fetch data from our Node.js server
@@ -68,16 +82,27 @@ export default function Home() {
             thailandMovies,
             japanMovies,
             actionMovies,
-            romanceMovies
+            romanceMovies,
+            comedyMovies,
+            adventureMovies,
+            scifiMovies,
+            crimeMovies,
+            historyDramaMovies,
+            martialArtsMovies,
+            shortDramaMovies,
+            tvShows,
+            warMovies,
+            mysteryMovies,
+            schoolMovies,
+            documentaryMovies,
+            fantasyMovies,
+            hkMovies,
+            vnMovies
           } = data.data;
 
           setTrendingMovies(trendingMovies || []);
           setFeaturedMovies(featuredMovies || []);
           setContinueWatchingMovies(continueWatching || []);
-
-          // DEBUG: Log continue watching data
-          console.log('[Homepage] Continue Watching Data:', continueWatching);
-          console.log('[Homepage] Continue Watching Count:', continueWatching?.length || 0);
 
           setLatestMovies(latestMovies || []);
           setChinaMovies(chinaMovies || []);
@@ -90,6 +115,21 @@ export default function Home() {
           setJapanMovies(japanMovies || []);
           setActionMovies(actionMovies || []);
           setRomanceMovies(romanceMovies || []);
+          setComedyMovies(comedyMovies || []);
+          setAdventureMovies(adventureMovies || []);
+          setScifiMovies(scifiMovies || []);
+          setCrimeMovies(crimeMovies || []);
+          setHistoryDramaMovies(historyDramaMovies || []);
+          setMartialArtsMovies(martialArtsMovies || []);
+          setShortDramaMovies(shortDramaMovies || []);
+          setTvShows(tvShows || []);
+          setWarMovies(warMovies || []);
+          setMysteryMovies(mysteryMovies || []);
+          setSchoolMovies(schoolMovies || []);
+          setDocumentaryMovies(documentaryMovies || []);
+          setFantasyMovies(fantasyMovies || []);
+          setHkMovies(hkMovies || []);
+          setVnMovies(vnMovies || []);
         }
         setLoading(false);
       })
@@ -114,10 +154,25 @@ export default function Home() {
       {/* Carousel Sections */}
       <div className="container mx-auto px-4 space-y-12 -mt-10 relative z-20">
 
-        {/* Trending Section */}
+        {/* 1. Cinema / Featured */}
+        {featuredMovies.length > 0 && (
+          <MovieCarousel
+            title="Phim lẻ chiếu rạp đẳng cấp nhất"
+            movies={featuredMovies}
+            viewAllLink="/danh-sach/phim-chieu-rap"
+          />
+        )}
+
+        {/* 2. Trending Section */}
         {trendingMovies.length > 0 && (
           <TrendingCarousel movies={trendingMovies} />
         )}
+
+        {/* 3. Recommended */}
+        <MovieCarousel
+          title="Phim nổi bật đề cử cho bạn"
+          movies={trendingMovies.slice().reverse()}
+        />
 
         {/* Continue Watching Section */}
         {continueWatchingMovies.length > 0 && (
@@ -138,78 +193,179 @@ export default function Home() {
           </div>
         )}
 
-
-
-        {/* Eager-loaded sections */}
-        <MovieCarousel
-          title="Phim Mới Cập Nhật"
-          movies={latestMovies}
-          viewAllLink="/phim-moi"
-        />
-
-        <MovieCarousel
-          title="Đề Cử Cho Bạn"
-          movies={trendingMovies.slice().reverse()}
-        />
-
-        {/* Lazy-loaded sections - only load when scrolled into view */}
+        {/* 4. Anime */}
         <LazyMovieSection
-          title="C-Drama Đỉnh Cao"
-          movies={chinaMovies}
-          viewAllLink="/quoc-gia/trung-quoc"
-        />
-
-        <LazyMovieSection
-          title="K-Drama Cực Phẩm"
-          movies={koreaMovies}
-          viewAllLink="/quoc-gia/han-quoc"
-        />
-
-        <LazyMovieSection
-          title="Phim Thái Lan Đặc Sắc"
-          movies={thailandMovies}
-          viewAllLink="/quoc-gia/thai-lan"
-        />
-
-        <LazyMovieSection
-          title="Phim Nhật Bản Hấp Dẫn"
-          movies={japanMovies}
-          viewAllLink="/quoc-gia/nhat-ban"
-        />
-
-        <LazyMovieSection
-          title="Phim Hành Động Kịch Tính"
-          movies={actionMovies}
-          viewAllLink="/the-loai/hanh-dong"
-        />
-
-        <LazyMovieSection
-          title="Phim Tình Cảm Lãng Mạn"
-          movies={romanceMovies}
-          viewAllLink="/the-loai/tinh-cam"
-        />
-
-        <LazyMovieSection
-          title="Thế Giới Tuổi Thơ"
+          title="Thế giới Anime Nhật Bản đa sắc màu"
           movies={cartoonMovies}
           viewAllLink="/hoat-hinh"
         />
 
+        {/* 5. China */}
         <LazyMovieSection
-          title="Bom Tấn Hollywood"
-          movies={usukMovies}
+          title="Siêu phẩm Trung Quốc hot nhất"
+          movies={chinaMovies}
+          viewAllLink="/quoc-gia/trung-quoc"
         />
 
+        {/* 6. Korea */}
         <LazyMovieSection
-          title="Nỗi Ám Ảnh Đêm Khuya"
+          title="Phim Hàn Quốc châm ngòi cảm xúc"
+          movies={koreaMovies}
+          viewAllLink="/quoc-gia/han-quoc"
+        />
+
+        {/* 7. Action */}
+        <LazyMovieSection
+          title="Hành động nghẹt thở và kịch tính"
+          movies={actionMovies}
+          viewAllLink="/the-loai/hanh-dong"
+        />
+
+        {/* 8. Latest */}
+        <MovieCarousel
+          title="Phim mới cập nhật hàng ngày"
+          movies={latestMovies}
+          viewAllLink="/phim-moi"
+        />
+
+        {/* 9. Hollywood / USUK */}
+        <LazyMovieSection
+          title="Bom tấn Hollywood và đỉnh cao điện ảnh"
+          movies={usukMovies}
+          viewAllLink="/quoc-gia/au-my"
+        />
+
+        {/* 10. Romance */}
+        <LazyMovieSection
+          title="Tình cảm lãng mạn ngọt ngào"
+          movies={romanceMovies}
+          viewAllLink="/the-loai/tinh-cam"
+        />
+
+        {/* 11. Horror */}
+        <LazyMovieSection
+          title="Nỗi ám ảnh kinh dị rùng rợn"
           movies={horrorMovies}
           viewAllLink="/the-loai/kinh-di"
         />
 
+        {/* 12. Comedy */}
         <LazyMovieSection
-          title="Gia Đình Là Số 1"
+          title="Hài hước sảng khoái xua tan mệt mỏi"
+          movies={comedyMovies}
+          viewAllLink="/the-loai/hai-huoc"
+        />
+
+        {/* 13. Adventure */}
+        <LazyMovieSection
+          title="Phiêu lưu kỳ thú và hành trình mới"
+          movies={adventureMovies}
+          viewAllLink="/the-loai/phieu-luu"
+        />
+
+        {/* 14. Family / Animation for kids */}
+        <LazyMovieSection
+          title="Phim hoạt hình cho trẻ em và gia đình"
           movies={familyMovies}
           viewAllLink="/the-loai/gia-dinh"
+        />
+
+        {/* 15. Martial Arts */}
+        <LazyMovieSection
+          title="Võ thuật đỉnh cao và hành động thực chiến"
+          movies={martialArtsMovies}
+          viewAllLink="/the-loai/vo-thuat"
+        />
+
+        {/* 16. Historical / Cổ Trang */}
+        <LazyMovieSection
+          title="Cổ Trang và kiếm hiệp Trung Hoa"
+          movies={historyDramaMovies}
+          viewAllLink="/the-loai/co-trang"
+        />
+
+        {/* 17. Crime */}
+        <LazyMovieSection
+          title="Hình sự và hồ sơ tội phạm phá án"
+          movies={crimeMovies}
+          viewAllLink="/the-loai/hinh-su"
+        />
+
+        {/* 18. Sci-Fi */}
+        <LazyMovieSection
+          title="Viễn tưởng và khoa học kỳ ảo"
+          movies={scifiMovies}
+          viewAllLink="/the-loai/vien-tuong"
+        />
+
+        {/* 19. Short Drama */}
+        <LazyMovieSection
+          title="Phim ngắn Short Drama mới lạ"
+          movies={shortDramaMovies}
+          viewAllLink="/the-loai/short-drama"
+        />
+
+        {/* 20. Thailand */}
+        <LazyMovieSection
+          title="Phim Thái Lan kịch tính và hài hước"
+          movies={thailandMovies}
+          viewAllLink="/quoc-gia/thai-lan"
+        />
+
+        {/* 21. Vietnam */}
+        <LazyMovieSection
+          title="Phim lẻ Việt Nam đặc sắc chọn lọc"
+          movies={vnMovies}
+          viewAllLink="/quoc-gia/viet-nam"
+        />
+
+        {/* 22. Hong Kong */}
+        <LazyMovieSection
+          title="Phim Hồng Kông kinh điển một thời"
+          movies={hkMovies}
+          viewAllLink="/quoc-gia/hong-kong"
+        />
+
+        {/* 23. TV Shows */}
+        <LazyMovieSection
+          title="TV Show truyền hình thực tế bùng nổ"
+          movies={tvShows}
+          viewAllLink="/tv-shows"
+        />
+
+        {/* 24. War */}
+        <LazyMovieSection
+          title="Hùng ca chiến tranh và lịch sử hào hùng"
+          movies={warMovies}
+          viewAllLink="/the-loai/chien-tranh"
+        />
+
+        {/* 25. Fantasy */}
+        <LazyMovieSection
+          title="Thần thoại và thế giới ma thuật"
+          movies={fantasyMovies}
+          viewAllLink="/the-loai/than-thoai"
+        />
+
+        {/* 26. School */}
+        <LazyMovieSection
+          title="Thanh xuân học đường và tuổi trẻ"
+          movies={schoolMovies}
+          viewAllLink="/the-loai/hoc-duong"
+        />
+
+        {/* 27. Mystery */}
+        <LazyMovieSection
+          title="Bí ẩn và những câu đố chưa có lời giải"
+          movies={mysteryMovies}
+          viewAllLink="/the-loai/bi-an"
+        />
+
+        {/* 28. Documentary */}
+        <LazyMovieSection
+          title="Thước phim tài liệu và đời thực"
+          movies={documentaryMovies}
+          viewAllLink="/the-loai/tai-lieu"
         />
 
         <div className="pb-8">

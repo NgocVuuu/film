@@ -133,7 +133,7 @@ export function Navbar() {
     return (
         <>
             <header
-                className={`fixed top-0 z-50 w-full transition-all duration-300 pt-[env(safe-area-inset-top)] ${isScrolled ? 'bg-deep-black/95 backdrop-blur-sm shadow-md shadow-primary/10' : 'bg-transparent'
+                className={`fixed top-0 z-[100] w-full transition-all duration-300 pt-[env(safe-area-inset-top)] ${isScrolled ? 'bg-deep-black/95 backdrop-blur-sm shadow-md shadow-primary/10' : 'bg-transparent'
                     }`}
             >
                 <div className="container mx-auto flex h-14 md:h-16 items-center justify-between px-4 gap-4">
@@ -162,11 +162,12 @@ export function Navbar() {
                         {/* Filter / Browse Menu Trigger */}
                         <div ref={browserMenuRef} className="relative">
                             <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Prevent immediate close on mobile
                                     setShowBrowseMenu(!showBrowseMenu);
                                     setShowGenreMenu(false);
                                 }}
-                                className="p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                                className="p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors touch-manipulation"
                             >
                                 <Filter className="w-5 h-5 md:w-6 md:h-6" />
                             </button>
@@ -176,7 +177,7 @@ export function Navbar() {
                                 <>
                                     <div
                                         ref={browseMenuContentRef}
-                                        className={`fixed inset-x-0 md:bottom-auto top-auto md:absolute md:top-full md:right-0 md:mt-2 w-full md:w-64 bg-black/95 backdrop-blur-md md:border border-white/10 md:rounded-lg overflow-hidden shadow-2xl z-50 rounded-t-xl transition-all animate-in slide-in-from-bottom-10 md:slide-in-from-top-2 border-t ${isPWA ? 'bottom-[calc(5rem+env(safe-area-inset-bottom))]' : 'bottom-16'
+                                        className={`fixed inset-x-0 md:bottom-auto top-auto md:absolute md:top-full md:right-0 md:mt-2 w-full md:w-64 bg-black/95 backdrop-blur-md md:border border-white/10 md:rounded-lg overflow-hidden shadow-2xl z-[120] rounded-t-xl transition-all animate-in slide-in-from-bottom-10 md:slide-in-from-top-2 border-t ${isPWA ? 'bottom-[calc(5rem+env(safe-area-inset-bottom))]' : 'bottom-16'
                                             } md:inset-x-auto`}
                                     >
                                         {/* Mobile Handle */}
@@ -210,7 +211,10 @@ export function Navbar() {
                                                         Phim bộ
                                                     </Link>
                                                     <button
-                                                        onClick={() => setShowGenreMenu(true)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setShowGenreMenu(true);
+                                                        }}
                                                         className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
                                                     >
                                                         <span className="flex items-center gap-3">
@@ -223,7 +227,10 @@ export function Navbar() {
                                             ) : (
                                                 <div className="h-[50vh] md:h-auto md:max-h-[60vh] flex flex-col overscroll-contain">
                                                     <button
-                                                        onClick={() => setShowGenreMenu(false)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setShowGenreMenu(false);
+                                                        }}
                                                         className="flex items-center gap-2 px-4 py-3 text-sm text-gray-400 hover:text-white border-b border-white/10 mb-2 shrink-0"
                                                     >
                                                         ‹ Quay lại
@@ -246,7 +253,7 @@ export function Navbar() {
                                     </div>
                                     {/* Backdrop */}
                                     <div
-                                        className="fixed inset-0 bg-black/60 z-40 md:hidden"
+                                        className="fixed inset-0 bg-black/60 z-[110] md:hidden backdrop-blur-[2px]"
                                         onClick={() => setShowBrowseMenu(false)}
                                     />
                                 </>
