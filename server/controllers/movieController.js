@@ -151,9 +151,7 @@ const getHomeData = async (req, res) => {
             Movie.find({ 'category.slug': 'gia-dinh' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // 10. Thailand
             Movie.find({ 'country.slug': 'thai-lan' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 11. Japan
-            Movie.find({ 'country.slug': 'nhat-ban' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 12. Action
+            // 11. Action
             Movie.find({ 'category.slug': 'hanh-dong' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // 13. Romance
             Movie.find({ 'category.slug': 'tinh-cam' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
@@ -232,7 +230,6 @@ const getHomeData = async (req, res) => {
                 responseData.cartoonMovies = await attachProgressToMovies(cartoonMovies, userId);
                 responseData.familyMovies = await attachProgressToMovies(familyMovies, userId);
                 responseData.thailandMovies = await attachProgressToMovies(thailandMovies, userId);
-                responseData.japanMovies = await attachProgressToMovies(japanMovies, userId);
                 responseData.actionMovies = await attachProgressToMovies(actionMovies, userId);
                 responseData.romanceMovies = await attachProgressToMovies(romanceMovies, userId);
 

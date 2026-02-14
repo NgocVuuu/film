@@ -43,7 +43,6 @@ export default function Home() {
   const [horrorMovies, setHorrorMovies] = useState<Movie[]>([]);
   const [familyMovies, setFamilyMovies] = useState<Movie[]>([]);
   const [thailandMovies, setThailandMovies] = useState<Movie[]>([]);
-  const [japanMovies, setJapanMovies] = useState<Movie[]>([]);
   const [actionMovies, setActionMovies] = useState<Movie[]>([]);
   const [romanceMovies, setRomanceMovies] = useState<Movie[]>([]);
   const [comedyMovies, setComedyMovies] = useState<Movie[]>([]);
@@ -80,7 +79,6 @@ export default function Home() {
             horrorMovies,
             familyMovies,
             thailandMovies,
-            japanMovies,
             actionMovies,
             romanceMovies,
             comedyMovies,
@@ -112,7 +110,6 @@ export default function Home() {
           setHorrorMovies(horrorMovies || []);
           setFamilyMovies(familyMovies || []);
           setThailandMovies(thailandMovies || []);
-          setJapanMovies(japanMovies || []);
           setActionMovies(actionMovies || []);
           setRomanceMovies(romanceMovies || []);
           setComedyMovies(comedyMovies || []);
