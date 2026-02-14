@@ -48,7 +48,22 @@ app.use(morgan('dev'));
 
 // Security Middleware
 app.use(helmet({
-    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.google-analytics.com", "https://ssl.google-analytics.com", "https://www.googletagmanager.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            imgSrc: ["'self'", "data:", "https:", "http:"], // Allow images from all sources
+            connectSrc: ["'self'", "https://api.pchill.online", "https://*.google-analytics.com", "https://*.analytics.google.com", "https://*.googletagmanager.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'", "https:", "http:"], // Allow video from all sources
+            frameSrc: ["'self'", "https://www.youtube.com", "https://www.google.com"],
+            upgradeInsecureRequests: [],
+        },
+    },
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" }
 }));
 
 // Custom Mongo Sanitize (In-place to support Express 5)

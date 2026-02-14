@@ -295,6 +295,8 @@ function LoginContent() {
                 <p className="text-center text-gray-500 text-sm mt-6">
                     Bằng việc đăng nhập, bạn đồng ý với{' '}
                     <Link href="/terms" className="text-primary hover:underline whitespace-nowrap">Điều khoản dịch vụ</Link>
+                    {' '}và{' '}
+                    <Link href="/privacy" className="text-primary hover:underline whitespace-nowrap">Chính sách bảo mật</Link>
                 </p>
             </div>
         </div>

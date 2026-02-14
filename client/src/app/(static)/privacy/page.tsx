@@ -6,13 +6,27 @@ export default function PrivacyPage() {
         <StaticPage
             title="Chính sách bảo mật"
             content={
-                <div className="space-y-4">
-                    <p>Chúng tôi tôn trọng quyền riêng tư của bạn. Dưới đây là cách chúng tôi xử lý thông tin:</p>
-                    <ul className="list-disc pl-5 space-y-2">
-                        <li><strong>Thông tin thu thập:</strong> Email, tên hiển thị (khi đăng nhập), lịch sử xem phim (để đồng bộ tiến độ).</li>
-                        <li><strong>Bảo mật:</strong> Mật khẩu của bạn được mã hóa hoàn toàn. Chúng tôi không chia sẻ thông tin cá nhân với bên thứ ba.</li>
-                        <li><strong>Cookies:</strong> Website sử dụng cookies để lưu trạng thái đăng nhập và cài đặt cá nhân.</li>
-                    </ul>
+                <div className="space-y-6 text-gray-300">
+                    <section>
+                        <h2 className="text-xl font-bold text-white mb-2">1. Thu thập thông tin</h2>
+                        <p>Chúng tôi chỉ thu thập thông tin cơ bản khi bạn đăng ký tài khoản (Tên hiển thị, Email) để cá nhân hoá trải nghiệm xem phim của bạn.</p>
+                    </section>
+                    <section>
+                        <h2 className="text-xl font-bold text-white mb-2">2. Sử dụng thông tin</h2>
+                        <p>Thông tin của bạn được sử dụng để duy trì tài khoản, ghi nhớ lịch sử xem phim và danh sách yêu thích. Chúng tôi cam kết không bán hoặc chia sẻ thông tin cá nhân của bạn cho bên thứ ba.</p>
+                    </section>
+                    <section>
+                        <h2 className="text-xl font-bold text-white mb-2">3. Bảo mật dữ liệu</h2>
+                        <p>Chúng tôi sử dụng các biện pháp bảo mật tiêu chuẩn (Mã hóa mật khẩu bằng bcrypt, Token JWT) để bảo vệ tài khoản của bạn khỏi truy cập trái phép.</p>
+                    </section>
+                    <section>
+                        <h2 className="text-xl font-bold text-white mb-2">4. Cookies</h2>
+                        <p>Chúng tôi sử dụng cookies để duy trì trạng thái đăng nhập. Bạn có thể tắt cookies trong trình duyệt, nhưng một số tính năng của website có thể không hoạt động chính xác.</p>
+                    </section>
+                    <section>
+                        <h2 className="text-xl font-bold text-white mb-2">5. Liên hệ</h2>
+                        <p>Nếu có bất kỳ câu hỏi nào về chính sách bảo mật, vui lòng liên hệ với chúng tôi qua email: support@pchill.online</p>
+                    </section>
                 </div>
             }
         />
