@@ -72,6 +72,5 @@ movieSchema.index({ type: 1, updatedAt: -1 });
 movieSchema.index({ status: 1, updatedAt: -1 });
 movieSchema.index({ chieurap: 1, updatedAt: -1 });
 movieSchema.index({ view: -1 }); // Trending
-movieSchema.index({ slug: 1 }); // Already unique, but explicit index doesn't hurt
 
 module.exports = mongoose.model('Movie', movieSchema);
