@@ -141,50 +141,50 @@ const getHomeData = async (req, res) => {
             Movie.find({ 'country.slug': 'trung-quoc' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // 5. Korea
             Movie.find({ 'country.slug': 'han-quoc' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 6. US/UK (Hollywood)
-            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 7. Cartoon (type: hoathinh) - Used for Anime
+            // 6. Western (Holland/USUK) - Single movies only for blockbuster feel
+            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] }, type: 'single' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // 7. Cartoon/Anime (All countries as per user request)
             Movie.find({ type: 'hoathinh' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 8. Horror
-            Movie.find({ 'category.slug': 'kinh-di' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 9. Family
+            // 8. Horror - Single movies prioritize
+            Movie.find({ 'category.slug': 'kinh-di', type: 'single' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // 9. Family/Kids
             Movie.find({ 'category.slug': 'gia-dinh' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // 10. Thailand
             Movie.find({ 'country.slug': 'thai-lan' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 11. Action
-            Movie.find({ 'category.slug': 'hanh-dong' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 13. Romance
+            // 11. Action - Single movies only for high-octane feel
+            Movie.find({ 'category.slug': 'hanh-dong', type: 'single' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // 12. Romance
             Movie.find({ 'category.slug': 'tinh-cam' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 14. Comedy
+            // 13. Comedy
             Movie.find({ 'category.slug': 'hai-huoc' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 15. Adventure
+            // 14. Adventure
             Movie.find({ 'category.slug': 'phieu-luu' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 16. Sci-Fi
-            Movie.find({ 'category.slug': 'vien-tuong' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 17. Crime
+            // 15. Sci-Fi - Single movies prioritize
+            Movie.find({ 'category.slug': 'vien-tuong', type: 'single' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // 16. Crime
             Movie.find({ 'category.slug': 'hinh-su' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 18. Historical/Cổ Trang
-            Movie.find({ 'category.slug': 'co-trang' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 19. Martial Arts
+            // 17. Historical/Cổ Trang (Strictly China as per plan)
+            Movie.find({ 'category.slug': 'co-trang', 'country.slug': 'trung-quoc' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // 18. Martial Arts (Series allowed as per user request)
             Movie.find({ 'category.slug': 'vo-thuat' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 20. Short Drama
+            // 19. Short Drama
             Movie.find({ 'category.slug': 'short-drama' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 21. TV Show
+            // 20. TV Show
             Movie.find({ type: 'tvshows' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 22. War
+            // 21. War
             Movie.find({ 'category.slug': 'chien-tranh' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 23. Mystery
+            // 22. Mystery
             Movie.find({ 'category.slug': 'bi-an' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 24. School
-            Movie.find({ 'category.slug': 'hoc-duong' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 25. Documentary
+            // 23. School (Strictly China as per user request)
+            Movie.find({ 'category.slug': 'hoc-duong', 'country.slug': 'trung-quoc' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // 24. Documentary
             Movie.find({ 'category.slug': 'tai-lieu' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 26. Fantasy
+            // 25. Fantasy
             Movie.find({ 'category.slug': 'than-thoai' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 27. Hong Kong
-            Movie.find({ 'country.slug': 'hong-kong' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 28. Viet Nam
-            Movie.find({ 'country.slug': 'viet-nam' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // 26. Hong Kong - Single movies focus
+            Movie.find({ 'country.slug': 'hong-kong', type: 'single' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            // 27. Vietnam - Single movies focus
+            Movie.find({ 'country.slug': 'viet-nam', type: 'single' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
         ]);
 
         let responseData = {

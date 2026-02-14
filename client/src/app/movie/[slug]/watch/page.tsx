@@ -233,7 +233,7 @@ export default function WatchPage() {
 
         // Update URL
         const newUrl = `/movie/${slug}/watch?episode=${episode.slug}`;
-        window.history.pushState({}, '', newUrl);
+        window.history.replaceState({}, '', newUrl);
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };

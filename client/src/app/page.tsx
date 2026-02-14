@@ -190,9 +190,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* 4. Anime */}
+        {/* 4. Animation */}
         <LazyMovieSection
-          title="Thế giới Anime Nhật Bản đa sắc màu"
+          title="Thế giới hoạt hình đa sắc màu"
           movies={cartoonMovies}
           viewAllLink="/hoat-hinh"
         />
@@ -346,7 +346,7 @@ export default function Home() {
 
         {/* 26. School */}
         <LazyMovieSection
-          title="Thanh xuân học đường và tuổi trẻ"
+          title="Thanh xuân học đường Trung Hoa"
           movies={schoolMovies}
           viewAllLink="/the-loai/hoc-duong"
         />
