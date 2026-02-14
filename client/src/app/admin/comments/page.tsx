@@ -141,7 +141,7 @@ export default function AdminCommentsPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="text-sm text-gray-300 max-w-xs md:max-w-md line-clamp-2 italic">"{comment.content}"</div>
+                                        <div className="text-sm text-gray-300 max-w-xs md:max-w-md line-clamp-2 italic">&quot;{comment.content}&quot;</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-xs text-primary font-medium hover:underline cursor-pointer">{comment.movieSlug}</div>

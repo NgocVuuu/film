@@ -343,21 +343,32 @@ const getMovies = async (req, res) => {
                 const externalMovies = await multiSourceSearch(q);
 
                 if (externalMovies.length > 0) {
-                    movies = externalMovies;
-                    total = externalMovies.length;
-
-                    // Background sync (gentle queue)
-                    setImmediate(async () => {
-                        for (const movie of externalMovies) {
-                            try {
-                                await syncSpecificMovie(movie.slug);
-                                // Small delay between syncs during search to be VPS friendly
-                                await new Promise(r => setTimeout(r, 1000));
-                            } catch (e) {
-                                console.error(`[HYBRID SYNC] Failed for ${movie.slug}:`, e.message);
-                            }
+                    // Filter out external movies that are already in our DB and marked as hidden
+                    const activeExternalMovies = [];
+                    for (const extMovie of externalMovies) {
+                        const localMovie = await Movie.findOne({ slug: extMovie.slug }).select('isActive');
+                        if (!localMovie || localMovie.isActive !== false) {
+                            activeExternalMovies.push(extMovie);
                         }
-                    });
+                    }
+
+                    if (activeExternalMovies.length > 0) {
+                        movies = activeExternalMovies;
+                        total = activeExternalMovies.length;
+
+                        // Background sync (gentle queue)
+                        setImmediate(async () => {
+                            for (const movie of activeExternalMovies) {
+                                try {
+                                    await syncSpecificMovie(movie.slug);
+                                    // Small delay between syncs during search to be VPS friendly
+                                    await new Promise(r => setTimeout(r, 1000));
+                                } catch (e) {
+                                    console.error(`[HYBRID SYNC] Failed for ${movie.slug}:`, e.message);
+                                }
+                            }
+                        });
+                    }
                 }
             } catch (externalError) {
                 console.error('[HYBRID] Multi-source search error:', externalError.message);
