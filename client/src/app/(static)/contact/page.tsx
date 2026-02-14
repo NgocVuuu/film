@@ -14,8 +14,8 @@ export default function ContactPage() {
                         <div className="bg-white/5 p-6 rounded-lg border border-white/10 flex flex-col items-center text-center hover:bg-white/10 transition-colors">
                             <Mail className="w-10 h-10 text-primary mb-4" />
                             <h3 className="font-bold text-white mb-2">Email</h3>
-                            <p className="text-sm">support@pchill.com</p>
-                            <p className="text-sm">ads@pchill.com</p>
+                            <p className="text-sm">support@pchill.online</p>
+                            <p className="text-sm">ads@pchill.online</p>
                         </div>
 
                         <div className="bg-white/5 p-6 rounded-lg border border-white/10 flex flex-col items-center text-center hover:bg-white/10 transition-colors">

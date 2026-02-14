@@ -5,25 +5,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Static Routes
     const staticRoutes: MetadataRoute.Sitemap = [
         {
-            url: 'https://pchill.com',
+            url: 'https://pchill.online',
             lastModified: new Date(),
             changeFrequency: 'daily',
             priority: 1,
         },
         {
-            url: 'https://pchill.com/phim-moi',
+            url: 'https://pchill.online/phim-moi',
             lastModified: new Date(),
             changeFrequency: 'daily',
             priority: 0.8,
         },
         {
-            url: 'https://pchill.com/phim-bo',
+            url: 'https://pchill.online/phim-bo',
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.8,
         },
         {
-            url: 'https://pchill.com/phim-le',
+            url: 'https://pchill.online/phim-le',
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.8,
@@ -49,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 }
 
                 return {
-                    url: `https://pchill.com/movie/${movie.slug}`,
+                    url: `https://pchill.online/movie/${movie.slug}`,
                     lastModified: lastModifiedDate,
                     changeFrequency: 'daily',
                     priority: 0.7,

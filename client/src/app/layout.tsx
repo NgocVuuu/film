@@ -16,9 +16,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://pchill.online"),
   title: "Pchill Movie - Xem Phim Online Miễn Phí",
-  description: "Web xem phim miễn phí với giao diện đẹp mắt, cập nhật liên tục.",
+  description: "Web xem phim miễn phí với giao diện đẹp mắt, cập nhật liên tục những bộ phim mới nhất.",
   manifest: "/manifest.json",
+  keywords: ["xem phim", "phim online", "phim moi", "pchill", "xem phim free"],
+  openGraph: {
+    title: "Pchill Movie - Xem Phim Online Miễn Phí",
+    description: "Web xem phim miễn phí với giao diện đẹp mắt, cập nhật liên tục.",
+    url: "https://pchill.online",
+    siteName: "Pchill Movie",
+    locale: "vi_VN",
+    type: "website",
+    images: [
+      {
+        url: "/logo.png",
+        width: 512,
+        height: 512,
+        alt: "Pchill Movie Logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pchill Movie - Xem Phim Online Miễn Phí",
+    description: "Web xem phim miễn phí với giao diện đẹp mắt, cập nhật liên tục.",
+    images: ["/logo.png"],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

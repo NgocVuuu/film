@@ -46,8 +46,8 @@ export async function generateMetadata(
         openGraph: {
             title: `${movie.name} (${movie.year}) - Xem phim miễn phí tại Pchill`,
             description: ogDescription,
-            url: `https://pchill.com/movie/${movie.slug}`,
-            siteName: 'Pchill',
+            url: `https://pchill.online/movie/${movie.slug}`,
+            siteName: 'Pchill Movie',
             images: [
                 {
                     url: movie.thumb_url || movie.poster_url,
@@ -57,6 +57,12 @@ export async function generateMetadata(
                 ...previousImages,
             ],
             type: 'video.movie',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: `${movie.name} (${movie.year}) - Pchill`,
+            description: ogDescription,
+            images: [movie.thumb_url || movie.poster_url],
         },
     };
 }

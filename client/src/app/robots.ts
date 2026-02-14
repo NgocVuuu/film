@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
             allow: '/',
             disallow: ['/admin/', '/profile/', '/favorites/', '/history/'],
         },
-        sitemap: 'https://pchill.com/sitemap.xml',
+        sitemap: 'https://pchill.online/sitemap.xml',
     }
 }

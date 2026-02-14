@@ -12,7 +12,7 @@ export default function DmcaPage() {
                     <div className="bg-white/5 p-4 rounded-lg border border-white/10 mt-4">
                         <p className="font-bold text-white">Quy trình báo cáo:</p>
                         <ol className="list-decimal pl-5 mt-2 space-y-1">
-                            <li>Gửi email đến: <strong>copyright@pchill.com</strong></li>
+                            <li>Gửi email đến: <strong>copyright@pchill.online</strong></li>
                             <li>Cung cấp bằng chứng sở hữu bản quyền.</li>
                             <li>Cung cấp liên kết (URL) nội dung vi phạm trên website của chúng tôi.</li>
                         </ol>
