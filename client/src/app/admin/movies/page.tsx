@@ -156,7 +156,7 @@ export default function AdminMoviesPage() {
                                     const data = await res.json();
                                     if (data.success) toast.success(data.message);
                                     else toast.error(data.message);
-                                } catch (e) {
+                                } catch {
                                     toast.error('Lỗi khi gửi yêu cầu');
                                 }
                             }}
