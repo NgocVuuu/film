@@ -104,12 +104,23 @@ const ADAPTERS = {
                     }))
                 }));
 
+                // Extract year from category if top level is missing
+                let year = movie.year;
+                if (!year && movie.category) {
+                    // Category is an object with numeric keys or an array
+                    const catObj = movie.category;
+                    const yearGroup = Object.values(catObj).find(g => g.group && g.group.name === 'Năm');
+                    if (yearGroup && yearGroup.list && yearGroup.list.length > 0) {
+                        year = parseInt(yearGroup.list[0].name);
+                    }
+                }
+
                 const normalizedMovie = {
                     ...movie,
                     origin_name: movie.original_name,
                     thumb_url: movie.thumb_url,
                     poster_url: movie.poster_url,
-                    year: movie.year || new Date().getFullYear()
+                    year: year || null // No more defaulting to current year here
                 };
 
                 return { movie: normalizedMovie, episodes };
