@@ -91,7 +91,10 @@ app.use(hpp());
 // Rate Limiting (100 requests per 10 minutes)
 const limiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    max: 100
+    max: 100,
+    message: { success: false, message: 'Bạn đã yêu cầu quá nhanh, vui lòng thử lại sau 10 phút.' },
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 app.use('/api', limiter);
 

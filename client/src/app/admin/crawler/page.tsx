@@ -275,7 +275,7 @@ export default function AdminCrawlerPage() {
 
             {/* Status Card */}
             <div className="bg-surface-900 border border-white/10 rounded-xl p-6 mb-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
                     <div>
                         <h2 className="text-xl font-bold text-white mb-2">Sync Status</h2>
                         <div className="flex items-center gap-2">
@@ -288,11 +288,11 @@ export default function AdminCrawlerPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                         <Button
                             onClick={() => handleSync(false)}
                             disabled={status?.isRunning}
-                            className={`${status?.isRunning
+                            className={`flex-1 ${status?.isRunning
                                 ? 'bg-gray-600 cursor-not-allowed'
                                 : 'bg-primary text-black hover:bg-primary/90'
                                 }`}
@@ -305,17 +305,17 @@ export default function AdminCrawlerPage() {
                             ) : (
                                 <>
                                     <Play className="w-4 h-4 mr-2" />
-                                    Quick Update (Page 1)
+                                    Quick Update
                                 </>
                             )}
                         </Button>
 
-                        <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10 flex-1">
                             <input
                                 type="number"
                                 value={totalPages}
                                 onChange={(e) => setTotalPages(e.target.value)}
-                                className="w-16 bg-transparent text-white text-center text-sm focus:outline-none"
+                                className="w-12 bg-transparent text-white text-center text-sm focus:outline-none"
                                 placeholder="Pages"
                                 min="1"
                                 max="1000"
@@ -326,9 +326,10 @@ export default function AdminCrawlerPage() {
                                 disabled={status?.isRunning}
                                 variant="destructive"
                                 size="sm"
+                                className="flex-1"
                             >
-                                <RefreshCw className={`w-4 h-4 mr-2 ${status?.isRunning ? 'animate-spin' : ''}`} />
-                                Full Crawl
+                                <RefreshCw className={`w-4 h-4 mr-1 ${status?.isRunning ? 'animate-spin' : ''}`} />
+                                <span className="text-xs">Full Crawl</span>
                             </Button>
                         </div>
 
@@ -336,19 +337,19 @@ export default function AdminCrawlerPage() {
                             <Button
                                 onClick={handleStopSync}
                                 variant="destructive"
-                                className="bg-red-600 hover:bg-red-700 text-white"
+                                className="bg-red-600 hover:bg-red-700 text-white flex-1"
                             >
                                 <ShieldAlert className="w-4 h-4 mr-2" />
-                                Stop Crawler
+                                Stop
                             </Button>
                         )}
                     </div>
                 </div>
                 <div className="p-4 bg-white/5 rounded-lg border border-white/10">
                     <p className="text-sm text-gray-400">
-                        <span className="text-white font-bold">Lưu ý:</span>
-                        <br />- <b>Quick Update:</b> Chỉ quét trang 1 để lấy phim mới nhất (Nhanh).
-                        <br />- <b>Full Crawl:</b> Quét sâu nhiều trang để lấy lại phim cũ (Rất lâu).
+                        <span className="text-white font-bold text-xs uppercase tracking-wider">Lưu ý:</span>
+                        <br />- <b>Quick Update:</b> Chỉ quét trang 1 (Nhanh).
+                        <br />- <b>Full Crawl:</b> Quét sâu nhiều trang (Lâu).
                     </p>
                 </div>
             </div>

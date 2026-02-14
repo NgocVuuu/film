@@ -1,0 +1,7 @@
+Connected to MongoDB
+Total movies: 14599
+Active movies (isActive != false): 14598
+Inactive movies (isActive == false): 1
+
+Sample inactive movies:
+- Còn Ra Thể Thống Gì Nữa (con-ra-the-thong-gi-nua-2026) - Updated At: Sat Feb 14 2026 00:10:30 GMT+0700 (Indochina Time)

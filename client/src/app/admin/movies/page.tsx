@@ -27,8 +27,10 @@ export default function AdminMoviesPage() {
     const [movies, setMovies] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [isActiveFilter, setIsActiveFilter] = useState<string>('true');
 
     const fetchMovies = useCallback(async () => {
         try {
@@ -37,7 +39,10 @@ export default function AdminMoviesPage() {
                 page: page.toString(),
                 limit: '24'
             });
-            if (search) queryParams.append('search', search);
+            if (debouncedSearch) queryParams.append('search', debouncedSearch);
+            if (isActiveFilter !== 'all') {
+                queryParams.append('isActive', isActiveFilter);
+            }
 
             const res = await customFetch(`/api/admin/movies?${queryParams}`, {
                 credentials: 'include'
@@ -56,7 +61,16 @@ export default function AdminMoviesPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, search]);
+    }, [page, debouncedSearch, isActiveFilter]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search);
+            setPage(1);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [search]);
 
     useEffect(() => {
         fetchMovies();
@@ -118,30 +132,49 @@ export default function AdminMoviesPage() {
     }
 
     return (
-        <div className="p-6">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-                <h1 className="text-2xl font-bold text-white">Quản lý Phim</h1>
+        <div className="p-4 md:p-6">
+            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between mb-8 gap-6">
+                <h1 className="text-2xl font-bold text-white shrink-0">Quản lý Phim</h1>
 
-                <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full xl:w-auto">
+                    <div className="flex items-center gap-2 bg-surface-800 p-2 rounded-xl border border-white/10">
+                        <span className="text-[10px] text-gray-500 px-2 uppercase font-black tracking-widest hidden sm:inline">Trạng thái</span>
+                        <select
+                            value={isActiveFilter}
+                            onChange={(e) => {
+                                setIsActiveFilter(e.target.value);
+                                setPage(1);
+                            }}
+                            className="bg-surface-900 border border-white/5 text-white h-9 px-3 rounded-lg text-xs focus:outline-none focus:border-primary transition-colors"
+                        >
+                            <option value="true">Đang hiện</option>
+                            <option value="false">Đã xóa/ẩn</option>
+                            <option value="all">Tất cả</option>
+                        </select>
+                    </div>
+
                     {/* Scraper Range */}
-                    <div className="flex items-center gap-2 bg-surface-800 p-1.5 rounded-lg border border-white/10">
-                        <span className="text-xs text-gray-400 px-2 uppercase font-bold">Quét phim</span>
-                        <Input
-                            type="number"
-                            placeholder="Từ"
-                            className="bg-surface-900 border-white/5 text-white w-16 h-8 text-sm"
-                            id="fromPage"
-                        />
-                        <span className="text-gray-500">-</span>
-                        <Input
-                            type="number"
-                            placeholder="Đến"
-                            className="bg-surface-900 border-white/5 text-white w-16 h-8 text-sm"
-                            id="toPage"
-                        />
+                    <div className="flex flex-wrap items-center gap-2 bg-surface-800 p-2 rounded-xl border border-white/10 flex-1 md:flex-initial">
+                        <span className="text-[10px] text-gray-500 px-2 uppercase font-black tracking-widest hidden sm:inline">Quét nhanh</span>
+                        <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                            <Input
+                                type="number"
+                                placeholder="Từ"
+                                className="bg-surface-900 border-white/5 text-white w-14 h-9 text-xs"
+                                id="fromPage"
+                            />
+                            <span className="text-gray-500">-</span>
+                            <Input
+                                type="number"
+                                placeholder="Đến"
+                                className="bg-surface-900 border-white/5 text-white w-14 h-9 text-xs"
+                                id="toPage"
+                            />
+                        </div>
                         <Button
                             size="sm"
                             variant="secondary"
+                            className="bg-primary/20 text-primary hover:bg-primary/30 border-none h-9 px-4"
                             onClick={async () => {
                                 const from = (document.getElementById('fromPage') as HTMLInputElement).value;
                                 const to = (document.getElementById('toPage') as HTMLInputElement).value;
@@ -165,88 +198,98 @@ export default function AdminMoviesPage() {
                         </Button>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-1 md:flex-initial">
                         <Input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                             placeholder="Tìm kiếm phim..."
-                            className="bg-surface-800 border-white/10 text-white w-48 md:w-64"
+                            className="bg-surface-800 border-white/10 text-white flex-1 md:w-64 h-11 md:h-10"
                         />
-                        <Button onClick={handleSearch}>Tìm</Button>
+                        <Button onClick={handleSearch} className="h-11 md:h-10 px-6">Tìm</Button>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-surface-900 rounded-lg overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-surface-800">
-                        <tr>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Ảnh</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Tên phim</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Loại</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Trạng thái</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Lượt xem</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Nổi bật</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-400">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/10">
-                        {movies.map((movie) => (
-                            <tr key={movie._id} className="hover:bg-surface-800/50">
-                                <td className="px-4 py-3">
-                                    <Image
-                                        src={movie.thumb_url}
-                                        alt={movie.name}
-                                        width={64}
-                                        height={96}
-                                        className="w-16 h-24 object-cover rounded"
-                                    />
-                                </td>
-                                <td className="px-4 py-3 text-sm text-white">
-                                    <div className="font-medium">{movie.name}</div>
-                                    <div className="text-xs text-gray-400">{movie.year}</div>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-400">{movie.type}</td>
-                                <td className="px-4 py-3 text-sm text-gray-400">{movie.status}</td>
-                                <td className="px-4 py-3 text-sm text-gray-400">{movie.view.toLocaleString()}</td>
-                                <td className="px-4 py-3 text-sm">
-                                    {movie.isFeatured ? (
-                                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                                    ) : (
-                                        <StarOff className="w-4 h-4 text-gray-500" />
-                                    )}
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => router.push(`/admin/movies/${movie.slug}`)}
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleToggleFeatured(movie.slug)}
-                                        >
-                                            {movie.isFeatured ? <StarOff className="w-4 h-4" /> : <Star className="w-4 h-4" />}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleDelete(movie.slug, movie.name)}
-                                            className="text-red-500 hover:text-red-600"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                </td>
+            <div className="bg-surface-900 rounded-xl border border-white/5 overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/10">
+                    <table className="w-full min-w-[1000px]">
+                        <thead className="bg-surface-800">
+                            <tr>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Ảnh</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Tên phim</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Loại</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Trạng thái</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Lượt xem</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Nổi bật</th>
+                                <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Hành động</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {movies.map((movie) => (
+                                <tr key={movie._id} className="hover:bg-white/[0.02] transition-colors group">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="relative w-12 h-16 group-hover:scale-110 transition-transform duration-300">
+                                            <Image
+                                                src={movie.thumb_url}
+                                                alt={movie.name}
+                                                fill
+                                                sizes="48px"
+                                                className="object-cover rounded-md shadow-lg"
+                                            />
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-sm font-bold text-white group-hover:text-primary transition-colors line-clamp-1">{movie.name}</div>
+                                        <div className="text-[10px] text-gray-500 font-mono mt-0.5">{movie.year} • {movie.slug}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="text-xs px-2 py-1 bg-white/5 rounded text-gray-400 border border-white/5 uppercase font-medium">{movie.type}</span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`text-xs px-2 py-1 rounded border ${movie.status === 'completed' ? 'border-green-500/20 text-green-500 bg-green-500/5' : 'border-yellow-500/20 text-yellow-500 bg-yellow-500/5'}`}>{movie.status}</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-sm font-mono text-gray-400">{movie.view.toLocaleString()}</td>
+                                    <td className="px-6 py-4">
+                                        {movie.isFeatured ? (
+                                            <Star className="w-5 h-5 text-yellow-500 fill-yellow-500 filter drop-shadow-[0_0_8px_rgba(234,179,8,0.4)]" />
+                                        ) : (
+                                            <StarOff className="w-5 h-5 text-gray-600" />
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-9 w-9 p-0 hover:bg-primary/20 hover:text-primary"
+                                                onClick={() => router.push(`/admin/movies/${movie.slug}`)}
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className={`h-9 w-9 p-0 transition-all ${movie.isFeatured ? 'text-yellow-500 hover:bg-yellow-500/20' : 'text-gray-400 hover:bg-white/10'}`}
+                                                onClick={() => handleToggleFeatured(movie.slug)}
+                                            >
+                                                {movie.isFeatured ? <StarOff className="w-4 h-4" /> : <Star className="w-4 h-4" />}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-9 w-9 p-0 text-gray-500 hover:bg-red-500/20 hover:text-red-500"
+                                                onClick={() => handleDelete(movie.slug, movie.name)}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div className="flex items-center justify-center gap-4 mt-6">

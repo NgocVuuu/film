@@ -10,11 +10,22 @@ exports.getAllMovies = async (req, res) => {
         const { search, type, status, isFeatured, isActive } = req.query;
 
         let query = {};
-        if (search) query.$text = { $search: search };
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { origin_name: { $regex: search, $options: 'i' } }
+            ];
+        }
         if (type) query.type = type;
         if (status) query.status = status;
         if (isFeatured !== undefined) query.isFeatured = isFeatured === 'true';
-        if (isActive !== undefined) query.isActive = isActive === 'true';
+
+        // Default to showing only active movies unless explicitly requested
+        if (isActive !== undefined) {
+            query.isActive = isActive === 'true';
+        } else {
+            query.isActive = { $ne: false };
+        }
 
         const movies = await Movie.find(query)
             .sort({ updatedAt: -1 })

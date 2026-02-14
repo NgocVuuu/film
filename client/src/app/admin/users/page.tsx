@@ -103,15 +103,15 @@ export default function AdminUsersPage() {
     };
 
     return (
-        <div>
-            <div className="flex items-center justify-between mb-8">
-                <h1 className="text-3xl font-bold text-white">User Management</h1>
+        <div className="p-4 md:p-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+                <h1 className="text-2xl md:text-3xl font-bold text-white">User Management</h1>
             </div>
 
             {/* Search */}
-            <div className="mb-6">
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="mb-8">
+                <div className="relative group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     <input
                         type="text"
                         placeholder="Tìm theo tên, email, số điện thoại..."
@@ -120,7 +120,7 @@ export default function AdminUsersPage() {
                             setSearch(e.target.value);
                             setPage(1);
                         }}
-                        className="w-full pl-12 pr-4 py-3 bg-surface-900 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                        className="w-full pl-12 pr-4 py-3.5 bg-surface-900 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all shadow-lg"
                     />
                 </div>
             </div>
@@ -131,84 +131,95 @@ export default function AdminUsersPage() {
                     <Loader2 className="w-10 h-10 text-primary animate-spin" />
                 </div>
             ) : (
-                <div className="bg-surface-900 border border-white/10 rounded-xl overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-white/5 border-b border-white/10">
+                <div className="bg-surface-900 border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                    <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/10">
+                        <table className="w-full min-w-[1000px]">
+                            <thead className="bg-surface-800">
                                 <tr>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">User</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Contact</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Role</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Subscription</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Verified</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Status</th>
-                                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-300">Actions</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">User</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Contact</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Role</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Subscription</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Verified</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
+                                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {users.map((user) => (
-                                    <tr key={user._id} className="hover:bg-white/5">
-                                        <td className="px-6 py-4">
-                                            <div className="font-medium text-white">{user.displayName}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-400">
-                                                {user.email || user.phoneNumber || '-'}
+                                    <tr key={user._id} className="hover:bg-white/[0.02] transition-colors group">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-linear-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                                                    <span className="text-primary font-bold">{user.displayName?.[0] || 'U'}</span>
+                                                </div>
+                                                <div className="text-sm font-bold text-white group-hover:text-primary transition-colors">{user.displayName}</div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 text-xs rounded-full ${user.role === 'admin'
-                                                ? 'bg-red-500/20 text-red-400'
-                                                : 'bg-gray-500/20 text-gray-400'
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm text-gray-500 font-mono italic">{user.email || user.phoneNumber || '-'}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-tighter ${user.role === 'admin'
+                                                ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                                                : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
                                                 }`}>
                                                 {user.role}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 text-xs rounded-full ${user.subscription?.tier === 'premium'
-                                                ? 'bg-primary/20 text-primary'
-                                                : 'bg-gray-500/20 text-gray-400'
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`text-xs px-2 py-1 rounded-full border ${user.subscription?.tier === 'premium'
+                                                ? 'border-primary/20 text-primary bg-primary/5'
+                                                : 'border-gray-500/20 text-gray-400 bg-gray-500/5'
                                                 }`}>
                                                 {user.subscription?.tier || 'free'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             {user.isVerified ? (
-                                                <span className="flex items-center gap-1 text-green-400 text-sm">
+                                                <span className="flex items-center gap-1.5 text-green-500 text-xs font-medium">
                                                     <CheckCircle className="w-4 h-4" />
                                                     Verified
                                                 </span>
                                             ) : (
-                                                <span className="flex items-center gap-1 text-yellow-400 text-sm">
+                                                <span className="flex items-center gap-1.5 text-yellow-500/70 text-xs font-medium">
                                                     <XCircle className="w-4 h-4" />
                                                     Not Verified
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             {user.isBanned ? (
-                                                <XCircle className="w-5 h-5 text-red-500" />
+                                                <div className="flex items-center gap-1.5 text-red-500 text-xs font-bold uppercase tracking-widest">
+                                                    <XCircle className="w-4 h-4" />
+                                                    Banned
+                                                </div>
                                             ) : (
-                                                <CheckCircle className="w-5 h-5 text-green-500" />
+                                                <div className="flex items-center gap-1.5 text-green-500 text-xs font-bold uppercase tracking-widest">
+                                                    <CheckCircle className="w-4 h-4" />
+                                                    Active
+                                                </div>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-2">
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                                                 {user.role !== 'admin' && (
                                                     <>
                                                         <Button
                                                             size="sm"
-                                                            variant="outline"
+                                                            variant="ghost"
                                                             onClick={() => handleBanUser(user._id, !user.isBanned)}
-                                                            className="border-white/10 hover:bg-yellow-500/10"
+                                                            className={`h-9 w-9 p-0 hover:bg-yellow-500/20 ${user.isBanned ? 'text-green-500' : 'text-yellow-500'}`}
+                                                            title={user.isBanned ? 'Unban User' : 'Ban User'}
                                                         >
                                                             <Ban className="w-4 h-4" />
                                                         </Button>
                                                         <Button
                                                             size="sm"
-                                                            variant="outline"
+                                                            variant="ghost"
                                                             onClick={() => handleDeleteUser(user._id)}
-                                                            className="border-white/10 hover:bg-red-500/10 hover:text-red-400"
+                                                            className="h-9 w-9 p-0 text-gray-500 hover:bg-red-500/20 hover:text-red-500"
+                                                            title="Delete User"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </Button>

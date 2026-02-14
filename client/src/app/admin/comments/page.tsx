@@ -102,80 +102,87 @@ export default function AdminCommentsPage() {
     }
 
     return (
-        <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold text-white">Quản lý Bình luận</h1>
+        <div className="p-4 md:p-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+                <h1 className="text-2xl md:text-3xl font-bold text-white">Quản lý Bình luận</h1>
             </div>
 
-            <div className="bg-surface-900 rounded-lg overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-surface-800">
-                        <tr>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Người dùng</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Nội dung</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Phim</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Ngày đăng</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-400">Trạng thái</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-400">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/10">
-                        {comments.map((comment) => (
-                            <tr key={comment._id} className="hover:bg-surface-800/50">
-                                <td className="px-4 py-3 text-sm text-white">
-                                    <div className="flex items-center gap-3">
-                                        <Image
-                                            src={comment.user.avatar || '/default-avatar.png'}
-                                            alt={comment.user.displayName}
-                                            width={32}
-                                            height={32}
-                                            className="w-8 h-8 rounded-full object-cover"
-                                        />
-                                        <div>
-                                            <div className="font-medium">{comment.user.displayName}</div>
-                                            <div className="text-xs text-gray-400">{comment.user.email}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-300 max-w-md">
-                                    {comment.content}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-400">
-                                    {comment.movieSlug}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-400">
-                                    {new Date(comment.createdAt).toLocaleDateString('vi-VN')}
-                                </td>
-                                <td className="px-4 py-3 text-sm">
-                                    {comment.isHidden ? (
-                                        <span className="px-2 py-1 text-xs bg-red-500/20 text-red-400 rounded">Đã ẩn</span>
-                                    ) : (
-                                        <span className="px-2 py-1 text-xs bg-green-500/20 text-green-400 rounded">Hiển thị</span>
-                                    )}
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleToggleHide(comment._id)}
-                                        >
-                                            {comment.isHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleDelete(comment._id)}
-                                            className="text-red-500 hover:text-red-600"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                </td>
+            <div className="bg-surface-900 rounded-xl border border-white/5 overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/10">
+                    <table className="w-full min-w-[1000px]">
+                        <thead className="bg-surface-800">
+                            <tr>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Người dùng</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Nội dung</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Phim</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Ngày đăng</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Trạng thái</th>
+                                <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Hành động</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {comments.map((comment) => (
+                                <tr key={comment._id} className="hover:bg-white/[0.02] transition-colors group">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative w-8 h-8 shrink-0">
+                                                <Image
+                                                    src={comment.user.avatar || '/default-avatar.png'}
+                                                    alt={comment.user.displayName}
+                                                    fill
+                                                    sizes="32px"
+                                                    className="rounded-full object-cover border border-white/10"
+                                                />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-white group-hover:text-primary transition-colors">{comment.user.displayName}</div>
+                                                <div className="text-[10px] text-gray-500 font-mono italic">{comment.user.email}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-sm text-gray-300 max-w-xs md:max-w-md line-clamp-2 italic">"{comment.content}"</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-xs text-primary font-medium hover:underline cursor-pointer">{comment.movieSlug}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                                        {new Date(comment.createdAt).toLocaleDateString('vi-VN')}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {comment.isHidden ? (
+                                            <span className="px-2 py-0.5 text-[10px] font-black uppercase bg-red-500/10 text-red-500 border border-red-500/20 rounded">Bị ẩn</span>
+                                        ) : (
+                                            <span className="px-2 py-0.5 text-[10px] font-black uppercase bg-green-500/10 text-green-500 border border-green-500/20 rounded">Hiện</span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                                        <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className={`h-9 w-9 p-0 hover:bg-white/10 ${comment.isHidden ? 'text-green-500' : 'text-gray-400'}`}
+                                                onClick={() => handleToggleHide(comment._id)}
+                                                title={comment.isHidden ? 'Show Comment' : 'Hide Comment'}
+                                            >
+                                                {comment.isHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-9 w-9 p-0 text-gray-500 hover:bg-red-500/20 hover:text-red-500"
+                                                onClick={() => handleDelete(comment._id)}
+                                                title="Delete Comment"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div className="flex items-center justify-center gap-4 mt-6">

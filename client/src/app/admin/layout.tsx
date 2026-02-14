@@ -133,8 +133,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </aside>
 
             {/* Main content */}
-            <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
-                <div className="p-6 lg:p-8">
+            <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0 overflow-x-hidden">
+                <div className="p-4 md:p-6 lg:p-8">
                     {children}
                 </div>
             </main>
@@ -142,7 +142,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Mobile sidebar overlay */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
