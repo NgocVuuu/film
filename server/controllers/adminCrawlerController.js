@@ -1,6 +1,13 @@
-const { syncAll, syncSpecificMovie, searchMovieByName, addToBlacklist, removeFromBlacklist, getBlacklist, getStatus } = require('../crawler');
+const { syncAll, syncSpecificMovie, searchMovieByName, addToBlacklist, removeFromBlacklist, getBlacklist, getStatus, stopSync } = require('../crawler');
 
-// Manual sync trigger
+// Stop crawler
+exports.stopCrawler = (req, res) => {
+    stopSync();
+    res.json({
+        success: true,
+        message: 'Đã gửi lệnh dừng crawler. Hệ thống sẽ dừng sau khi hoàn tất phim hiện tại.'
+    });
+};
 exports.triggerSync = async (req, res) => {
     const { isRunning } = getStatus();
     if (isRunning) {

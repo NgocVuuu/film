@@ -233,6 +233,15 @@ async function processMovie(adapter, slug, retryCount = 0) {
             // Clean display identifier (avoid 'undefined' string)
             const displayEp = currentEpName && currentEpName !== 'undefined' ? currentEpName : null;
 
+            // Completion check: Is this movie already considered finished?
+            const isFinishedLabels = ['Full', 'Hoàn tất', 'Trọn bộ', '1/1', 'Tập cuối'];
+            const wasFinished = existingMovie.status === 'completed' ||
+                isFinishedLabels.some(label => existingMovie.lastNotifiedEpisode?.includes(label) ||
+                    existingMovie.episode_current?.includes(label));
+
+            const isNowFinished = movie.status === 'completed' ||
+                isFinishedLabels.some(label => movie.episode_current?.includes(label));
+
             // Notify if:
             // 1. Episode count increased OR status changed OR current episode name changed
             // 2. AND we haven't notified for this specific episode yet
@@ -241,7 +250,11 @@ async function processMovie(adapter, slug, retryCount = 0) {
 
             const isNewEpisode = displayEp && displayEp !== existingMovie.lastNotifiedEpisode;
 
-            if (hasChange && isNewEpisode) {
+            // Only notify if there's a real change AND it wasn't already marked as finished
+            // Exceptions: we always notify if it's the FIRST time it becomes "Full/Completed"
+            const shouldNotify = (hasChange && isNewEpisode) && (!wasFinished || (isNowFinished && !wasFinished));
+
+            if (shouldNotify) {
                 // Find all users interested in this movie:
                 // 1. Users who favorited it
                 const favorites = await Favorite.find({ movieSlug: slug }).select('user');
@@ -340,7 +353,16 @@ async function syncAll(options = {}) {
     try {
         const isFull = options.full || false;
         const fromPage = parseInt(options.fromPage) || 1;
-        const toPage = parseInt(options.toPage) || (isFull ? 500 : fromPage);
+        // If 'pages' is provided (from old UI), use it to determine toPage. 
+        // Otherwise use fromPage -> toPage range from new UI.
+        let toPage;
+        if (options.toPage) {
+            toPage = parseInt(options.toPage);
+        } else if (options.pages) {
+            toPage = fromPage + parseInt(options.pages) - 1;
+        } else {
+            toPage = isFull ? 500 : fromPage;
+        }
 
         console.log(`Starting Sync. Mode: ${isFull ? 'FULL CRAWL' : 'UPDATE'} (Pages: ${fromPage} - ${toPage})`);
 
@@ -585,6 +607,11 @@ async function processPendingRequests() {
     }
 }
 
+const stopSync = () => {
+    isRunning = false;
+    console.log('Sync manually stopped by admin.');
+};
+
 module.exports = {
     setupCrawler,
     syncAll,
@@ -594,5 +621,6 @@ module.exports = {
     addToBlacklist,
     removeFromBlacklist,
     getBlacklist,
-    getStatus
+    getStatus,
+    stopSync
 };

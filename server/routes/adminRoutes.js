@@ -35,6 +35,7 @@ router.post('/movie-requests/:requestId/reject', adminRequestController.rejectRe
 
 // Crawler management
 router.post('/crawler/sync', adminCrawlerController.triggerSync);
+router.post('/crawler/stop-sync', adminCrawlerController.stopCrawler);
 router.get('/crawler/status', adminCrawlerController.getCrawlerStatus);
 router.get('/crawler/blacklist', adminCrawlerController.getBlacklist);
 router.post('/crawler/blacklist', adminCrawlerController.addToBlacklist);

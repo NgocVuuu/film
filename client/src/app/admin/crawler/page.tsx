@@ -17,7 +17,7 @@ export default function AdminCrawlerPage() {
     const [blacklist, setBlacklist] = useState<string[]>([]);
     const [newItem, setNewItem] = useState('');
     const [totalPages, setTotalPages] = useState('50');
-    
+
     // Fetch specific movie states
     const [movieSlug, setMovieSlug] = useState('');
     const [movieSource, setMovieSource] = useState('');
@@ -57,6 +57,26 @@ export default function AdminCrawlerPage() {
             }
         } catch (error) {
             console.error('Fetch blacklist error:', error);
+        }
+    };
+
+    const handleStopSync = async () => {
+        if (!status?.isRunning) return;
+        try {
+            const response = await customFetch(`/api/admin/crawler/stop-sync`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const data = await response.json();
+            if (data.success) {
+                toast.success(data.message);
+                fetchStatus();
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            console.error('Stop sync error:', error);
+            toast.error('Lỗi khi gửi lệnh dừng');
         }
     };
 
@@ -149,20 +169,20 @@ export default function AdminCrawlerPage() {
         try {
             setFetching(true);
             toast.loading('Đang tải phim từ nguồn...', { id: 'fetch-movie' });
-            
+
             const response = await customFetch(`/api/admin/crawler/fetch-movie`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 credentials: 'include',
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     slug: movieSlug.trim(),
                     source: movieSource || null
                 })
             });
             const data = await response.json();
-            
+
             if (data.success) {
                 toast.success(data.message, { id: 'fetch-movie' });
                 setMovieSlug('');
@@ -196,7 +216,7 @@ export default function AdminCrawlerPage() {
                     <Download className="w-5 h-5 text-primary" />
                     Tải phim cụ thể
                 </h2>
-                
+
                 <div className="space-y-4">
                     <div className="flex flex-col md:flex-row gap-4">
                         <input
@@ -208,7 +228,7 @@ export default function AdminCrawlerPage() {
                             className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
                             disabled={fetching}
                         />
-                        
+
                         <select
                             value={movieSource}
                             onChange={(e) => setMovieSource(e.target.value)}
@@ -220,7 +240,7 @@ export default function AdminCrawlerPage() {
                             <option value="KKPHIM">KKPHIM</option>
                             <option value="NGUONC">NGUONC</option>
                         </select>
-                        
+
                         <Button
                             onClick={handleFetchMovie}
                             disabled={fetching || !movieSlug.trim()}
@@ -239,7 +259,7 @@ export default function AdminCrawlerPage() {
                             )}
                         </Button>
                     </div>
-                    
+
                     <div className="p-4 bg-white/5 rounded-lg border border-white/10">
                         <p className="text-sm text-gray-400">
                             <span className="text-white font-bold">Hướng dẫn:</span>
@@ -311,6 +331,17 @@ export default function AdminCrawlerPage() {
                                 Full Crawl
                             </Button>
                         </div>
+
+                        {status?.isRunning && (
+                            <Button
+                                onClick={handleStopSync}
+                                variant="destructive"
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                            >
+                                <ShieldAlert className="w-4 h-4 mr-2" />
+                                Stop Crawler
+                            </Button>
+                        )}
                     </div>
                 </div>
                 <div className="p-4 bg-white/5 rounded-lg border border-white/10">
