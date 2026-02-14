@@ -10,10 +10,10 @@ exports.triggerSync = async (req, res) => {
         });
     }
 
-    const { full, pages } = req.body; // { full: true/false, pages: number }
+    const { full, pages, fromPage, toPage } = req.body; // { full: true/false, pages: number, fromPage: number, toPage: number }
 
     // Run sync in background
-    syncAll({ full, pages }).then(total => {
+    syncAll({ full, pages, fromPage, toPage }).then(total => {
         console.log(`Manual Sync Finished. Processed ${total} movies.`);
     }).catch(err => {
         console.error('Manual Sync Failed:', err);
@@ -21,9 +21,9 @@ exports.triggerSync = async (req, res) => {
 
     res.json({
         success: true,
-        message: full
-            ? `Đã kích hoạt CRAWL TẤT CẢ (Max ${pages || 500} trang).`
-            : 'Đã kích hoạt đồng bộ nhanh.'
+        message: fromPage && toPage
+            ? `Đã kích hoạt quét từ trang ${fromPage} đến ${toPage}.`
+            : (full ? `Đã kích hoạt CRAWL TẤT CẢ (Max ${pages || 500} trang).` : 'Đã kích hoạt đồng bộ nhanh.')
     });
 };
 
@@ -75,11 +75,11 @@ exports.removeFromBlacklist = (req, res) => {
 exports.fetchSpecificMovie = async (req, res) => {
     try {
         const { slug, source } = req.body;
-        
+
         if (!slug) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Vui lòng nhập slug của phim' 
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập slug của phim'
             });
         }
 
@@ -99,9 +99,9 @@ exports.fetchSpecificMovie = async (req, res) => {
         }
     } catch (error) {
         console.error('Fetch specific movie error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
@@ -110,11 +110,11 @@ exports.fetchSpecificMovie = async (req, res) => {
 exports.searchMovie = async (req, res) => {
     try {
         const { query, source } = req.query;
-        
+
         if (!query) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Vui lòng nhập tên phim để tìm kiếm' 
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập tên phim để tìm kiếm'
             });
         }
 
@@ -133,9 +133,9 @@ exports.searchMovie = async (req, res) => {
         }
     } catch (error) {
         console.error('Search movie error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };

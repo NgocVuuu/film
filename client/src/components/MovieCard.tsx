@@ -31,10 +31,13 @@ export function MovieCard({ movie, isEditing }: MovieCardProps) {
             {/* Image Container */}
             <div className="aspect-2/3 w-full overflow-hidden relative">
                 <img
-                    src={movie.thumb_url}
+                    src={movie.thumb_url || '/logo.png'}
                     alt={movie.name}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"
+                    onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/logo.png';
+                    }}
                 />
                 {/* Overlay Gradient */}
                 <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />

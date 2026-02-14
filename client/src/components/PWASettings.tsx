@@ -29,13 +29,29 @@ export function PWASettings() {
 
       // Check if already subscribed
       const checkSubscription = async () => {
-        if ('serviceWorker' in navigator && Notification.permission === 'granted') {
-          const registration = await navigator.serviceWorker.ready;
-          const subscription = await registration.pushManager.getSubscription();
-          setPushEnabled(subscription !== null);
+        try {
+          if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+            setPushEnabled(!!subscription);
+          }
+        } catch (e) {
+          console.error('Check subscription error:', e);
         }
       };
+
       checkSubscription();
+
+      // Also listen for visibility changes to refresh status
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          checkSubscription();
+          setNotificationPermission(Notification.permission);
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }
   }, []);
 

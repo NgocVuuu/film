@@ -339,15 +339,15 @@ async function syncAll(options = {}) {
 
     try {
         const isFull = options.full || false;
-        // If full crawl, go up to 500 pages, else just page 1
-        const maxPages = isFull ? 500 : 1;
+        const fromPage = parseInt(options.fromPage) || 1;
+        const toPage = parseInt(options.toPage) || (isFull ? 500 : fromPage);
 
-        console.log(`Starting Sync. Mode: ${isFull ? 'FULL CRAWL' : 'UPDATE'} (Max Pages: ${maxPages})`);
+        console.log(`Starting Sync. Mode: ${isFull ? 'FULL CRAWL' : 'UPDATE'} (Pages: ${fromPage} - ${toPage})`);
 
         let totalProcessed = 0;
 
         // Loop through pages
-        for (let page = 1; page <= maxPages; page++) {
+        for (let page = fromPage; page <= toPage; page++) {
             currentPage = page;
             if (!isRunning) break;
 
@@ -360,14 +360,8 @@ async function syncAll(options = {}) {
 
             totalProcessed += (countOP + countKK + countNC);
 
-            // ... (rest of loop)
-
-            // If all adapters return 0 movies for this page, maybe we reached the end?
-            // But some API might have gaps, so better to rely on known total pages or just hard limit.
-            // For now, hard limit of 500 is safe enough.
-
             // Small break between pages
-            if (isFull) await sleep(1000);
+            if (isFull || (toPage - fromPage > 1)) await sleep(1000);
         }
 
         console.log(`Sync Completed. Total movies processed: ${totalProcessed}`);

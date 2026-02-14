@@ -56,11 +56,13 @@ function SearchContent() {
             document.body.style.overflow = '';
             document.body.style.position = '';
             document.body.style.width = '';
+            document.body.style.top = '';
         }
         return () => {
             document.body.style.overflow = '';
             document.body.style.position = '';
             document.body.style.width = '';
+            document.body.style.top = '';
         };
     }, [showMobileFilter]);
 
@@ -151,13 +153,13 @@ function SearchContent() {
 
                     {/* Mobile Filters Drawer */}
                     {showMobileFilter && (
-                        <div className="fixed inset-0 z-100 lg:hidden flex justify-end">
+                        <div className="fixed inset-0 z-[100] lg:hidden flex justify-end">
                             <div
                                 className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                                 onClick={() => setShowMobileFilter(false)}
                                 aria-hidden="true"
                             />
-                            <div className="relative w-75 max-w-[85vw] bg-surface-900 h-dvh border-l border-white/10 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
+                            <div className="relative w-80 max-w-[85vw] bg-surface-900 h-dvh border-l border-white/10 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col pointer-events-auto">
                                 {/* Header */}
                                 <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0 bg-surface-900 z-10">
                                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -281,7 +283,7 @@ function SearchContent() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 

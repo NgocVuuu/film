@@ -162,7 +162,9 @@
 
   body {
     background-color: var(--background-hex);
-    @apply text-foreground min-h-screen;
+    @apply text-foreground min-h-screen overflow-x-hidden;
+    width: 100%;
+    position: relative;
   }
 
   body.premium-theme {

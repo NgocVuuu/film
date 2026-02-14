@@ -89,7 +89,11 @@ const multiSourceSearch = async (keyword) => {
         });
     }
 
-    const finalResults = Array.from(allMovies.values());
+    const finalResults = Array.from(allMovies.values()).map(m => ({
+        ...m,
+        thumb_url: m.thumb_url || '',
+        poster_url: m.poster_url || ''
+    }));
     searchCache.set(cacheKey, finalResults);
     return finalResults;
 };
@@ -115,29 +119,29 @@ const getHomeData = async (req, res) => {
             // Trending: Highest Views
             Movie.find({}).sort({ view: -1 }).limit(10).select('-content -episodes -director -actor'),
             // Featured
-            Movie.find({}).sort({ updatedAt: -1 }).limit(10).select('-content -episodes -director -actor'),
+            Movie.find({}).sort({ year: -1, updatedAt: -1 }).limit(10).select('-content -episodes -director -actor'),
             // Latest
-            Movie.find({}).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({}).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // China
-            Movie.find({ 'country.slug': 'trung-quoc' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'country.slug': 'trung-quoc' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Korea
-            Movie.find({ 'country.slug': 'han-quoc' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'country.slug': 'han-quoc' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // US/UK
-            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] } }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Cartoon
-            Movie.find({ type: 'hoathinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ type: 'hoathinh' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Horror
-            Movie.find({ 'category.slug': 'kinh-di' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'category.slug': 'kinh-di' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Family
-            Movie.find({ 'category.slug': 'gia-dinh' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'category.slug': 'gia-dinh' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Thailand
-            Movie.find({ 'country.slug': 'thai-lan' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'country.slug': 'thai-lan' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Japan
-            Movie.find({ 'country.slug': 'nhat-ban' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'country.slug': 'nhat-ban' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Action
-            Movie.find({ 'category.slug': 'hanh-dong' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'category.slug': 'hanh-dong' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
             // Romance
-            Movie.find({ 'category.slug': 'tinh-cam' }).sort({ updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'category.slug': 'tinh-cam' }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
         ]);
 
         let responseData = {
@@ -262,7 +266,8 @@ const getMovies = async (req, res) => {
         if (actor) query.actor = actor; // Filter by actor name
 
         // Sorting
-        let sortOption = { updatedAt: -1 }; // Default: Newest update
+        let sortOption = { year: -1, updatedAt: -1 }; // Default: Newest Release & Latest Update
+        if (sort === 'updated') sortOption = { updatedAt: -1 };
         if (sort === 'newest') sortOption = { year: -1, updatedAt: -1 }; // Release year
         if (sort === 'view') sortOption = { view: -1 };
         if (sort === 'rating') sortOption = { rating_average: -1 };

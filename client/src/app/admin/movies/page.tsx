@@ -119,18 +119,62 @@ export default function AdminMoviesPage() {
 
     return (
         <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
                 <h1 className="text-2xl font-bold text-white">Quản lý Phim</h1>
 
-                <div className="flex gap-2">
-                    <Input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                        placeholder="Tìm kiếm phim..."
-                        className="bg-surface-800 border-white/10 text-white w-64"
-                    />
-                    <Button onClick={handleSearch}>Tìm</Button>
+                <div className="flex flex-wrap items-center gap-4">
+                    {/* Scraper Range */}
+                    <div className="flex items-center gap-2 bg-surface-800 p-1.5 rounded-lg border border-white/10">
+                        <span className="text-xs text-gray-400 px-2 uppercase font-bold">Quét phim</span>
+                        <Input
+                            type="number"
+                            placeholder="Từ"
+                            className="bg-surface-900 border-white/5 text-white w-16 h-8 text-sm"
+                            id="fromPage"
+                        />
+                        <span className="text-gray-500">-</span>
+                        <Input
+                            type="number"
+                            placeholder="Đến"
+                            className="bg-surface-900 border-white/5 text-white w-16 h-8 text-sm"
+                            id="toPage"
+                        />
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={async () => {
+                                const from = (document.getElementById('fromPage') as HTMLInputElement).value;
+                                const to = (document.getElementById('toPage') as HTMLInputElement).value;
+                                if (!from || !to) return toast.error('Vui lòng nhập dải trang');
+                                try {
+                                    const res = await customFetch('/api/admin/crawler/sync', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ fromPage: parseInt(from), toPage: parseInt(to) }),
+                                        credentials: 'include'
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) toast.success(data.message);
+                                    else toast.error(data.message);
+                                } catch (e) {
+                                    toast.error('Lỗi khi gửi yêu cầu');
+                                }
+                            }}
+                        >
+                            Quét
+                        </Button>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <Input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                            placeholder="Tìm kiếm phim..."
+                            className="bg-surface-800 border-white/10 text-white w-48 md:w-64"
+                        />
+                        <Button onClick={handleSearch}>Tìm</Button>
+                    </div>
                 </div>
             </div>
 
