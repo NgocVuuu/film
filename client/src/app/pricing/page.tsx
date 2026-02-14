@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
-import { Crown, Check, Loader2, ArrowRight, X, Copy } from 'lucide-react';
+import { Crown, Check, Loader2, ArrowRight, X, Copy, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { API_URL } from '@/lib/config';
@@ -32,8 +32,13 @@ interface PaymentData {
 }
 
 export default function PricingPage() {
-    const { user, refresh } = useAuth(); // refresh to refresh user data
     const router = useRouter();
+
+    useEffect(() => {
+        router.push('/');
+    }, [router]);
+
+    const { user, refresh } = useAuth(); // refresh to refresh user data
     const [plans, setPlans] = useState<Plan[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingPlan, setProcessingPlan] = useState<string | null>(null);
@@ -168,8 +173,34 @@ export default function PricingPage() {
         toast.success('Đã sao chép');
     };
 
+    const IS_HIDDEN = true;
+
+    if (IS_HIDDEN) {
+        return (
+            <div className="min-h-screen bg-deep-black flex flex-col items-center justify-center text-center p-4">
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                    <Crown className="w-10 h-10 text-primary animate-pulse" />
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                    Tính năng đang được <span className="text-gold-gradient">bảo trì</span>
+                </h1>
+                <p className="text-gray-400 text-lg max-w-md mx-auto mb-8">
+                    Hiện tại hệ thống nâng cấp Premium đang tạm đóng để nâng cấp. Sếp vui lòng quay lại sau nhé! ❤️
+                </p>
+                <Button
+                    onClick={() => router.push('/')}
+                    className="bg-primary hover:bg-primary/90 text-black font-bold px-8"
+                >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Quay về trang chủ
+                </Button>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-deep-black py-20 relative">
+
             <div className="container mx-auto px-4">
                 {/* Header */}
                 <div className="text-center mb-16">

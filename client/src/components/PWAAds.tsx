@@ -40,14 +40,18 @@ export function PWAAds() {
                         </p>
                     </div>
 
-                    <Link href="/pricing" className="shrink-0">
-                        <Button
-                            size="sm"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-black text-xs font-bold h-8 px-3 rounded-lg shadow-lg shadow-yellow-500/20"
-                        >
-                            Nâng cấp
-                        </Button>
-                    </Link>
+                    {/* Hidden: Nâng cấp button */}
+                    {false && (
+                        <Link href="/pricing" className="shrink-0">
+                            <Button
+                                size="sm"
+                                className="bg-yellow-500 hover:bg-yellow-600 text-black text-xs font-bold h-8 px-3 rounded-lg shadow-lg shadow-yellow-500/20"
+                            >
+                                Nâng cấp
+                            </Button>
+                        </Link>
+                    )}
+
                 </div>
             </div>
         </div>

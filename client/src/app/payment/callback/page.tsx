@@ -82,12 +82,15 @@ function PaymentCallbackContent() {
                         <h1 className="text-2xl font-bold text-white mb-2">Thanh toán thất bại</h1>
                         <p className="text-gray-400 mb-6">{message}</p>
                         <div className="flex gap-3">
-                            <Button
-                                onClick={() => router.push('/pricing')}
-                                className="flex-1 bg-primary hover:bg-primary/90 text-black font-bold"
-                            >
-                                Thử lại
-                            </Button>
+                            {/* Hidden: Thử lại button */}
+                            {false && (
+                                <Button
+                                    onClick={() => router.push('/pricing')}
+                                    className="flex-1 bg-primary hover:bg-primary/90 text-black font-bold"
+                                >
+                                    Thử lại
+                                </Button>
+                            )}
                             <Link href="/" className="flex-1">
                                 <Button
                                     variant="outline"
@@ -97,6 +100,7 @@ function PaymentCallbackContent() {
                                 </Button>
                             </Link>
                         </div>
+
                     </>
                 )}
             </div>

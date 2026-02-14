@@ -179,11 +179,15 @@ function ProfileContent() {
                                         : 'Sếp ơi, nâng cấp Premium để ad có thêm bát phở, còn sếp được hưởng đặc quyền thượng lưu nhé! 🥺🍜👑'}
                                 </p>
                             </div>
-                            <Link href="/pricing">
-                                <Button className="w-full bg-[#fbbf24] hover:bg-[#f59e0b] text-black text-xs h-8 font-bold mt-auto relative z-10 shadow-lg shadow-yellow-500/10">
-                                    {user.isPremium ? 'Gia hạn' : 'Nâng cấp'} <span className="ml-1 text-[10px]">▲</span>
-                                </Button>
-                            </Link>
+                            {/* Hidden: Nâng cấp / Gia hạn button */}
+                            {false && (
+                                <Link href="/pricing">
+                                    <Button className="w-full bg-[#fbbf24] hover:bg-[#f59e0b] text-black text-xs h-8 font-bold mt-auto relative z-10 shadow-lg shadow-yellow-500/10">
+                                        {user.isPremium ? 'Gia hạn' : 'Nâng cấp'} <span className="ml-1 text-[10px]">▲</span>
+                                    </Button>
+                                </Link>
+                            )}
+
                         </div>
                     </div>
 
