@@ -126,27 +126,6 @@ export default function AdminMoviesPage() {
         }
     };
 
-    const handleDelete = async (slug: string, name: string) => {
-        if (!confirm(`Bạn có chắc muốn xóa (ẩn) phim "${name}"?`)) return;
-
-        try {
-            const res = await customFetch(`/api/admin/movies/${slug}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                toast.success(data.message);
-                fetchMovies();
-            } else {
-                toast.error(data.message);
-            }
-        } catch (error) {
-            console.error('Delete movie error:', error);
-            toast.error('Lỗi khi xóa phim');
-        }
-    };
 
     if (loading) {
         return (
