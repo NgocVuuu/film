@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize,
-    Settings, Loader2, FastForward, Rewind
+    Settings, Loader2, FastForward, Rewind, PictureInPicture,
+    SkipBack, SkipForward
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
@@ -26,6 +27,12 @@ interface VideoPlayerProps {
         name: string;
         serverName: string;
     };
+    prevEpisodeInfo?: {
+        name: string;
+        serverName: string;
+    };
+    onNextEpisode?: () => void;
+    onPrevEpisode?: () => void;
     onTimeUpdate?: (time: number) => void;
 }
 
@@ -55,6 +62,9 @@ export default function VideoPlayer({
     startTime = 0,
     onEnded,
     nextEpisodeInfo,
+    prevEpisodeInfo,
+    onNextEpisode,
+    onPrevEpisode,
     onTimeUpdate
 }: VideoPlayerProps) {
     const { user } = useAuth();
@@ -357,6 +367,22 @@ export default function VideoPlayer({
         }
     };
 
+    // -- PIP Logic --
+    const togglePIP = async () => {
+        try {
+            const video = videoRef.current;
+            if (!video) return;
+
+            if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+            } else if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
+                await video.requestPictureInPicture();
+            }
+        } catch (e) {
+            console.error('PIP error:', e);
+        }
+    };
+
     // -- Rotation Logic (Fake Landscape for Mobile) --
     const [isLandscape, setIsLandscape] = useState(false);
 
@@ -591,6 +617,18 @@ export default function VideoPlayer({
                     e.preventDefault();
                     toggleMute();
                     break;
+                case '[':
+                    if (onPrevEpisode) {
+                        e.preventDefault();
+                        onPrevEpisode();
+                    }
+                    break;
+                case ']':
+                    if (onNextEpisode) {
+                        e.preventDefault();
+                        onNextEpisode();
+                    }
+                    break;
             }
         };
 
@@ -624,7 +662,7 @@ export default function VideoPlayer({
     return (
         <div
             ref={containerRef}
-            className={`relative bg-black border border-border shadow-2xl shadow-primary/10 group select-none overflow-hidden transition-all duration-300
+            className={`relative bg-black border border-border shadow-2xl shadow-primary/10 group select-none overflow-visible transition-all duration-300
                 ${isLandscape
                     ? 'fixed inset-0 z-9999 w-[100vh] h-[100vw] rotate-90 origin-center top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-none'
                     : 'w-full h-full rounded-lg'
@@ -643,7 +681,7 @@ export default function VideoPlayer({
             <video
                 ref={videoRef}
                 poster={poster}
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain rounded-lg"
                 playsInline
                 autoPlay={autoPlay}
             />
@@ -770,8 +808,8 @@ export default function VideoPlayer({
                 </div>
 
                 {/* Main Controls */}
-                <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-2 md:gap-4">
+                <div className="flex items-center justify-between gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
                         <Button variant="ghost" size="icon" onClick={togglePlay} className="text-white hover:text-primary hover:bg-transparent">
                             {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
                         </Button>
@@ -782,6 +820,29 @@ export default function VideoPlayer({
                         <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime += 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent">
                             <FastForward className="w-5 h-5" />
                         </Button>
+
+                        <div className="flex items-center gap-1 border-l border-white/10 ml-1 sm:ml-2 pl-1 sm:pl-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => { e.stopPropagation(); onPrevEpisode?.(); }}
+                                disabled={!onPrevEpisode || !prevEpisodeInfo}
+                                className="text-white/70 hover:text-white hover:bg-white/10 h-8 w-8 disabled:opacity-30 disabled:hover:bg-transparent"
+                                title={prevEpisodeInfo ? `Tập trước: ${prevEpisodeInfo.name}` : ''}
+                            >
+                                <SkipBack className="w-4 h-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => { e.stopPropagation(); onNextEpisode?.(); }}
+                                disabled={!onNextEpisode || !nextEpisodeInfo}
+                                className="text-white/70 hover:text-white hover:bg-white/10 h-8 w-8 disabled:opacity-30 disabled:hover:bg-transparent"
+                                title={nextEpisodeInfo ? `Tập tiếp theo: ${nextEpisodeInfo.name}` : ''}
+                            >
+                                <SkipForward className="w-4 h-4" />
+                            </Button>
+                        </div>
 
                         <div className="flex items-center gap-2 group/volume">
                             <Button variant="ghost" size="icon" onClick={toggleMute} className="text-white hover:text-primary hover:bg-transparent">
@@ -799,12 +860,12 @@ export default function VideoPlayer({
                             />
                         </div>
 
-                        <span className="text-white text-xs font-mono ml-2 whitespace-nowrap">
+                        <span className="text-white text-[10px] sm:text-xs font-mono ml-1 sm:ml-2 whitespace-nowrap">
                             {formatTime(currentTime)} / {formatTime(duration)}
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
                         {/* Settings Button logic */}
                         <div className="relative">
                             <Button
@@ -819,7 +880,7 @@ export default function VideoPlayer({
 
                             {/* Settings Popup */}
                             {showSettings && (
-                                <div className={`absolute bottom-12 right-0 bg-black/90 border border-white/20 rounded-lg p-3 min-w-50 text-white space-y-3 ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+                                <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
                                     {/* Speed */}
                                     <div>
                                         <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tốc độ</p>
@@ -875,6 +936,16 @@ export default function VideoPlayer({
                                 <path d="M21 3v5h-5" />
                             </svg>
                         </Button> */}
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={togglePIP}
+                            className="text-white hover:text-primary hover:bg-transparent flex"
+                            title="Picture-in-Picture"
+                        >
+                            <PictureInPicture className="w-5 h-5" />
+                        </Button>
 
                         <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:text-primary hover:bg-transparent">
                             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}

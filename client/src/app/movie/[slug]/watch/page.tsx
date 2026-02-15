@@ -64,7 +64,8 @@ export default function WatchPage() {
     const [currentSource, setCurrentSource] = useState<string>('');
     const [filteredServers, setFilteredServers] = useState<Episode[]>([]);
 
-    // Next Episode State
+    // Next/Prev Episode State
+    const [prevEpisode, setPrevEpisode] = useState<{ server: string; episode: { name: string; slug: string; link_m3u8: string; link_embed: string } } | null>(null);
     const [nextEpisode, setNextEpisode] = useState<{ server: string; episode: { name: string; slug: string; link_m3u8: string; link_embed: string } } | null>(null);
 
     // Get query params
@@ -177,9 +178,10 @@ export default function WatchPage() {
 
     }, [movie, currentSource, episodeParam, timestampParam]);
 
-    // Find next episode
+    // Find prev/next episode
     useEffect(() => {
         if (!currentEpisode || !currentServerName || filteredServers.length === 0) {
+            setPrevEpisode(null);
             setNextEpisode(null);
             return;
         }
@@ -189,32 +191,58 @@ export default function WatchPage() {
             if (server.server_name === currentServerName) {
                 const currentIndex = server.server_data.findIndex(ep => ep.slug === currentEpisode.slug);
 
-                if (currentIndex !== -1 && currentIndex < server.server_data.length - 1) {
-                    // Next episode in same server
-                    setNextEpisode({
-                        server: server.server_name,
-                        episode: server.server_data[currentIndex + 1]
-                    });
-                    return;
-                }
-
-                // No next episode in current server, try next server
-                const serverIndex = filteredServers.findIndex(s => s.server_name === currentServerName);
-                if (serverIndex !== -1 && serverIndex < filteredServers.length - 1) {
-                    const nextServer = filteredServers[serverIndex + 1];
-                    if (nextServer.server_data.length > 0) {
+                if (currentIndex !== -1) {
+                    // 1. Next episode in same server
+                    if (currentIndex < server.server_data.length - 1) {
                         setNextEpisode({
-                            server: nextServer.server_name,
-                            episode: nextServer.server_data[0]
+                            server: server.server_name,
+                            episode: server.server_data[currentIndex + 1]
                         });
-                        return;
+                    } else {
+                        // Try next server for next episode
+                        const serverIndex = filteredServers.findIndex(s => s.server_name === currentServerName);
+                        if (serverIndex !== -1 && serverIndex < filteredServers.length - 1) {
+                            const nextServer = filteredServers[serverIndex + 1];
+                            if (nextServer.server_data.length > 0) {
+                                setNextEpisode({
+                                    server: nextServer.server_name,
+                                    episode: nextServer.server_data[0]
+                                });
+                            } else {
+                                setNextEpisode(null);
+                            }
+                        } else {
+                            setNextEpisode(null);
+                        }
+                    }
+
+                    // 2. Prev episode in same server
+                    if (currentIndex > 0) {
+                        setPrevEpisode({
+                            server: server.server_name,
+                            episode: server.server_data[currentIndex - 1]
+                        });
+                    } else {
+                        // Try prev server for prev episode
+                        const serverIndex = filteredServers.findIndex(s => s.server_name === currentServerName);
+                        if (serverIndex > 0) {
+                            const prevServer = filteredServers[serverIndex - 1];
+                            if (prevServer.server_data.length > 0) {
+                                setPrevEpisode({
+                                    server: prevServer.server_name,
+                                    episode: prevServer.server_data[prevServer.server_data.length - 1]
+                                });
+                            } else {
+                                setPrevEpisode(null);
+                            }
+                        } else {
+                            setPrevEpisode(null);
+                        }
                     }
                 }
                 break;
             }
         }
-
-        setNextEpisode(null);
     }, [currentEpisode, currentServerName, filteredServers]);
 
     const handleEpisodeClick = (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string }) => {
@@ -244,6 +272,12 @@ export default function WatchPage() {
         }
     };
 
+    const handlePrevEpisode = () => {
+        if (prevEpisode) {
+            handleEpisodeClick(prevEpisode.server, prevEpisode.episode);
+        }
+    };
+
     const getCleanServerName = (rawName: string) => {
         const lowerName = rawName.toLowerCase();
 
@@ -265,7 +299,7 @@ export default function WatchPage() {
     if (!movie) return <div className="min-h-screen flex items-center justify-center bg-black text-red-500">Phim không tồn tại.</div>;
 
     return (
-        <div className={`min-h-screen bg-black text-white font-sans ${isPWA ? 'mt-0' : '-mt-16'}`}>
+        <div className={`min-h-screen bg-black text-white font-sans mt-0`}>
 
             {/* Header / Nav Back */}
             <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5 py-3 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))]">
@@ -279,17 +313,6 @@ export default function WatchPage() {
                             {currentEpisode ? `Đang xem: ${currentEpisode.name}` : movie.origin_name}
                         </p>
                     </div>
-                    {/* Next Episode Button */}
-                    {nextEpisode && (
-                        <Button
-                            onClick={handleNextEpisode}
-                            size="sm"
-                            className="bg-primary/20 text-primary hover:bg-primary hover:text-black border border-primary/30 hidden sm:flex items-center gap-2"
-                        >
-                            <SkipForward className="w-4 h-4" />
-                            <span className="hidden md:inline">Tập tiếp theo</span>
-                        </Button>
-                    )}
                     <div className="hidden md:flex items-center gap-2">
                         <Button variant="ghost" size="sm" className="text-xs text-gray-400 hover:text-red-400">
                             <AlertTriangle className="w-4 h-4 mr-1" /> Báo lỗi
@@ -308,7 +331,7 @@ export default function WatchPage() {
                         <PWAAds />
                     </div>
 
-                    <div className="aspect-video bg-black md:rounded-xl overflow-hidden shadow-2xl border-t border-b md:border border-white/10 relative">
+                    <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (
                             <VideoPlayer
                                 key={currentEpisode.link_m3u8}
@@ -324,11 +347,17 @@ export default function WatchPage() {
                                 serverName={currentServerName}
                                 startTime={startTime}
                                 onTimeUpdate={(time) => setPlayerTime(time)}
-                                onEnded={nextEpisode ? handleNextEpisode : undefined}
+                                onEnded={handleNextEpisode}
                                 nextEpisodeInfo={nextEpisode ? {
                                     name: nextEpisode.episode.name,
                                     serverName: getCleanServerName(nextEpisode.server)
                                 } : undefined}
+                                prevEpisodeInfo={prevEpisode ? {
+                                    name: prevEpisode.episode.name,
+                                    serverName: getCleanServerName(prevEpisode.server)
+                                } : undefined}
+                                onNextEpisode={handleNextEpisode}
+                                onPrevEpisode={handlePrevEpisode}
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-surface-900">

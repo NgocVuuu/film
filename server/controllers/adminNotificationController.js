@@ -13,15 +13,15 @@ exports.broadcastNotification = async (req, res) => {
         // Get all active users
         const users = await User.find({}).select('_id');
 
-        // Create notifications for all users
-        const notifications = users.map(user => ({
-            recipient: user._id,
+        // Create notifications for all users and send push
+        const { sendToMultiple } = require('../utils/notificationService');
+
+        await sendToMultiple(users.map(u => u._id.toString()), {
             content,
             link: link || '/',
-            type: type || 'system'
-        }));
-
-        await Notification.insertMany(notifications);
+            type: type || 'system',
+            title: 'Thông báo từ Pchill'
+        });
 
         res.json({
             success: true,

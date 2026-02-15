@@ -82,6 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             removeAuthToken();
             setUser(null);
             toast.success('Đã đăng xuất thành công');
+            // Force a hard reload to login to clear all route history/cache
+            window.location.href = '/login';
         }
     };
 

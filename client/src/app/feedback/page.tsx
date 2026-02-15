@@ -21,18 +21,23 @@ export default function FeedbackPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            // Ideally call API to save feedback
-            // For now simulate success or send to admin email endpoint if available
-            // Assuming we have or will create an endpoint, or just simulate for MVP
-             await new Promise(resolve => setTimeout(resolve, 1000));
-            // const res = await customFetch('/api/feedback', {
-            //     method: 'POST',
-            //     body: JSON.stringify(formData)
-            // });
-            
-            toast.success('Cảm ơn bạn đã đóng góp ý kiến!');
-            setSuccess(true);
-            setFormData({ title: '', content: '', type: 'feature', email: '' });
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/feedback`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success('Cảm ơn bạn đã đóng góp ý kiến!');
+                setSuccess(true);
+                setFormData({ title: '', content: '', type: 'feature', email: '' });
+            } else {
+                toast.error(data.message || 'Có lỗi xảy ra, vui lòng thử lại sau.');
+            }
         } catch {
             toast.error('Có lỗi xảy ra, vui lòng thử lại sau.');
         } finally {
@@ -74,10 +79,10 @@ export default function FeedbackPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-300">Loại góp ý</label>
-                                <select 
+                                <select
                                     className="w-full bg-black/50 border border-white/10 rounded-lg h-10 px-3 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                                     value={formData.type}
-                                    onChange={(e) => setFormData({...formData, type: e.target.value as 'feature' | 'content' | 'bug' | 'other'})}
+                                    onChange={(e) => setFormData({ ...formData, type: e.target.value as 'feature' | 'content' | 'bug' | 'other' })}
                                 >
                                     <option value="feature">Đề xuất tính năng</option>
                                     <option value="content">Yêu cầu phim / Nội dung</option>
@@ -87,10 +92,10 @@ export default function FeedbackPage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-300">Email (Tùy chọn)</label>
-                                <Input 
+                                <Input
                                     placeholder="example@gmail.com"
                                     value={formData.email}
-                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     className="bg-black/50 border-white/10"
                                 />
                             </div>
@@ -98,23 +103,23 @@ export default function FeedbackPage() {
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-300">Tiêu đề <span className="text-red-500">*</span></label>
-                            <Input 
+                            <Input
                                 placeholder="Tóm tắt ý kiến của bạn"
                                 required
                                 value={formData.title}
-                                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                 className="bg-black/50 border-white/10"
                             />
                         </div>
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-300">Nội dung chi tiết <span className="text-red-500">*</span></label>
-                            <Textarea 
+                            <Textarea
                                 placeholder="Mô tả chi tiết vấn đề hoặc đề xuất của bạn..."
                                 required
                                 rows={5}
                                 value={formData.content}
-                                onChange={(e) => setFormData({...formData, content: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                                 className="bg-black/50 border-white/10 resize-none"
                             />
                         </div>

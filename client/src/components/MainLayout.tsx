@@ -27,9 +27,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     // Start with /admin check
     const isAdmin = pathname?.startsWith('/admin');
+    const isWatchPage = pathname?.includes('/watch');
 
-    // Hide top navbar on PWA if not on home page
-    const showNavbar = !isAdmin && (!isPWA || pathname === '/');
+    // Hide top navbar on PWA if not on home page, and also hide it on watch page (it has its own header)
+    const showNavbar = !isAdmin && !isWatchPage && (!isPWA || pathname === '/');
     // Hide footer on PWA entirely
     const showFooter = !isAdmin && !isPWA;
 

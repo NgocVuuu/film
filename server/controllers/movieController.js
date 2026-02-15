@@ -89,11 +89,24 @@ const multiSourceSearch = async (keyword) => {
         });
     }
 
-    const finalResults = Array.from(allMovies.values()).map(m => ({
-        ...m,
-        thumb_url: m.thumb_url || '',
-        poster_url: m.poster_url || ''
-    }));
+    const finalResults = Array.from(allMovies.values()).map(m => {
+        const processImg = (path, source) => {
+            if (!path || path.startsWith('http')) return path || '';
+            let base = '';
+            if (source === 'KKPhim') base = 'https://phimimg.com';
+            if (source === 'NguonC') base = 'https://phim.nguonc.com';
+            if (source === 'Ophim') base = 'https://img.ophim.live/uploads/movies'; // OPhim base usually varies but search results often use this or similar
+
+            if (!base) return path;
+            return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
+        };
+
+        return {
+            ...m,
+            thumb_url: processImg(m.thumb_url, m.source),
+            poster_url: processImg(m.poster_url, m.source)
+        };
+    });
     searchCache.set(cacheKey, finalResults);
     return finalResults;
 };

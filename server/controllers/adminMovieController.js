@@ -106,7 +106,34 @@ exports.updateMovie = async (req, res) => {
     }
 };
 
-// Delete movie (soft delete)
+// Toggle movie active status (soft delete/restore)
+exports.toggleActive = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const { isActive } = req.body;
+
+        const movie = await Movie.findOneAndUpdate(
+            { slug },
+            { isActive: isActive !== undefined ? isActive : false },
+            { new: true }
+        );
+
+        if (!movie) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
+        }
+
+        res.json({
+            success: true,
+            message: movie.isActive ? 'Đã hiện phim' : 'Đã ẩn phim',
+            data: movie
+        });
+    } catch (error) {
+        console.error('Toggle active error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Delete movie (soft delete) - Keeping for compatibility or updating to use toggleActive logic
 exports.deleteMovie = async (req, res) => {
     try {
         const { slug } = req.params;
@@ -121,7 +148,7 @@ exports.deleteMovie = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
         }
 
-        res.json({ success: true, message: 'Đã xóa phim' });
+        res.json({ success: true, message: 'Đã ẩn phim thành công' });
     } catch (error) {
         console.error('Delete movie error:', error);
         res.status(500).json({ success: false, message: error.message });

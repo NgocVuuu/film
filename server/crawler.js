@@ -76,7 +76,12 @@ const ADAPTERS = {
                 return { movie, episodes };
             } catch (e) { return null; }
         },
-        processImage: (path) => path
+        processImage: (path) => {
+            if (!path) return '';
+            if (path.startsWith('http')) return path;
+            const base = 'https://phimimg.com';
+            return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
+        }
     },
     NGUONC: {
         name: 'NGUONC',
@@ -120,7 +125,6 @@ const ADAPTERS = {
                     origin_name: movie.original_name,
                     thumb_url: movie.thumb_url,
                     poster_url: movie.poster_url,
-                    year: year || null // No more defaulting to current year here
                 };
 
                 return { movie: normalizedMovie, episodes };
@@ -128,7 +132,12 @@ const ADAPTERS = {
                 return null;
             }
         },
-        processImage: (path) => path
+        processImage: (path) => {
+            if (!path) return '';
+            if (path.startsWith('http')) return path;
+            const base = 'https://phim.nguonc.com';
+            return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
+        }
     }
 };
 

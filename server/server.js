@@ -24,6 +24,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const movieListRoutes = require('./routes/movieListRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -138,6 +139,7 @@ app.use('/api/notifications', notificationRoutes);
 // Comments
 app.use('/api/comments', commentRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Error Handler (Last Middleware)
 app.use(errorHandler);

@@ -31,18 +31,27 @@ export function PWASettings() {
       const checkSubscription = async () => {
         try {
           if ('serviceWorker' in navigator) {
+            // Use ready to wait for active SW, but don't block indefinitely
             const registration = await navigator.serviceWorker.ready;
             const subscription = await registration.pushManager.getSubscription();
+
+            // Critical fix: Ensure pushEnabled is synced with actual subscription
             setPushEnabled(!!subscription);
+
+            if (subscription) {
+              console.log('Push subscription found:', subscription.endpoint);
+              // Optionally verify with server or refresh state
+            }
           }
         } catch (e) {
           console.error('Check subscription error:', e);
         }
       };
 
+      // Run on mount
       checkSubscription();
 
-      // Also listen for visibility changes to refresh status
+      // Refresh on visibility change (help sync state if user changed browser settings)
       const handleVisibilityChange = () => {
         if (document.visibilityState === 'visible') {
           checkSubscription();

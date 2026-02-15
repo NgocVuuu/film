@@ -29,6 +29,7 @@ const navigation = [
     { name: 'Subscriptions', href: '/admin/subscriptions', icon: CreditCard },
     { name: 'Movie Requests', href: '/admin/requests', icon: Film },
     { name: 'Notifications', href: '/admin/notifications', icon: Bell },
+    { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
     { name: 'Crawler', href: '/admin/crawler', icon: RefreshCw },
 ];
 

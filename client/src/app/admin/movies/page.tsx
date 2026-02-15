@@ -101,8 +101,33 @@ export default function AdminMoviesPage() {
         }
     };
 
+    const handleToggleActive = async (slug: string, currentStatus: boolean) => {
+        const action = currentStatus ? 'ẩn' : 'hiện';
+        if (!confirm(`Bạn có chắc muốn ${action} phim này?`)) return;
+
+        try {
+            const res = await customFetch(`/api/admin/movies/${slug}/active`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isActive: !currentStatus }),
+                credentials: 'include'
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success(data.message);
+                fetchMovies();
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            console.error('Toggle active error:', error);
+            toast.error('Lỗi khi cập nhật trạng thái');
+        }
+    };
+
     const handleDelete = async (slug: string, name: string) => {
-        if (!confirm(`Bạn có chắc muốn xóa phim "${name}"?`)) return;
+        if (!confirm(`Bạn có chắc muốn xóa (ẩn) phim "${name}"?`)) return;
 
         try {
             const res = await customFetch(`/api/admin/movies/${slug}`, {
@@ -278,10 +303,11 @@ export default function AdminMoviesPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-9 w-9 p-0 text-gray-500 hover:bg-red-500/20 hover:text-red-500"
-                                                onClick={() => handleDelete(movie.slug, movie.name)}
+                                                className={`h-9 w-9 p-0 transition-all ${movie.isActive ? 'text-gray-500 hover:text-red-500 hover:bg-red-500/20' : 'text-green-500 hover:bg-green-500/20'}`}
+                                                onClick={() => handleToggleActive(movie.slug, movie.isActive)}
+                                                title={movie.isActive ? 'Ẩn phim' : 'Hiện phim'}
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                {movie.isActive ? <Trash2 className="w-4 h-4" /> : <Star className="w-4 h-4 rotate-45" />}
                                             </Button>
                                         </div>
                                     </td>

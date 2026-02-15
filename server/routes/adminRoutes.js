@@ -8,6 +8,7 @@ const adminCommentController = require('../controllers/adminCommentController');
 const adminReportController = require('../controllers/adminReportController');
 const adminMovieController = require('../controllers/adminMovieController');
 const adminNotificationController = require('../controllers/adminNotificationController');
+const adminFeedbackController = require('../controllers/adminFeedbackController');
 const { authMiddleware, adminMiddleware } = require('../middleware/authMiddleware');
 
 // All routes require admin authentication
@@ -52,10 +53,16 @@ router.patch('/comments/:commentId/hide', adminCommentController.toggleHideComme
 router.get('/reports', adminReportController.getAllReports);
 router.patch('/reports/:reportId/resolve', adminReportController.resolveReport);
 
+// Feedback management
+router.get('/feedback', adminFeedbackController.getAllFeedback);
+router.patch('/feedback/:id/status', adminFeedbackController.updateFeedbackStatus);
+router.delete('/feedback/:id', adminFeedbackController.deleteFeedback);
+
 // Movie management
 router.get('/movies', adminMovieController.getAllMovies);
 router.get('/movies/:slug', adminMovieController.getMovieDetail);
 router.patch('/movies/:slug', adminMovieController.updateMovie);
+router.patch('/movies/:slug/active', adminMovieController.toggleActive);
 router.delete('/movies/:slug', adminMovieController.deleteMovie);
 router.patch('/movies/:slug/featured', adminMovieController.toggleFeatured);
 
