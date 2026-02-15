@@ -200,7 +200,17 @@ exports.getCurrentUser = async (req, res) => {
 // Logout (mainly for client-side token removal)
 exports.logout = async (req, res) => {
     try {
-        res.clearCookie('token');
+        const origin = req.headers.origin || '';
+        const isProduction = process.env.NODE_ENV === 'production' ||
+            (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) ||
+            (origin && !origin.includes('localhost') && origin.startsWith('http'));
+
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? 'none' : 'lax'
+        });
+
         res.json({
             success: true,
             message: 'Đăng xuất thành công'

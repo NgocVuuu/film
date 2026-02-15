@@ -37,15 +37,12 @@ export const customFetch = async (endpoint: string, options: FetchOptions = {}) 
         headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Ensure endpoint doesn't start with / if we are appending to base URL (optional, depending on usage)
-    // But usually API_URL doesn't have trailing slash, and endpoint starts with /. 
-    // If input endpoint is full URL, we normally wouldn't use this helper or we'd handle it.
-    // Assuming this helper is for our API.
-
+    // Ensure endpoint doesn't start with / if we are appending to base URL
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
 
     const response = await fetch(url, {
         cache: 'no-store', // Always fetch fresh data
+        credentials: 'include', // Important for PWA cookies
         ...options,
         headers
     });

@@ -10,7 +10,7 @@ export default function AdminNotificationsPage() {
     const [content, setContent] = useState('');
     const [link, setLink] = useState('/');
     const [sending, setSending] = useState(false);
-    const [targetUserId, setTargetUserId] = useState('');
+    const [targetUserId, setTargetUserId] = useState(''); // This state will now hold either ID or Email
     const [targetType, setTargetType] = useState<'all' | 'specific'>('all');
 
     const handleSend = async () => {
@@ -20,7 +20,7 @@ export default function AdminNotificationsPage() {
         }
 
         if (targetType === 'specific' && !targetUserId.trim()) {
-            toast.error('Vui lòng nhập User ID');
+            toast.error('Vui lòng nhập Email hoặc User ID');
             return;
         }
 
@@ -88,11 +88,11 @@ export default function AdminNotificationsPage() {
 
                     {targetType === 'specific' && (
                         <div>
-                            <label className="text-sm text-gray-400 mb-2 block">User ID</label>
+                            <label className="text-sm text-gray-400 mb-2 block">Email hoặc User ID người nhận</label>
                             <Input
                                 value={targetUserId}
                                 onChange={(e) => setTargetUserId(e.target.value)}
-                                placeholder="Nhập User ID"
+                                placeholder="Nhập Email hoặc ID người dùng"
                                 className="bg-surface-800 border-white/10 text-white"
                             />
                         </div>

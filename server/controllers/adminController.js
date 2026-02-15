@@ -137,6 +137,57 @@ exports.toggleBanUser = async (req, res) => {
     }
 };
 
+// Manual upgrade user to premium
+exports.manualUpgradePremium = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const { durationDays = 30 } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy người dùng'
+            });
+        }
+
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + durationDays);
+
+        user.subscription = {
+            tier: 'premium',
+            status: 'active',
+            startDate,
+            endDate,
+            autoRenew: false
+        };
+
+        await user.save();
+
+        // Create notification for user
+        const Notification = require('../models/Notification');
+        await Notification.create({
+            recipient: user._id,
+            content: `Chúc mừng! Tài khoản của bạn đã được nâng cấp lên Premium (${durationDays} ngày) bởi Admin.`,
+            type: 'system',
+            link: '/profile'
+        });
+
+        res.json({
+            success: true,
+            message: `Đã nâng cấp Premium cho ${user.displayName} đến ngày ${endDate.toLocaleDateString('vi-VN')}`,
+            data: user
+        });
+    } catch (error) {
+        console.error('Manual upgrade premium error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi nâng cấp Premium'
+        });
+    }
+};
+
 // Delete user
 exports.deleteUser = async (req, res) => {
     try {
