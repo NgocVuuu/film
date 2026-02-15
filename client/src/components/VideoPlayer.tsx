@@ -373,10 +373,21 @@ export default function VideoPlayer({
             const video = videoRef.current;
             if (!video) return;
 
-            if (document.pictureInPictureElement) {
-                await document.exitPictureInPicture();
-            } else if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
-                await video.requestPictureInPicture();
+            // Modern API (Android / Chrome / Desktop)
+            if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
+                if (document.pictureInPictureElement) {
+                    await document.exitPictureInPicture();
+                } else {
+                    await video.requestPictureInPicture();
+                }
+            }
+            // iOS WebKit Fallback (Safari / PWA)
+            else if ((video as any).webkitSupportsPresentationMode && (video as any).webkitSupportsPresentationMode('picture-in-picture')) {
+                const mode = (video as any).webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture';
+                (video as any).webkitSetPresentationMode(mode);
+            }
+            else {
+                console.warn('PIP not supported on this browser/device');
             }
         } catch (e) {
             console.error('PIP error:', e);
@@ -562,6 +573,9 @@ export default function VideoPlayer({
             document.removeEventListener('fullscreenchange', onFullscreenChange);
             document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
             video.removeEventListener('webkitendfullscreen', () => setIsFullscreen(false));
+            video.removeEventListener('webkitpresentationmodechanged' as any, () => {
+                // handle iOS pip state change if needed
+            });
         };
     }, [src, autoPlay]);
 

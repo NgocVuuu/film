@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Send, Loader2, CheckCircle } from 'lucide-react';
 
 import { toast } from 'react-hot-toast';
+import { getAuthToken } from '@/lib/api';
 
 export default function FeedbackPage() {
     const [loading, setLoading] = useState(false);
@@ -21,11 +22,14 @@ export default function FeedbackPage() {
         e.preventDefault();
         setLoading(true);
         try {
+            const token = getAuthToken();
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/feedback`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
+                credentials: 'include',
                 body: JSON.stringify(formData)
             });
 

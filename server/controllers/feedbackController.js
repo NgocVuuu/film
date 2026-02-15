@@ -5,6 +5,8 @@ exports.submitFeedback = async (req, res) => {
         const { title, content, type, email } = req.body;
         const userId = req.user?._id;
 
+        console.log('[FEEDBACK] Incoming submission:', { title, type, email, userId: userId?.toString() || 'anonymous' });
+
         if (!title || !content) {
             return res.status(400).json({
                 success: false,
