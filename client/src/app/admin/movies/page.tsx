@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { customFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Trash2, Star, StarOff, Edit } from 'lucide-react';
+import { Loader2, Trash2, Star, StarOff, Edit, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 
@@ -101,15 +101,37 @@ export default function AdminMoviesPage() {
         }
     };
 
-    const handleToggleActive = async (slug: string, currentStatus: boolean) => {
-        const action = currentStatus ? 'ẩn' : 'hiện';
-        if (!confirm(`Bạn có chắc muốn ${action} phim này?`)) return;
-
+    const handleRestore = async (slug: string) => {
+        if (!confirm('Bạn có chắc muốn hiện lại phim này?')) return;
         try {
             const res = await customFetch(`/api/admin/movies/${slug}/active`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isActive: !currentStatus }),
+                body: JSON.stringify({ isActive: true }),
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success('Đã hiện lại phim');
+                fetchMovies();
+            } else {
+                toast.error(data.message);
+            }
+        } catch {
+            toast.error('Lỗi khi hiện lại phim');
+        }
+    };
+
+    const handleDelete = async (slug: string, isPermanent: boolean) => {
+        const message = isPermanent
+            ? 'Bạn có chắc chắn muốn XÓA VĨNH VIỄN phim này? Hành động này không thể hoàn tác.'
+            : 'Bạn có chắc muốn ẩn phim này?';
+
+        if (!confirm(message)) return;
+
+        try {
+            const res = await customFetch(`/api/admin/movies/${slug}`, {
+                method: 'DELETE',
                 credentials: 'include'
             });
             const data = await res.json();
@@ -120,9 +142,8 @@ export default function AdminMoviesPage() {
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
-            console.error('Toggle active error:', error);
-            toast.error('Lỗi khi cập nhật trạng thái');
+        } catch {
+            toast.error('Lỗi khi thực hiện yêu cầu');
         }
     };
 
@@ -141,20 +162,25 @@ export default function AdminMoviesPage() {
                 <h1 className="text-2xl font-bold text-white shrink-0">Quản lý Phim</h1>
 
                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full xl:w-auto">
-                    <div className="flex items-center gap-2 bg-surface-800 p-2 rounded-xl border border-white/10">
+                    <div className="flex items-center gap-2 bg-surface-800 p-2 rounded-xl border border-white/10 relative group/select">
                         <span className="text-[10px] text-gray-500 px-2 uppercase font-black tracking-widest hidden sm:inline">Trạng thái</span>
-                        <select
-                            value={isActiveFilter}
-                            onChange={(e) => {
-                                setIsActiveFilter(e.target.value);
-                                setPage(1);
-                            }}
-                            className="bg-surface-900 border border-white/5 text-white h-9 px-3 rounded-lg text-xs focus:outline-none focus:border-primary transition-colors"
-                        >
-                            <option value="true">Đang hiện</option>
-                            <option value="false">Đã xóa/ẩn</option>
-                            <option value="all">Tất cả</option>
-                        </select>
+                        <div className="relative">
+                            <select
+                                value={isActiveFilter}
+                                onChange={(e) => {
+                                    setIsActiveFilter(e.target.value);
+                                    setPage(1);
+                                }}
+                                className="bg-surface-900 border border-white/5 text-white h-9 pl-3 pr-8 rounded-lg text-xs focus:outline-none focus:border-primary transition-colors appearance-none cursor-pointer hover:bg-surface-700 min-w-[120px]"
+                            >
+                                <option value="true" className="bg-surface-900 py-2">Đang hiện</option>
+                                <option value="false" className="bg-surface-900 py-2 text-red-400 font-bold">Đã xóa/ẩn</option>
+                                <option value="all" className="bg-surface-900 py-2">Tất cả</option>
+                            </select>
+                            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Scraper Range */}
@@ -251,7 +277,12 @@ export default function AdminMoviesPage() {
                                         <span className="text-xs px-2 py-1 bg-white/5 rounded text-gray-400 border border-white/5 uppercase font-medium">{movie.type}</span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`text-xs px-2 py-1 rounded border ${movie.status === 'completed' ? 'border-green-500/20 text-green-500 bg-green-500/5' : 'border-yellow-500/20 text-yellow-500 bg-yellow-500/5'}`}>{movie.status}</span>
+                                        <div className="flex flex-col gap-1 items-start">
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded border uppercase font-bold ${movie.status === 'completed' ? 'border-green-500/20 text-green-500 bg-green-500/5' : 'border-yellow-500/20 text-yellow-500 bg-yellow-500/5'}`}>{movie.status}</span>
+                                            {!movie.isActive && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded border border-red-500/20 text-red-500 bg-red-500/5 uppercase font-bold">Đã ẩn</span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-sm font-mono text-gray-400">{movie.view.toLocaleString()}</td>
                                     <td className="px-6 py-4">
@@ -276,18 +307,43 @@ export default function AdminMoviesPage() {
                                                 size="sm"
                                                 className={`h-9 w-9 p-0 transition-all ${movie.isFeatured ? 'text-yellow-500 hover:bg-yellow-500/20' : 'text-gray-400 hover:bg-white/10'}`}
                                                 onClick={() => handleToggleFeatured(movie.slug)}
+                                                title={movie.isFeatured ? 'Bỏ nổi bật' : 'Thêm nổi bật'}
                                             >
-                                                {movie.isFeatured ? <StarOff className="w-4 h-4" /> : <Star className="w-4 h-4" />}
+                                                {movie.isFeatured ? <Star className="w-4 h-4 fill-current" /> : <Star className="w-4 h-4" />}
                                             </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className={`h-9 w-9 p-0 transition-all ${movie.isActive ? 'text-gray-500 hover:text-red-500 hover:bg-red-500/20' : 'text-green-500 hover:bg-green-500/20'}`}
-                                                onClick={() => handleToggleActive(movie.slug, movie.isActive)}
-                                                title={movie.isActive ? 'Ẩn phim' : 'Hiện phim'}
-                                            >
-                                                {movie.isActive ? <Trash2 className="w-4 h-4" /> : <Star className="w-4 h-4 rotate-45" />}
-                                            </Button>
+
+                                            {movie.isActive ? (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-9 w-9 p-0 text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                                                    onClick={() => handleDelete(movie.slug, false)}
+                                                    title="Ẩn phim"
+                                                >
+                                                    <EyeOff className="w-4 h-4" />
+                                                </Button>
+                                            ) : (
+                                                <>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-9 w-9 p-0 text-green-500 hover:bg-green-500/10 transition-all"
+                                                        onClick={() => handleRestore(movie.slug)}
+                                                        title="Hiện lại phim"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-9 w-9 p-0 text-red-500 hover:bg-red-500/20 transition-all"
+                                                        onClick={() => handleDelete(movie.slug, true)}
+                                                        title="XÓA VĨNH VIỄN"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
