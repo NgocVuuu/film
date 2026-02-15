@@ -119,7 +119,7 @@ export default function FavoritesPage() {
                         <Button
                             variant="outline"
                             onClick={() => setIsEdit(!isEdit)}
-                            className={`border-white/20 h-9 ${isEdit ? 'bg-primary text-black hover:bg-primary/80' : 'text-gray-400 hover:text-white'}`}
+                            className={`border-white/20 h-9 ${isEdit ? 'bg-primary text-black hover:bg-primary/80 dark:bg-primary dark:text-black font-bold' : 'text-gray-400 hover:text-white dark:bg-surface-800'}`}
                         >
                             {isEdit ? 'Hoàn tất' : 'Chỉnh sửa'}
                         </Button>

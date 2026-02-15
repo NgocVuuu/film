@@ -267,7 +267,7 @@ function LoginContent() {
                         <Button
                             onClick={() => googleLogin()}
                             variant="outline"
-                            className="w-full h-11 bg-white hover:bg-gray-100 text-black border-none flex items-center justify-center gap-3 font-medium transition-all"
+                            className="w-full h-11 bg-white hover:bg-gray-100 text-black border-none flex items-center justify-center gap-3 font-medium transition-all dark:bg-white dark:text-black dark:hover:bg-gray-200"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path
