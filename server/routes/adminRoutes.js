@@ -22,6 +22,7 @@ router.get('/stats', adminController.getDashboardStats);
 router.get('/users', adminController.getAllUsers);
 router.get('/users/:userId', adminController.getUserDetails);
 router.patch('/users/:userId/ban', adminController.toggleBanUser);
+router.patch('/users/:userId/premium', adminController.manualUpgradePremium);
 router.delete('/users/:userId', adminController.deleteUser);
 
 // Subscription management
@@ -65,6 +66,8 @@ router.patch('/movies/:slug', adminMovieController.updateMovie);
 router.patch('/movies/:slug/active', adminMovieController.toggleActive);
 router.delete('/movies/:slug', adminMovieController.deleteMovie);
 router.patch('/movies/:slug/featured', adminMovieController.toggleFeatured);
+router.get('/movies/:slug/auto-subtitles', adminMovieController.autoFetchSubtitles);
+router.post('/movies/download-subtitle', adminMovieController.downloadSubtitle);
 
 // Notification management
 router.post('/notifications/broadcast', adminNotificationController.broadcastNotification);

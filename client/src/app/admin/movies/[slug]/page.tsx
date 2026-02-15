@@ -69,6 +69,12 @@ interface Movie {
         seeders: number;
         isPremiumOnly: boolean;
     }[];
+    subtitles?: {
+        lang: string;
+        label: string;
+        url: string;
+        isDefault: boolean;
+    }[];
 }
 
 interface EditMoviePageProps {
@@ -121,6 +127,22 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
         isPremiumOnly: true
     });
 
+    const [subtitles, setSubtitles] = useState<{
+        lang: string;
+        label: string;
+        url: string;
+        isDefault: boolean;
+    }[]>([]);
+    const [newSubtitle, setNewSubtitle] = useState({
+        lang: 'vi',
+        label: 'Tiếng Việt',
+        url: '',
+        isDefault: false
+    });
+
+    const [autoFetchedSubs, setAutoFetchedSubs] = useState<any[]>([]);
+    const [searchingSubs, setSearchingSubs] = useState(false);
+
     const fetchMovieDetail = useCallback(async () => {
         try {
             setLoading(true);
@@ -151,6 +173,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                 setActors(movieData.actor || []);
                 setDirectors(movieData.director || []);
                 setTorrents(movieData.torrents || []);
+                setSubtitles(movieData.subtitles || []);
             } else {
                 toast.error(data.message);
             }
@@ -209,6 +232,73 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
         setTorrents(torrents.filter((_, i) => i !== index));
     };
 
+    const addSubtitle = () => {
+        if (newSubtitle.url.trim() && newSubtitle.label.trim()) {
+            setSubtitles([...subtitles, newSubtitle]);
+            setNewSubtitle({
+                lang: 'vi',
+                label: 'Tiếng Việt',
+                url: '',
+                isDefault: false
+            });
+        }
+    };
+
+    const removeSubtitle = (index: number) => {
+        setSubtitles(subtitles.filter((_, i) => i !== index));
+    };
+
+    const handleAutoSearch = async () => {
+        try {
+            setSearchingSubs(true);
+            const res = await customFetch(`/api/admin/movies/${slug}/auto-subtitles`, {
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                setAutoFetchedSubs(data.data);
+                if (data.data.length === 0) {
+                    toast.success('Không tìm thấy phụ đề tự động');
+                }
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            toast.error('Lỗi khi tìm phụ đề');
+        } finally {
+            setSearchingSubs(false);
+        }
+    };
+
+    const applyAutoSub = async (sub: any) => {
+        try {
+            const loadingToast = toast.loading('Đang lấy link tải phụ đề...');
+            const res = await customFetch(`/api/admin/movies/download-subtitle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ fileId: sub.file_id })
+            });
+            const data = await res.json();
+
+            if (data.success && data.downloadUrl) {
+                setSubtitles([...subtitles, {
+                    lang: 'vi',
+                    label: sub.label,
+                    url: data.downloadUrl,
+                    isDefault: false
+                }]);
+                toast.success('Đã thêm phụ đề thành công!', { id: loadingToast });
+                // Filter out the applied sub
+                setAutoFetchedSubs(autoFetchedSubs.filter(s => s.file_id !== sub.file_id));
+            } else {
+                toast.error(data.message || 'Lỗi khi lấy link tải', { id: loadingToast });
+            }
+        } catch (error) {
+            toast.error('Lỗi khi áp dụng phụ đề');
+        }
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
@@ -218,6 +308,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                 actor: actors,
                 director: directors,
                 torrents: torrents,
+                subtitles: subtitles,
                 // Keep existing category, country, episodes
                 ...(movie && {
                     category: movie.category,
@@ -631,6 +722,117 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                         {torrents.length === 0 && (
                             <div className="text-center py-8 bg-surface-800/50 rounded-lg border border-dashed border-white/10">
                                 <p className="text-gray-500 text-sm">Chưa có nguồn Torrent chất lượng cao</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Subtitles */}
+                <div className="bg-surface-900 rounded-lg p-6 space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-semibold text-white">Phụ đề (.SRT / .VTT)</h2>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAutoSearch}
+                            disabled={searchingSubs}
+                            className="border-primary/50 text-primary hover:bg-primary/10"
+                        >
+                            {searchingSubs ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                            Tìm phụ đề tự động
+                        </Button>
+                    </div>
+
+                    {/* Auto Fetch Results */}
+                    {autoFetchedSubs.length > 0 && (
+                        <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg space-y-3 mb-6">
+                            <h3 className="text-sm font-bold text-primary uppercase">Kết quả tìm kiếm (OpenSubtitles)</h3>
+                            <div className="grid grid-cols-1 gap-2">
+                                {autoFetchedSubs.map((sub, idx) => (
+                                    <div key={idx} className="flex items-center justify-between bg-surface-800 p-3 rounded-md border border-white/5">
+                                        <div className="min-w-0 pr-4">
+                                            <p className="text-sm text-white font-medium truncate">{sub.label}</p>
+                                            <p className="text-[10px] text-gray-400 uppercase">{sub.provider}</p>
+                                        </div>
+                                        <Button size="sm" onClick={() => applyAutoSub(sub)}>Áp dụng</Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-surface-800 p-4 rounded-lg border border-white/5">
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-400 mb-2">URL Phụ đề</label>
+                            <Input
+                                value={newSubtitle.url}
+                                onChange={(e) => setNewSubtitle({ ...newSubtitle, url: e.target.value })}
+                                placeholder="https://example.com/sub.srt"
+                                className="bg-surface-900 border-white/10 text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Nhãn (Label)</label>
+                            <Input
+                                value={newSubtitle.label}
+                                onChange={(e) => setNewSubtitle({ ...newSubtitle, label: e.target.value })}
+                                placeholder="Tiếng Việt"
+                                className="bg-surface-900 border-white/10 text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Ngôn ngữ</label>
+                            <select
+                                value={newSubtitle.lang}
+                                onChange={(e) => setNewSubtitle({ ...newSubtitle, lang: e.target.value })}
+                                className="w-full bg-surface-900 border border-white/10 text-white rounded-md px-3 py-2"
+                            >
+                                <option value="vi">Tiếng Việt</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                        <div className="md:col-span-4 flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="isDefaultSub"
+                                checked={newSubtitle.isDefault}
+                                onChange={(e) => setNewSubtitle({ ...newSubtitle, isDefault: e.target.checked })}
+                                className="w-4 h-4 rounded border-white/10 bg-surface-900 text-primary"
+                            />
+                            <label htmlFor="isDefaultSub" className="text-sm text-gray-300">Đặt làm mặc định</label>
+                        </div>
+                        <div className="md:col-span-4">
+                            <Button onClick={addSubtitle} className="w-full bg-surface-700 hover:bg-surface-600 border border-white/10">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Thêm phụ đề
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 mt-6">
+                        {subtitles.map((s, index) => (
+                            <div key={index} className="bg-surface-800 p-4 rounded-lg border border-white/5 flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="bg-surface-700 text-gray-300 text-[10px] px-2 py-0.5 rounded font-bold uppercase">{s.lang}</span>
+                                        <span className="text-white font-medium">{s.label}</span>
+                                        {s.isDefault && <span className="text-primary text-[10px] font-bold">(Mặc định)</span>}
+                                    </div>
+                                    <p className="text-gray-400 text-xs truncate font-mono">{s.url}</p>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeSubtitle(index)}
+                                    className="text-gray-500 hover:text-red-500"
+                                >
+                                    <X className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        ))}
+                        {subtitles.length === 0 && (
+                            <div className="text-center py-6 bg-surface-800/50 rounded-lg border border-dashed border-white/10">
+                                <p className="text-gray-500 text-sm">Chưa có phụ đề thủ công</p>
                             </div>
                         )}
                     </div>

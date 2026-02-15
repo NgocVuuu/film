@@ -1,25 +1,14 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, memo } from 'react';
+import Artplayer from 'artplayer';
+import artplayerPluginHlsControl from 'artplayer-plugin-hls-control';
 import Hls from 'hls.js';
-import {
-    Play, Pause, Volume2, VolumeX, Maximize, Minimize,
-    Settings, Loader2, FastForward, Rewind, PictureInPicture,
-    SkipBack, SkipForward
-} from 'lucide-react';
-import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useWatchProgress } from '@/hooks/useWatchProgress';
-
-interface WebKitVideoElement extends HTMLVideoElement {
-    webkitSupportsPresentationMode?: (mode: string) => boolean;
-    webkitPresentationMode?: string;
-    webkitSetPresentationMode?: (mode: string) => void;
-}
 
 interface VideoPlayerProps {
     src: string;
     poster?: string;
-    embedUrl?: string;
     autoPlay?: boolean;
     movieSlug?: string;
     movieName?: string;
@@ -27,37 +16,17 @@ interface VideoPlayerProps {
     episodeSlug?: string;
     episodeName?: string;
     serverName?: string;
-    startTime?: number;  // Optional start time from URL param
-    onEnded?: () => void;  // Callback when video ends
-    nextEpisodeInfo?: {
-        name: string;
-        serverName: string;
-    };
-    prevEpisodeInfo?: {
-        name: string;
-        serverName: string;
-    };
+    startTime?: number;
+    subtitles?: { lang: string; url: string; label: string; default?: boolean }[];
+    onEnded?: () => void;
     onNextEpisode?: () => void;
     onPrevEpisode?: () => void;
     onTimeUpdate?: (time: number) => void;
 }
 
-const formatTime = (seconds: number) => {
-    if (!seconds) return "00:00";
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-
-    if (h > 0) {
-        return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-};
-
-export default function VideoPlayer({
+const VideoPlayer = ({
     src,
     poster,
-    embedUrl,
     autoPlay,
     movieSlug,
     movieName,
@@ -66,49 +35,17 @@ export default function VideoPlayer({
     episodeName,
     serverName,
     startTime = 0,
+    subtitles = [],
     onEnded,
-    nextEpisodeInfo,
-    prevEpisodeInfo,
     onNextEpisode,
     onPrevEpisode,
     onTimeUpdate
-}: VideoPlayerProps) {
+}: VideoPlayerProps) => {
     const { user } = useAuth();
-    const videoRef = useRef<HTMLVideoElement>(null);
+    const artRef = useRef<Artplayer | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const hlsRef = useRef<Hls | null>(null);
-
-    // Track previous episode/movie to detect changes
-    const prevEpisodeRef = useRef<{ movie: string, episode: string } | null>(null);
-    const savedTimeRef = useRef<number>(0);
-
-    // State
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [volume, setVolume] = useState(1);
-    const [isMuted, setIsMuted] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
-    const [playbackSpeed, setPlaybackSpeed] = useState(1);
-    const [showControls, setShowControls] = useState(true);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(false);
-    const [useEmbed] = useState(false);
-    const [hoverTime, setHoverTime] = useState<number | null>(null);
-    const [hoverPosition, setHoverPosition] = useState<number>(0);
-
-    // Next Episode Countdown
-    const [showNextEpisode, setShowNextEpisode] = useState(false);
-    const [countdown, setCountdown] = useState(10);
-    const [cancelledAutoPlay, setCancelledAutoPlay] = useState(false);
-
-    // Quality State
-    const [qualityLevels, setQualityLevels] = useState<{ height: number; bitrate: number; index: number }[]>([]);
-    const [currentQuality, setCurrentQuality] = useState(-1); // -1 is Auto
-    const [showSettings, setShowSettings] = useState(false);
-
-    // Timer for hiding controls
-    const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [brightness, setBrightness] = useState(1);
+    const touchStartRef = useRef<{ x: number, y: number } | null>(null);
 
     // Watch Progress Hook
     const { initialProgress, debouncedSave } = useWatchProgress({
@@ -120,870 +57,601 @@ export default function VideoPlayer({
         serverName
     });
 
-    // -- Logic --
+    useEffect(() => {
+        if (!containerRef.current) return;
 
-    const handleMouseMove = () => {
-        setShowControls(true);
-        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-        if (isPlaying) {
-            controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
-        }
-    };
+        let hlsInstance: Hls | null = null;
+        let isDestroyed = false;
 
-    const togglePlay = () => {
-        if (!videoRef.current) return;
-        if (isPlaying) {
-            videoRef.current.pause();
-        } else {
-            videoRef.current.play();
-        }
-    };
+        const art = new Artplayer({
+            container: containerRef.current,
+            url: src,
+            poster: poster,
+            volume: 1,
+            isLive: false,
+            muted: false,
+            autoplay: false,
+            pip: false, // Disabled for stability
+            autoSize: false,
+            autoMini: false, // Disabled to prevent background play hidden issues
+            screenshot: false,
+            setting: true,
+            loop: false,
+            flip: true,
+            playbackRate: true,
+            aspectRatio: true,
+            fullscreen: true,
+            fullscreenWeb: false,
+            subtitleOffset: true,
+            miniProgressBar: true,
+            mutex: true,
+            backdrop: true,
+            playsInline: true,
+            autoPlayback: true,
+            airplay: true,
+            theme: '#eab308',
+            lang: 'vi',
+            moreVideoAttr: {
+                crossOrigin: 'anonymous',
+                playsInline: true,
+            },
+            controls: [
+                {
+                    name: 'subtitle-selector',
+                    position: 'right',
+                    index: 11,
+                    html: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 12H4v-2h8v2zm8 0h-6v-2h6v2zm0-4H4V8h16v4z"/></svg>',
+                    selector: (subtitles && subtitles.length > 0) ? subtitles.map((sub, index) => ({
+                        default: sub.default,
+                        html: sub.label,
+                        url: sub.url,
+                        index
+                    })) : [{ html: 'Không có phụ đề', index: 0 }],
+                    onSelect: function (item: any) {
+                        if (item.url) {
+                            // @ts-ignore
+                            this.subtitle.url = item.url;
+                            // @ts-ignore
+                            this.subtitle.show = true;
+                        }
+                        // @ts-ignore
+                        const control = this.controls['subtitle-selector'];
+                        if (control) control.classList.remove('menu-active');
+                        return ''; // Return empty string to prevent text from showing in bar
+                    },
+                    click: function () {
+                        // @ts-ignore
+                        const control = this.controls['subtitle-selector'];
+                        if (control) {
+                            const isActive = control.classList.contains('menu-active');
+                            // Close other menus
+                            // @ts-ignore
+                            const audioControl = this.controls['audio-selector'];
+                            if (audioControl) audioControl.classList.remove('menu-active');
+                            // @ts-ignore
+                            const qualityControl = this.controls['quality'];
+                            if (qualityControl) qualityControl.classList.remove('menu-active');
 
-    const handleTimeUpdate = () => {
-        if (videoRef.current) {
-            const time = videoRef.current.currentTime;
-            const dur = videoRef.current.duration || 0;
-            setCurrentTime(time);
-            // Update ref for restoring position on source change
-            savedTimeRef.current = time;
-            setDuration(dur);
+                            if (isActive) {
+                                control.classList.remove('menu-active');
+                            } else {
+                                control.classList.add('menu-active');
+                            }
+                        }
+                    }
+                },
+                {
+                    name: 'audio-selector',
+                    position: 'right',
+                    index: 12,
+                    html: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>',
+                    selector: [{ default: true, html: 'Mặc định', index: 0 }],
+                    onSelect: function (item: any) {
+                        // @ts-ignore
+                        if (this.hls && this.hls.audioTracks && this.hls.audioTracks[item.index]) {
+                            // @ts-ignore
+                            this.hls.audioTrack = item.index;
+                        }
+                        // @ts-ignore
+                        const control = this.controls['audio-selector'];
+                        if (control) control.classList.remove('menu-active');
+                        return ''; // Return empty string to prevent text from showing in bar
+                    },
+                    click: function () {
+                        // @ts-ignore
+                        const control = this.controls['audio-selector'];
+                        if (control) {
+                            const isActive = control.classList.contains('menu-active');
+                            // Close other menus
+                            // @ts-ignore
+                            const subControl = this.controls['subtitle-selector'];
+                            if (subControl) subControl.classList.remove('menu-active');
+                            // @ts-ignore
+                            const qualityControl = this.controls['quality'];
+                            if (qualityControl) qualityControl.classList.remove('menu-active');
 
-            if (onTimeUpdate) onTimeUpdate(time);
-
-            // Auto-save progress (debounced)
-            if (user && movieSlug && episodeSlug) {
-                debouncedSave(time, dur);
-            }
-
-            // Show next episode countdown 10 seconds before end
-            if (onEnded && nextEpisodeInfo && !cancelledAutoPlay && dur > 0 && dur - time <= 10 && dur - time > 0) {
-                if (!showNextEpisode) {
-                    setShowNextEpisode(true);
-                    setCountdown(Math.ceil(dur - time));
-                }
-            }
-        }
-    };
-
-    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const time = Number(e.target.value);
-        if (videoRef.current) {
-            videoRef.current.currentTime = time;
-            setCurrentTime(time);
-        }
-    };
-
-    const toggleMute = () => {
-        if (!videoRef.current) return;
-        const newMuted = !isMuted;
-        videoRef.current.muted = newMuted;
-        setIsMuted(newMuted);
-    };
-
-    const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = Number(e.target.value);
-        if (videoRef.current) {
-            videoRef.current.volume = value;
-            setVolume(value);
-            setIsMuted(value === 0);
-        }
-    };
-
-    // Seek forward/backward
-    const seekVideo = (seconds: number) => {
-        if (!videoRef.current) return;
-        const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
-        videoRef.current.currentTime = newTime;
-        setCurrentTime(newTime);
-
-        // Show feedback
-        setSeekFeedback({
-            direction: seconds > 0 ? 'forward' : 'backward',
-            amount: Math.abs(seconds)
-        });
-        setTimeout(() => setSeekFeedback(null), 500);
-    };
-
-    // -- Mobile Gestures & Orientation --
-    const touchStartRef = useRef<{ x: number, y: number } | null>(null);
-    const touchStartTimeRef = useRef<number>(0);
-    const [brightness, setBrightness] = useState(1);
-    const [gestureFeedback, setGestureFeedback] = useState<{ type: 'volume' | 'brightness' | 'error', value: number } | null>(null);
-
-    // Seek Feedback
-    const [seekFeedback, setSeekFeedback] = useState<{ direction: 'forward' | 'backward', amount: number } | null>(null);
-    const lastTapRef = useRef<{ time: number, x: number, side: 'left' | 'right' } | null>(null);
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-        touchStartRef.current = {
-            x: e.touches[0].clientX,
-            y: e.touches[0].clientY
-        };
-        touchStartTimeRef.current = Date.now();
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (!touchStartRef.current || !containerRef.current) return;
-
-        // Gestures only active in fullscreen (landscape/zoomed)
-        if (!isFullscreen && !isLandscape) return;
-
-        // Prevent page scroll
-        // e.preventDefault(); // Warning: Passive event listener issue in React?
-        // Better handled via CSS touch-action: none
-
-        const deltaY = touchStartRef.current.y - e.touches[0].clientY;
-        const deltaX = e.touches[0].clientX - touchStartRef.current.x;
-        const rect = containerRef.current.getBoundingClientRect();
-        const sensitive = 150; // Pixels to scroll to max change
-
-        // Ignore horizontal swipes (seeking) - threshold 30px difference
-        if (Math.abs(deltaX) > Math.abs(deltaY) + 30) return;
-
-        const percentChange = deltaY / sensitive;
-
-        // Left side: Brightness
-        if (touchStartRef.current.x < rect.width / 2) {
-            const newBrightness = Math.max(0.2, Math.min(1.5, brightness + percentChange * 0.05));
-            setBrightness(newBrightness);
-            setGestureFeedback({ type: 'brightness', value: newBrightness });
-        }
-        // Right side: Volume
-        else {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as { MSStream?: unknown }).MSStream;
-            if (isIOS) {
-                // iOS does not allow volume control via JS
-                // Show feedback but don't change volume
-                setGestureFeedback({ type: 'error', value: 0 }); // Error type for "Use Buttons"
-            } else if (videoRef.current) {
-                const newVolume = Math.max(0, Math.min(1, volume + percentChange * 0.05));
-                videoRef.current.volume = newVolume;
-                setVolume(newVolume);
-                setIsMuted(newVolume === 0);
-                setGestureFeedback({ type: 'volume', value: newVolume });
-            }
-        }
-    };
-
-    const handleTouchEnd = (e: React.TouchEvent) => {
-        const now = Date.now();
-        const touch = e.changedTouches[0];
-        const x = touch.clientX;
-        const y = touch.clientY;
-        const container = containerRef.current;
-
-        // Check if this was a quick tap (not a long press or swipe)
-        const touchDuration = now - touchStartTimeRef.current;
-        const wasTap = touchDuration < 200; // Quick tap < 200ms
-
-        // Check if touch moved significantly (swipe vs tap)
-        const touchMoved = touchStartRef.current && (
-            Math.abs(x - touchStartRef.current.x) > 10 ||
-            Math.abs(y - touchStartRef.current.y) > 10
-        );
-
-        if (container && wasTap && !touchMoved) {
-            const rect = container.getBoundingClientRect();
-            const side = x < rect.width / 2 ? 'left' : 'right';
-
-            // Double tap detection (within 300ms and same side)
-            if (lastTapRef.current &&
-                now - lastTapRef.current.time < 300 &&
-                lastTapRef.current.side === side) {
-
-                // Prevent default click/play behavior on double tap
-                e.preventDefault();
-                e.stopPropagation();
-
-                // Double tap detected - seek video
-                if (side === 'left') {
-                    seekVideo(-10);
-                } else {
-                    seekVideo(10);
-                }
-
-                lastTapRef.current = null; // Reset to prevent triple tap
-            } else {
-                // First tap - record time and position
-                lastTapRef.current = { time: now, x, side };
-            }
-        }
-
-        touchStartRef.current = null;
-        setTimeout(() => setGestureFeedback(null), 1000);
-    };
-
-    const toggleFullscreen = async () => {
-        try {
-            const container = containerRef.current;
-            const video = videoRef.current;
-
-            if (!container || !video) return;
-
-            // Check if standard fullscreen calls are available on container
-            const requestFS = container.requestFullscreen ||
-                (container as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen ||
-                (container as HTMLElement & { mozRequestFullScreen?: () => Promise<void> }).mozRequestFullScreen ||
-                (container as HTMLElement & { msRequestFullscreen?: () => Promise<void> }).msRequestFullscreen;
-
-            const exitFS = document.exitFullscreen ||
-                (document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen ||
-                (document as Document & { mozCancelFullScreen?: () => Promise<void> }).mozCancelFullScreen ||
-                (document as Document & { msExitFullscreen?: () => Promise<void> }).msExitFullscreen;
-
-            // iOS Safari often doesn't support container fullscreen, acts on video element
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
-
-            if (!document.fullscreenElement && !(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement) {
-                // ENTER FULLSCREEN
-                if (isIOS && (video as HTMLVideoElement & { webkitEnterFullscreen?: () => void }).webkitEnterFullscreen) {
-                    // Use native iOS fullscreen
-                    (video as HTMLVideoElement & { webkitEnterFullscreen: () => void }).webkitEnterFullscreen();
-                } else if (requestFS) {
-                    // Use standard/standard-ish container fullscreen
-                    await requestFS.call(container);
-                    setIsFullscreen(true);
-
-                    // Attempt Orientation Lock (Android)
-                    if (screen.orientation && (screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> }).lock) {
-                        try {
-                            await (screen.orientation as ScreenOrientation & { lock: (orientation: string) => Promise<void> }).lock('landscape');
-                        } catch {
-                            console.log('Orientation lock not supported/allowed');
+                            if (isActive) {
+                                control.classList.remove('menu-active');
+                            } else {
+                                control.classList.add('menu-active');
+                            }
                         }
                     }
                 }
-            } else {
-                // EXIT FULLSCREEN
-                if (exitFS) {
-                    await exitFS.call(document);
-                } else if ((video as HTMLVideoElement & { webkitExitFullscreen?: () => void }).webkitExitFullscreen) {
-                    (video as HTMLVideoElement & { webkitExitFullscreen: () => void }).webkitExitFullscreen();
-                }
-                setIsFullscreen(false);
+            ],
+            subtitle: {
+                url: subtitles.find(s => s.default)?.url || '',
+                type: 'srt',
+                style: {
+                    color: '#fff',
+                    fontSize: '24px',
+                    textShadow: '0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.5)',
+                    fontWeight: '500',
+                },
+                encoding: 'utf-8',
+            },
+            customType: {
+                m3u8: function (video, url) {
+                    if (isDestroyed) return;
 
-                // Unlock Orientation
-                if (screen.orientation && (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock) {
-                    try { (screen.orientation as ScreenOrientation & { unlock: () => void }).unlock(); } catch { }
-                }
-            }
+                    if (Hls.isSupported()) {
+                        const hls = new Hls({
+                            maxBufferLength: 30,
+                            maxMaxBufferLength: 60,
+                        });
+                        hlsInstance = hls;
+                        // @ts-ignore
+                        art.hls = hls;
+                        hls.loadSource(url);
+                        hls.attachMedia(video);
 
-        } catch (e) {
-            console.error('Fullscreen error:', e);
-        }
-    };
+                        // Handle HLS errors
+                        hls.on(Hls.Events.ERROR, (event, data) => {
+                            if (data.fatal) {
+                                switch (data.type) {
+                                    case Hls.ErrorTypes.NETWORK_ERROR:
+                                        art.notice.show = 'Lỗi kết nối server. Vui lòng thử đổi server khác.';
+                                        hls.startLoad();
+                                        break;
+                                    case Hls.ErrorTypes.MEDIA_ERROR:
+                                        art.notice.show = 'Lỗi tệp tin media. Đang thử khôi phục...';
+                                        hls.recoverMediaError();
+                                        break;
+                                    default:
+                                        art.notice.show = 'Lỗi không xác định. Vui lòng tải lại trang.';
+                                        hls.destroy();
+                                        break;
+                                }
+                            }
+                        });
 
-    // -- PIP Logic --
-    const togglePIP = async () => {
-        try {
-            const video = videoRef.current;
-            if (!video) return;
+                        // Detect Audio Tracks from HLS
+                        hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+                            if (isDestroyed) return;
+                            const hlsAudioTracks = hls.audioTracks;
+                            if (hlsAudioTracks && hlsAudioTracks.length > 0) {
+                                const audioSelector = hlsAudioTracks.map((track, index) => ({
+                                    default: track.id === hls.audioTrack,
+                                    html: track.name || track.lang || `Âm thanh ${index + 1}`,
+                                    index: index,
+                                }));
 
-            // Modern API (Android / Chrome / Desktop)
-            if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
-                if (document.pictureInPictureElement) {
-                    await document.exitPictureInPicture();
-                } else {
-                    await video.requestPictureInPicture();
-                }
-            }
-            // iOS WebKit Fallback (Safari / PWA)
-            else if ((video as WebKitVideoElement).webkitSupportsPresentationMode && (video as WebKitVideoElement).webkitSupportsPresentationMode!('picture-in-picture')) {
-                const webkitVideo = video as WebKitVideoElement;
-                const mode = webkitVideo.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture';
-                webkitVideo.webkitSetPresentationMode!(mode);
-            }
-            else {
-                console.warn('PIP not supported on this browser/device');
-            }
-        } catch (e) {
-            console.error('PIP error:', e);
-        }
-    };
+                                // Update the existing audio control selector instead of adding a new one
+                                art.controls.update({
+                                    name: 'audio-selector',
+                                    selector: audioSelector,
+                                });
+                            }
+                        });
 
-    // -- Rotation Logic (Fake Landscape for Mobile) --
-    const [isLandscape, setIsLandscape] = useState(false);
-
-    // ... existing changeSpeed/changeQuality ...
-
-    const changeSpeed = (speed: number) => {
-        if (videoRef.current) {
-            videoRef.current.playbackRate = speed;
-            setPlaybackSpeed(speed);
-            setShowSettings(false);
-        }
-    };
-
-    const changeQuality = (levelIndex: number) => {
-        if (hlsRef.current) {
-            hlsRef.current.currentLevel = levelIndex;
-            setCurrentQuality(levelIndex);
-            setShowSettings(false);
-        }
-    };
-
-    // -- HLS & Init --
-
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        // Set WebKit-specific attributes for iOS compatibility
-        // These ensure video plays inline instead of fullscreen on iOS
-        video.setAttribute('webkit-playsinline', 'true');
-        video.setAttribute('x-webkit-airplay', 'allow');
-        video.setAttribute('playsinline', 'true');
-
-        // Prevent iOS from automatically entering fullscreen
-        video.setAttribute('preload', 'metadata');
-
-        // Disable Picture-in-Picture on iOS (can interfere with inline playback)
-        video.disablePictureInPicture = false;
-
-        if (!src) {
-            setError(true);
-            setIsLoading(false);
-            return;
-        }
-
-        setError(false);
-        setIsLoading(true);
-        let hls: Hls;
-
-        const onVideoLoaded = () => setIsLoading(false);
-        const onVideoWaiting = () => setIsLoading(true);
-        const onVideoPlaying = () => {
-            setIsLoading(false);
-            setIsPlaying(true);
-        };
-        const onVideoPause = () => setIsPlaying(false);
-        const onVideoEnded = () => {
-            // Trigger onEnded callback if exists
-            if (onEnded && !cancelledAutoPlay) {
-                onEnded();
-            }
-        };
-        const onLoadedMetadata = () => {
-            // Logic to restore time or start fresh
-            const isSameEpisode = prevEpisodeRef.current?.movie === movieSlug &&
-                prevEpisodeRef.current?.episode === episodeSlug;
-
-            // Priority:
-            // 1. If switching source within same episode -> restore savedTimeRef
-            // 2. startTime from URL param
-            // 3. saved progress (initialProgress)
-
-            if (isSameEpisode && savedTimeRef.current > 0) {
-                // Restore time when switching source (Vietsub <-> Thuyết minh)
-                video.currentTime = savedTimeRef.current;
-            } else {
-                // New episode or first load
-                savedTimeRef.current = 0; // Reset saved time for safety
-                if (startTime > 0) {
-                    video.currentTime = startTime;
-                } else if (initialProgress !== null && initialProgress > 10) {
-                    video.currentTime = initialProgress;
-                }
-            }
-
-            // Update ref for next time
-            prevEpisodeRef.current = { movie: movieSlug || '', episode: episodeSlug || '' };
-        };
-        const onFullscreenChange = () => {
-            const isFS = !!document.fullscreenElement || !!(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement;
-            setIsFullscreen(isFS);
-            // If entering native TV/PC fullscreen, turn off our fake landscape
-            if (isFS) setIsLandscape(false);
-        };
-
-        video.addEventListener('loadeddata', onVideoLoaded);
-        video.addEventListener('waiting', onVideoWaiting);
-        video.addEventListener('playing', onVideoPlaying);
-        video.addEventListener('pause', onVideoPause);
-        video.addEventListener('ended', onVideoEnded);
-        video.addEventListener('loadedmetadata', onLoadedMetadata);
-        video.addEventListener('timeupdate', handleTimeUpdate);
-
-        // Listen for fullscreen changes to update state correctly
-        document.addEventListener('fullscreenchange', onFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', onFullscreenChange); // iOS/Safari
-        video.addEventListener('webkitendfullscreen', () => setIsFullscreen(false)); // iOS native exit
-
-        if (Hls.isSupported()) {
-            hls = new Hls({
-                capLevelToPlayerSize: true,
-                autoStartLoad: true,
-            });
-            hlsRef.current = hls;
-
-            hls.loadSource(src);
-            hls.attachMedia(video);
-
-            hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-                const levels = data.levels.map((level, index) => ({
-                    index,
-                    height: level.height,
-                    bitrate: level.bitrate,
-                    name: level.name || (level.height ? `${level.height}p` : 'Source')
-                }));
-                levels.sort((a, b) => b.height - a.height);
-                setQualityLevels(levels);
-                setIsLoading(false);
-                if (autoPlay) {
-                    video.play().catch(() => {
-                        setIsMuted(true);
-                        video.muted = true;
-                        video.play();
-                    });
-                }
-            });
-
-            hls.on(Hls.Events.ERROR, function (event, data) {
-                if (data.fatal) {
-                    switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            hls.recoverMediaError();
-                            break;
-                        default:
-                            hls.destroy();
-                            setError(true);
-                            break;
+                        // Sync subtitle if default 
+                        const defaultSub = subtitles.find(s => s.default);
+                        if (defaultSub) {
+                            art.subtitle.url = defaultSub.url;
+                            art.subtitle.show = true;
+                        }
+                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                        video.src = url;
+                    } else {
+                        art.notice.show = 'Unsupported media type: m3u8';
                     }
-                }
-            });
+                },
+            },
+            plugins: [
+                artplayerPluginHlsControl({
+                    quality: {
+                        control: true,
+                        setting: false,
+                        title: 'Chất lượng',
+                        auto: 'Tự động',
+                    },
+                }),
+            ],
+        });
 
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = src;
+        artRef.current = art;
+
+        // Custom Episode Controls
+        if (onPrevEpisode) {
+            art.controls.add({
+                name: 'prev-episode',
+                position: 'left',
+                index: 10,
+                html: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="hover:text-primary transition-colors"><path d="M11 18l-6-6 6-6v12zM19 18l-6-6 6-6v12z"/></svg>',
+                tooltip: 'Tập trước',
+                click: function () {
+                    onPrevEpisode();
+                },
+            });
+        }
+
+        if (onNextEpisode) {
+            art.controls.add({
+                name: 'next-episode',
+                position: 'left',
+                index: 11,
+                html: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="hover:text-primary transition-colors"><path d="M13 6l6 6-6 6V6zM5 6l6 6-6 6V6z"/></svg>',
+                tooltip: 'Tập tiếp theo',
+                click: function () {
+                    onNextEpisode();
+                },
+            });
+        }
+
+        // Handle Events
+        art.on('video:timeupdate', () => {
+            const currentTime = art.video.currentTime;
+            const duration = art.video.duration;
+            if (onTimeUpdate) onTimeUpdate(currentTime);
+            if (user && movieSlug && episodeSlug) {
+                debouncedSave(currentTime, duration);
+            }
+        });
+
+        art.on('video:ended', () => {
+            if (onEnded) onEnded();
+        });
+
+        // Toggle Quality menu on click (for Consistency)
+        // Global click-away to close menus
+        const handleGlobalClick = () => {
+            const controls = ['subtitle-selector', 'audio-selector', 'quality'];
+            controls.forEach(name => {
+                const control = art.controls[name];
+                if (control) control.classList.remove('menu-active');
+            });
+        };
+        window.addEventListener('click', handleGlobalClick);
+
+        art.on('ready', () => {
+            console.log('[VideoPlayer] Ready. Subtitles received:', subtitles?.length);
+
+            // Restore progress from props if available
+            if (startTime > 0) {
+                art.currentTime = startTime;
+            }
+
+            // Handle autoplay safely
             if (autoPlay) {
-                video.addEventListener('loadedmetadata', () => {
-                    video.play().catch(() => {
-                        setIsMuted(true);
-                        video.muted = true;
-                        video.play();
-                    });
+                art.play().catch(err => {
+                    if (err.name === 'NotAllowedError') {
+                        art.muted = true;
+                        art.play().catch(e => console.error('Silent play failed:', e));
+                        art.notice.show = 'Tự động phát (tắt tiếng)';
+                    } else if (err.name !== 'AbortError') {
+                        console.error('Playback error:', err);
+                    }
                 });
             }
-        } else {
-            // Support for direct video files (MP4, MKV, etc.)
-            video.src = src;
-            if (autoPlay) {
-                video.play().catch(() => {
-                    setIsMuted(true);
-                    video.muted = true;
-                    video.play();
+
+            // Quality control click handler
+            const qualityControl = art.controls['quality'];
+            if (qualityControl) {
+                qualityControl.addEventListener('click', (e: MouseEvent) => {
+                    e.stopPropagation();
+                    const subControl = art.controls['subtitle-selector'];
+                    const audioControl = art.controls['audio-selector'];
+                    if (subControl) subControl.classList.remove('menu-active');
+                    if (audioControl) audioControl.classList.remove('menu-active');
+
+                    qualityControl.classList.toggle('menu-active');
                 });
             }
+        });
+
+        // -- Mobile Gestures --
+        const handleTouchStart = (e: TouchEvent) => {
+            const isLandscape = window.innerWidth > window.innerHeight;
+            if (!isLandscape) return;
+
+            touchStartRef.current = {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            };
+        };
+
+        const handleTouchMove = (e: TouchEvent) => {
+            if (!touchStartRef.current || !artRef.current) return;
+
+            const isLandscape = window.innerWidth > window.innerHeight;
+            if (!isLandscape) return;
+
+            // Prevent scrolling while gesturing
+            if (e.cancelable) e.preventDefault();
+
+            const deltaY = touchStartRef.current.y - e.touches[0].clientY;
+            const rect = containerRef.current?.getBoundingClientRect();
+            if (!rect) return;
+
+            const sensitivity = 150; // Pixels for 100% change
+            const percentChange = deltaY / sensitivity;
+
+            // Left side: Brightness
+            if (touchStartRef.current.x < rect.left + rect.width / 2) {
+                setBrightness((prev: number) => {
+                    const next = Math.max(0.2, Math.min(1, prev + percentChange * 0.1));
+                    art.notice.show = `Độ sáng: ${Math.round(next * 100)}%`;
+                    return next;
+                });
+            }
+            // Right side: Volume
+            else {
+                const currentVolume = art.volume;
+                const nextVolume = Math.max(0, Math.min(1, currentVolume + percentChange * 0.1));
+                art.volume = nextVolume;
+                art.notice.show = `Âm lượng: ${Math.round(nextVolume * 100)}%`;
+            }
+
+            // Update start position for smooth continuous gesture
+            touchStartRef.current = {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            };
+        };
+
+        const handleTouchEnd = () => {
+            touchStartRef.current = null;
+        };
+
+        const container = containerRef.current;
+        if (container) {
+            container.addEventListener('touchstart', handleTouchStart);
+            container.addEventListener('touchmove', handleTouchMove, { passive: false });
+            container.addEventListener('touchend', handleTouchEnd);
         }
 
         return () => {
-            if (hls) hls.destroy();
-            video.removeEventListener('loadeddata', onVideoLoaded);
-            video.removeEventListener('waiting', onVideoWaiting);
-            video.removeEventListener('playing', onVideoPlaying);
-            video.removeEventListener('pause', onVideoPause);
-            video.removeEventListener('ended', onVideoEnded);
-            video.removeEventListener('timeupdate', handleTimeUpdate);
-            // Cleanup fullscreen listeners
-            document.removeEventListener('fullscreenchange', onFullscreenChange);
-            document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
-            video.removeEventListener('webkitendfullscreen', () => setIsFullscreen(false));
-            video.removeEventListener('webkitpresentationmodechanged', () => {
-                // handle iOS pip state change if needed
-            });
-        };
-    }, [src, autoPlay]);
-
-    // Countdown timer for next episode
-    useEffect(() => {
-        if (!showNextEpisode || countdown <= 0) return;
-
-        const timer = setInterval(() => {
-            setCountdown(prev => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [showNextEpisode, countdown]);
-
-    // Reset next episode states when src changes
-    useEffect(() => {
-        setShowNextEpisode(false);
-        setCountdown(10);
-        setCancelledAutoPlay(false);
-    }, [src]);
-
-    // Keyboard controls for seeking
-    useEffect(() => {
-        const handleKeyPress = (e: KeyboardEvent) => {
-            // Only handle if video player is focused or visible
-            if (!videoRef.current) return;
-
-            switch (e.key) {
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    seekVideo(-10);
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    seekVideo(10);
-                    break;
-                case ' ':
-                case 'k':
-                    e.preventDefault();
-                    togglePlay();
-                    break;
-                case 'f':
-                    e.preventDefault();
-                    toggleFullscreen();
-                    break;
-                case 'm':
-                    e.preventDefault();
-                    toggleMute();
-                    break;
-                case '[':
-                    if (onPrevEpisode) {
-                        e.preventDefault();
-                        onPrevEpisode();
-                    }
-                    break;
-                case ']':
-                    if (onNextEpisode) {
-                        e.preventDefault();
-                        onNextEpisode();
-                    }
-                    break;
+            isDestroyed = true;
+            window.removeEventListener('click', handleGlobalClick);
+            if (container) {
+                container.removeEventListener('touchstart', handleTouchStart);
+                container.removeEventListener('touchmove', handleTouchMove);
+                container.removeEventListener('touchend', handleTouchEnd);
+            }
+            if (hlsInstance) {
+                hlsInstance.stopLoad();
+                hlsInstance.detachMedia();
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
+            if (artRef.current) {
+                artRef.current.destroy(true);
+                artRef.current = null;
             }
         };
-
-        window.addEventListener('keydown', handleKeyPress);
-        return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [currentTime, duration, isPlaying]);
-
-
-    if (error || (useEmbed && embedUrl)) {
-        if (embedUrl) {
-            return (
-                <div className="relative w-full h-full bg-black rounded-lg overflow-hidden border border-border">
-                    <iframe
-                        src={`${embedUrl}${autoPlay ? '?autoplay=1' : ''}`}
-                        className="w-full h-full"
-                        frameBorder="0"
-                        allowFullScreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    />
-                </div>
-            );
-        }
-        return (
-            <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center border border-border rounded-lg gap-4">
-                <p className="text-red-500">Lỗi: Không thể tải tập phim này.</p>
-                <Button onClick={() => window.location.reload()} variant="outline">Tải lại trang</Button>
-            </div>
-        )
-    }
+    }, [src, user, movieSlug, episodeSlug, subtitles]);
 
     return (
-        <div
-            ref={containerRef}
-            className={`relative bg-black border border-border shadow-2xl shadow-primary/10 group select-none overflow-visible transition-all duration-300
-                ${isLandscape
-                    ? 'fixed inset-0 z-9999 w-[100vh] h-[100vw] rotate-90 origin-center top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-none'
-                    : 'w-full h-full rounded-lg'
-                }`}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={() => setShowControls(false)}
-            onClick={togglePlay}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            style={{
-                filter: `brightness(${brightness})`,
-                touchAction: 'none' // Important for gestures
-            }}
-        >
-            <video
-                ref={videoRef}
-                poster={poster}
-                className="w-full h-full object-contain rounded-lg"
-                playsInline
-                autoPlay={autoPlay}
+        <div className="relative w-full h-full bg-[#050505] rounded-xl overflow-hidden border border-white/10 group shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+            <div ref={containerRef} className="w-full h-full" />
+
+            {/* Brightness Overlay */}
+            <div
+                className="absolute inset-0 pointer-events-none z-[5] bg-black transition-opacity duration-100"
+                style={{ opacity: 1 - brightness }}
             />
+            <style jsx global>{`
+                .artplayer-app {
+                    border-radius: 12px;
+                    font-family: 'Inter', sans-serif;
+                }
+                
+                /* Control Bar Glassmorphism */
+                .art-bottom {
+                    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0) 100%) !important;
+                    padding-bottom: 0 !important;
+                }
+                
+                .art-controls {
+                    background: rgba(10, 10, 10, 0.4) !important;
+                    backdrop-filter: blur(12px) !important;
+                    border-radius: 12px !important;
+                    margin: 0 12px 4px 12px !important;
+                    border: 1px solid rgba(234, 179, 8, 0.1) !important;
+                    height: 48px !important;
+                }
 
-            {/* Gesture Feedback Overlay */}
-            {gestureFeedback && (
-                <div className={`absolute inset-0 flex items-center justify-center z-40 pointer-events-none ${isLandscape ? '-rotate-90' : ''}`}>
-                    <div className="bg-black/50 backdrop-blur-sm p-4 rounded-xl text-white flex flex-col items-center gap-2">
-                        {gestureFeedback.type === 'volume' ? <Volume2 className="w-8 h-8" /> :
-                            gestureFeedback.type === 'brightness' ? <Loader2 className="w-8 h-8 animate-spin" /> : // Should use Sun icon really but reusing loader for now or check type
-                                <VolumeX className="w-8 h-8 text-red-500" /> // Error icon
-                        }
+                /* Progress Bar Styling */
+                .art-progress-loaded {
+                    background: rgba(255, 255, 255, 0.1) !important;
+                }
+                
+                .art-progress-played {
+                    background: linear-gradient(90deg, #ca8a04 0%, #eab308 100%) !important;
+                    box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
+                }
+                
+                .art-progress-indicator {
+                    background: #fff !important;
+                    width: 14px !important;
+                    height: 14px !important;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                }
 
-                        <span className="text-xl font-bold">
-                            {gestureFeedback.type === 'brightness' ? 'Độ sáng' :
-                                gestureFeedback.type === 'volume' ? 'Âm lượng' :
-                                    'Dùng phím cứng'}
-                        </span>
+                /* Icons & Controls */
+                .art-control {
+                    color: #d1d5db !important;
+                    transition: all 0.2s ease !important;
+                }
+                
+                .art-control:hover {
+                    color: #eab308 !important;
+                    transform: scale(1.1);
+                }
 
-                        {gestureFeedback.type !== 'error' && (
-                            <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-primary transition-all duration-75"
-                                    style={{
-                                        width: `${gestureFeedback.type === 'brightness' ? (gestureFeedback.value / 1.5) * 100 : gestureFeedback.value * 100}%`
-                                    }}
-                                />
-                            </div>
-                        )}
-                        {gestureFeedback.type === 'error' && (
-                            <span className="text-xs text-center text-gray-300">iPhone không hỗ trợ<br />chỉnh âm lượng cảm ứng</span>
-                        )}
-                    </div>
-                </div>
-            )}
+                /* Settings Menu */
+                .art-setting {
+                    background: rgba(10, 10, 10, 0.9) !important;
+                    backdrop-filter: blur(20px) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                    border-radius: 12px !important;
+                    color: #fff !important;
+                    padding: 8px !important;
+                }
+                
+                .art-setting-item:hover {
+                    background: rgba(234, 179, 8, 0.2) !important;
+                    border-radius: 8px;
+                }
 
-            {/* Seek Feedback Overlay */}
-            {seekFeedback && (
-                <div className={`absolute inset-0 flex items-center z-40 pointer-events-none ${isLandscape ? '-rotate-90' : ''} ${seekFeedback.direction === 'forward' ? 'justify-end pr-8' : 'justify-start pl-8'
-                    }`}>
-                    <div className="bg-black/20 backdrop-blur-xl p-4 rounded-2xl text-white/80 flex flex-col items-center gap-1.5 animate-in fade-in zoom-in duration-200">
-                        {seekFeedback.direction === 'forward' ? (
-                            <FastForward className="w-10 h-10 text-primary opacity-80" />
-                        ) : (
-                            <Rewind className="w-10 h-10 text-primary opacity-80" />
-                        )}
-                        <span className="text-xl font-bold">
-                            {seekFeedback.direction === 'forward' ? '+' : '-'}{seekFeedback.amount}s
-                        </span>
-                    </div>
-                </div>
-            )}
+                /* Notices - More subtle */
+                .art-notice {
+                    background: rgba(0, 0, 0, 0.7) !important;
+                    border: 1px solid rgba(234, 179, 8, 0.3) !important;
+                    color: #eab308 !important;
+                    font-weight: 600 !important;
+                    border-radius: 8px !important;
+                    padding: 8px 16px !important;
+                    font-size: 13px !important;
+                    backdrop-filter: blur(8px);
+                    top: 20px !important;
+                    left: 20px !important;
+                    transform: none !important;
+                }
 
-            {/* Next Episode Countdown Overlay */}
-            {showNextEpisode && nextEpisodeInfo && !cancelledAutoPlay && (
-                <div className={`absolute inset-0 flex items-center justify-center z-50 bg-black/60 backdrop-blur-sm pointer-events-auto ${isLandscape ? '-rotate-90' : ''}`}
-                    onClick={(e) => e.stopPropagation()}>
-                    <div className="bg-linear-to-br from-gray-900 to-black border border-primary/30 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
-                        <div className="text-center space-y-4">
-                            <div className="text-primary text-4xl font-bold">{countdown}</div>
-                            <div className="space-y-2">
-                                <p className="text-gray-300 text-sm">Tập tiếp theo sẽ phát tự động</p>
-                                <p className="text-white font-semibold text-lg">{nextEpisodeInfo.name}</p>
-                            </div>
-                            <Button
-                                onClick={() => {
-                                    setCancelledAutoPlay(true);
-                                    setShowNextEpisode(false);
-                                }}
-                                variant="outline"
-                                className="w-full border-white/20 hover:border-primary hover:bg-primary/10"
-                            >
-                                Hủy tự động phát
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                /* Subtitle UI */
+                .art-subtitle {
+                    bottom: 12% !important;
+                    padding: 0 20px !important;
+                }
+                
+                .art-subtitle p {
+                    background: rgba(0, 0, 0, 0.45) !important;
+                    backdrop-filter: blur(4px);
+                    padding: 4px 12px !important;
+                    border-radius: 8px;
+                }
 
-            {/* Loading Spinner */}
-            {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 pointer-events-none">
-                    <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                </div>
-            )}
+                /* Volume bar */
+                .art-volume-panel-handle {
+                    background: #eab308 !important;
+                }
 
-            {/* Controls Overlay */}
-            <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
+                /* Custom controls spacing */
+                .art-control-prev-episode, .art-control-next-episode {
+                    margin: 0 4px !important;
+                }
+                
+                /* Large Play Button in center */
+                .art-state {
+                    background: rgba(234, 179, 8, 0.1);
+                    border: 2px solid rgba(234, 179, 8, 0.3);
+                    border-radius: 50%;
+                    width: 70px;
+                    height: 70px;
+                }
+                
+                .art-state svg {
+                    width: 40px;
+                    height: 40px;
+                    fill: #eab308;
+                }
 
-                {/* Progress Bar */}
-                <div
-                    className="w-full mb-4 flex items-center gap-2 group/progress relative"
-                    onClick={(e) => e.stopPropagation()}
-                    onMouseMove={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const x = e.clientX - rect.left;
-                        const percentage = x / rect.width;
-                        const time = percentage * duration;
-                        setHoverTime(time);
-                        setHoverPosition(percentage * 100);
-                    }}
-                    onMouseLeave={() => setHoverTime(null)}
-                >
-                    {/* Time Preview Tooltip */}
-                    {hoverTime !== null && (
-                        <div
-                            className="absolute bottom-full mb-2 px-2 py-1 bg-black/90 text-white text-xs rounded pointer-events-none z-50"
-                            style={{ left: `${hoverPosition}%`, transform: 'translateX(-50%)' }}
-                        >
-                            {formatTime(hoverTime)}
-                        </div>
-                    )}
-                    <input
-                        type="range"
-                        min={0}
-                        max={duration || 0}
-                        value={currentTime}
-                        onChange={handleSeek}
-                        className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary transition-all group-hover/progress:h-2"
-                        style={{
-                            background: `linear-gradient(to right, #D4AF37 ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) ${(currentTime / duration) * 100}%)`
-                        }}
-                    />
-                </div>
+                /* Custom Selector Styling */
+                .art-control-subtitle-selector, 
+                .art-control-audio-selector,
+                .art-control-quality {
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    width: auto !important;
+                    min-width: 38px !important;
+                    height: 100% !important;
+                    cursor: pointer !important;
+                    color: #d1d5db !important;
+                    position: relative !important;
+                }
 
-                {/* Main Controls */}
-                <div className="flex items-center justify-between gap-1" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-                        <Button variant="ghost" size="icon" onClick={togglePlay} className="text-white hover:text-primary hover:bg-transparent">
-                            {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
-                        </Button>
+                .art-control-subtitle-selector:hover, 
+                .art-control-audio-selector:hover,
+                .art-control-quality:hover {
+                    color: #eab308 !important;
+                }
 
-                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime -= 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent">
-                            <Rewind className="w-5 h-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime += 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent">
-                            <FastForward className="w-5 h-5" />
-                        </Button>
+                .art-control-subtitle-selector svg,
+                .art-control-audio-selector svg {
+                    width: 22px !important;
+                    height: 22px !important;
+                    fill: currentColor !important;
+                    display: block !important;
+                }
 
-                        <div className="flex items-center gap-1 border-l border-white/10 ml-1 sm:ml-2 pl-1 sm:pl-2">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => { e.stopPropagation(); onPrevEpisode?.(); }}
-                                disabled={!onPrevEpisode || !prevEpisodeInfo}
-                                className="text-white/70 hover:text-white hover:bg-white/10 h-8 w-8 disabled:opacity-30 disabled:hover:bg-transparent"
-                                title={prevEpisodeInfo ? `Tập trước: ${prevEpisodeInfo.name}` : ''}
-                            >
-                                <SkipBack className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => { e.stopPropagation(); onNextEpisode?.(); }}
-                                disabled={!onNextEpisode || !nextEpisodeInfo}
-                                className="text-white/70 hover:text-white hover:bg-white/10 h-8 w-8 disabled:opacity-30 disabled:hover:bg-transparent"
-                                title={nextEpisodeInfo ? `Tập tiếp theo: ${nextEpisodeInfo.name}` : ''}
-                            >
-                                <SkipForward className="w-4 h-4" />
-                            </Button>
-                        </div>
+                /* Suppress default Artplayer hover-to-show menu */
+                .art-control-subtitle-selector:hover .art-selector-list,
+                .art-control-audio-selector:hover .art-selector-list,
+                .art-control-quality:hover .art-selector-list {
+                    display: none !important;
+                }
 
-                        <div className="flex items-center gap-2 group/volume">
-                            <Button variant="ghost" size="icon" onClick={toggleMute} className="text-white hover:text-primary hover:bg-transparent">
-                                {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                            </Button>
-                            {/* Hide volume slider on mobile, show on hover/group on desktop */}
-                            <input
-                                type="range"
-                                min={0}
-                                max={1}
-                                step={0.1}
-                                value={isMuted ? 0 : volume}
-                                onChange={handleVolumeChange}
-                                className="hidden md:block w-0 overflow-hidden group-hover/volume:w-20 transition-all h-1 bg-white/30 rounded-lg cursor-pointer appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                            />
-                        </div>
+                /* Show menu only when active (on click) */
+                .art-control-subtitle-selector.menu-active .art-selector-list,
+                .art-control-audio-selector.menu-active .art-selector-list,
+                .art-control-quality.menu-active .art-selector-list {
+                    display: block !important;
+                }
 
-                        <span className="text-white text-[10px] sm:text-xs font-mono ml-1 sm:ml-2 whitespace-nowrap">
-                            {formatTime(currentTime)} / {formatTime(duration)}
-                        </span>
-                    </div>
+                /* Ensure text hidden but svg visible */
+                .art-control-subtitle-selector .art-selector-value,
+                .art-control-audio-selector .art-selector-value {
+                    font-size: 0 !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                }
 
-                    <div className="flex items-center gap-1 sm:gap-2">
-                        {/* Settings Button logic */}
-                        <div className="relative">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setShowSettings(!showSettings)}
-                                className={`text-white hover:text-primary hover:bg-transparent ${showSettings ? 'rotate-90 text-primary' : ''} transition-all`}
-                            >
-                                <Settings className="w-5 h-5" />
-                            </Button>
+                /* Dropdown list styling */
+                .art-control-subtitle-selector .art-selector-list,
+                .art-control-audio-selector .art-selector-list,
+                .art-control-quality .art-selector-list {
+                    background: rgba(15, 15, 15, 0.98) !important;
+                    backdrop-filter: blur(20px) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                    border-radius: 8px !important;
+                    min-width: 150px !important;
+                    bottom: 52px !important;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important;
+                    z-index: 9999 !important;
+                    left: 50% !important;
+                    transform: translateX(-50%) !important;
+                }
 
+                .art-selector-item {
+                    padding: 10px 16px !important;
+                    font-size: 13px !important;
+                    color: #e5e7eb !important;
+                }
 
-                            {/* Settings Popup */}
-                            {showSettings && (
-                                <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
-                                    {/* Speed */}
-                                    <div>
-                                        <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tốc độ</p>
-                                        <div className="grid grid-cols-4 gap-1">
-                                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(speed => (
-                                                <button
-                                                    key={speed}
-                                                    onClick={() => changeSpeed(speed)}
-                                                    className={`text-xs p-1 rounded ${playbackSpeed === speed ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
-                                                >
-                                                    {speed}x
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
+                .art-selector-item:hover {
+                    background: rgba(234, 179, 8, 0.2) !important;
+                    color: #fff !important;
+                }
 
-                                    {/* Quality */}
-                                    {qualityLevels.length > 0 && (
-                                        <div>
-                                            <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Chất lượng</p>
-                                            <div className="flex flex-col gap-1">
-                                                <button
-                                                    onClick={() => changeQuality(-1)}
-                                                    className={`text-xs text-left p-1.5 rounded ${currentQuality === -1 ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
-                                                >
-                                                    Tự động
-                                                </button>
-                                                {qualityLevels.map(level => (
-                                                    <button
-                                                        key={level.index}
-                                                        onClick={() => changeQuality(level.index)}
-                                                        className={`text-xs text-left p-1.5 rounded ${currentQuality === level.index ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
-                                                    >
-                                                        {level.height}p
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Mobile Rotate Button (Force Landscape) - Removed per request */}
-                        {/* <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={toggleLandscape}
-                            className={`text-white hover:text-primary hover:bg-transparent md:hidden ${isLandscape ? 'text-primary' : ''}`}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-                                <path d="M21 3v5h-5" />
-                            </svg>
-                        </Button> */}
-
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={togglePIP}
-                            className="text-white hover:text-primary hover:bg-transparent flex"
-                            title="Picture-in-Picture"
-                        >
-                            <PictureInPicture className="w-5 h-5" />
-                        </Button>
-
-                        <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:text-primary hover:bg-transparent">
-                            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                        </Button>
-                    </div>
-                </div>
-            </div>
+                .art-selector-item-active {
+                    color: #eab308 !important;
+                }
+            `}</style>
         </div>
     );
-}
+};
+
+export default memo(VideoPlayer);

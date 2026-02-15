@@ -66,6 +66,16 @@ const movieSchema = new mongoose.Schema({
     }
   ],
 
+  // Subtitles
+  subtitles: [
+    {
+      lang: String, // 'vi', 'en', etc.
+      label: String, // 'Tiếng Việt', 'English'
+      url: String,   // URL to .srt or .vtt file
+      isDefault: { type: Boolean, default: false }
+    }
+  ],
+
   isFeatured: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   lastNotifiedEpisode: { type: String }, // Tránh spam thông báo cho cùng một tập

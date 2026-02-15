@@ -1,4 +1,5 @@
 const Movie = require('../models/Movie');
+const SubtitleService = require('../utils/subtitleService');
 
 // Get all movies (Admin - includes inactive)
 exports.getAllMovies = async (req, res) => {
@@ -79,7 +80,7 @@ exports.updateMovie = async (req, res) => {
             'name', 'origin_name', 'content', 'thumb_url', 'poster_url', 'trailer_url',
             'year', 'quality', 'lang', 'status', 'type', 'time', 'episode_current',
             'episode_total', 'notify', 'showtimes', 'is_copyright', 'sub_docquyen',
-            'chieurap', 'actor', 'director', 'category', 'country', 'episodes', 'torrents'
+            'chieurap', 'actor', 'director', 'category', 'country', 'episodes', 'torrents', 'subtitles'
         ];
         const filteredUpdates = {};
 
@@ -182,6 +183,45 @@ exports.toggleFeatured = async (req, res) => {
         });
     } catch (error) {
         console.error('Toggle featured error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Auto fetch subtitles from OpenSubtitles
+exports.autoFetchSubtitles = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const movie = await Movie.findOne({ slug });
+
+        if (!movie) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
+        }
+
+        const subs = await SubtitleService.searchVietnameseSubtitles(movie.origin_name || movie.name, movie.year);
+
+        res.json({ success: true, data: subs });
+    } catch (error) {
+        console.error('Auto fetch subtitles error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Get download link for a specific subtitle file
+exports.downloadSubtitle = async (req, res) => {
+    try {
+        const { fileId } = req.body;
+        if (!fileId) {
+            return res.status(400).json({ success: false, message: 'Thiếu File ID' });
+        }
+
+        const downloadUrl = await SubtitleService.getDownloadLink(fileId);
+        if (!downloadUrl) {
+            return res.status(400).json({ success: false, message: 'Không thể lấy link tải phụ đề' });
+        }
+
+        res.json({ success: true, downloadUrl });
+    } catch (error) {
+        console.error('Download subtitle error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

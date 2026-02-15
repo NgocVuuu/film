@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
+import LegacyVideoPlayer from '@/components/LegacyVideoPlayer';
 import { Play, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -12,8 +13,7 @@ import toast from 'react-hot-toast';
 
 export const runtime = 'edge';
 import { PWAAds } from '@/components/PWAAds';
-
-
+import { ReportModal } from '@/components/ReportModal';
 
 // Types (Reuse same types)
 interface Episode {
@@ -52,6 +52,12 @@ interface MovieDetail {
         seeders: number;
         isPremiumOnly: boolean;
     }[];
+    subtitles?: {
+        lang: string;
+        label: string;
+        url: string;
+        isDefault: boolean;
+    }[];
 }
 
 export default function WatchPage() {
@@ -81,6 +87,14 @@ export default function WatchPage() {
     // Get query params
     const episodeParam = searchParams.get('episode');
     const timestampParam = searchParams.get('t');
+
+    // Memoized Subtitles (Move to top level to follow Rules of Hooks)
+    const memoizedSubtitles = useMemo(() => movie?.subtitles?.map(s => ({
+        lang: s.lang,
+        label: s.label,
+        url: s.url,
+        default: s.isDefault
+    })) || [], [movie?.subtitles]);
 
     useEffect(() => {
         if (!slug) return;
@@ -122,7 +136,6 @@ export default function WatchPage() {
         const sortedSources = Array.from(sources).sort((a, b) => {
             const indexA = sourceOrder.indexOf(a);
             const indexB = sourceOrder.indexOf(b);
-            // Handle sources not in order list
             const weightA = indexA === -1 ? 99 : indexA;
             const weightB = indexB === -1 ? 99 : indexB;
             return weightA - weightB;
@@ -163,8 +176,6 @@ export default function WatchPage() {
                     server_data: movie.torrents.map(t => ({
                         name: `${t.quality} (${t.size})`,
                         slug: `torrent-${t.quality}-${t.size}`.toLowerCase().replace(/\s+/g, '-'),
-                        // Placeholder for torrent-to-http proxy
-                        // We will handle this in handleEpisodeClick to generate the actual streaming URL
                         link_m3u8: t.magnet,
                         link_embed: ''
                     }))
@@ -179,7 +190,6 @@ export default function WatchPage() {
                 let selectedEpisode = null;
                 let selectedServer = null;
 
-                // Try to find episode from URL param
                 if (episodeParam) {
                     for (const server of filtered) {
                         const found = server.server_data.find((ep: { slug: string }) => ep.slug === episodeParam);
@@ -191,7 +201,6 @@ export default function WatchPage() {
                     }
                 }
 
-                // If not found or no param, use first episode
                 if (!selectedEpisode && filtered[0].server_data.length > 0) {
                     selectedEpisode = filtered[0].server_data[0];
                     selectedServer = filtered[0].server_name;
@@ -202,7 +211,6 @@ export default function WatchPage() {
                     setCurrentServerName(selectedServer);
                     setShouldAutoPlay(true);
 
-                    // Set start time from URL param
                     if (timestampParam) {
                         const time = parseInt(timestampParam);
                         if (!isNaN(time)) {
@@ -213,7 +221,7 @@ export default function WatchPage() {
             }
         }
 
-    }, [movie, currentSource, episodeParam, timestampParam]);
+    }, [movie, currentSource, episodeParam, timestampParam, isPremium]);
 
     // Find prev/next episode
     useEffect(() => {
@@ -223,20 +231,17 @@ export default function WatchPage() {
             return;
         }
 
-        // Find current server and episode index
         for (const server of filteredServers) {
             if (server.server_name === currentServerName) {
                 const currentIndex = server.server_data.findIndex(ep => ep.slug === currentEpisode.slug);
 
                 if (currentIndex !== -1) {
-                    // 1. Next episode in same server
                     if (currentIndex < server.server_data.length - 1) {
                         setNextEpisode({
                             server: server.server_name,
                             episode: server.server_data[currentIndex + 1]
                         });
                     } else {
-                        // Try next server for next episode
                         const serverIndex = filteredServers.findIndex(s => s.server_name === currentServerName);
                         if (serverIndex !== -1 && serverIndex < filteredServers.length - 1) {
                             const nextServer = filteredServers[serverIndex + 1];
@@ -253,14 +258,12 @@ export default function WatchPage() {
                         }
                     }
 
-                    // 2. Prev episode in same server
                     if (currentIndex > 0) {
                         setPrevEpisode({
                             server: server.server_name,
                             episode: server.server_data[currentIndex - 1]
                         });
                     } else {
-                        // Try prev server for prev episode
                         const serverIndex = filteredServers.findIndex(s => s.server_name === currentServerName);
                         if (serverIndex > 0) {
                             const prevServer = filteredServers[serverIndex - 1];
@@ -286,7 +289,6 @@ export default function WatchPage() {
         const isSameEpisode = currentEpisode?.slug === episode.slug;
         let finalEpisode = { ...episode };
 
-        // Handle Torrent Magnet -> Proxy Stream URL conversion
         if (serverName.includes('PREMIUM') && episode.link_m3u8.startsWith('magnet:')) {
             const loadingToast = toast.loading('Đang khởi tạo luồng Torrent Premium (4K)...');
             try {
@@ -295,12 +297,12 @@ export default function WatchPage() {
                 });
                 const data = await res.json();
 
-                if (data.success && data.data.streamUrl) {
-                    finalEpisode.link_m3u8 = data.data.streamUrl;
+                if (data.success && data.streamLink) {
+                    finalEpisode.link_m3u8 = data.streamLink;
                     toast.success('Đã sẵn sàng luồng chất lượng cao!', { id: loadingToast });
                 } else {
-                    toast.error(data.message || 'Lỗi khi khởi tạo luồng Torrent', { id: loadingToast });
-                    return; // Don't switch if it failed
+                    toast.error(data.message || data.error || 'Lỗi khi khởi tạo luồng Torrent', { id: loadingToast });
+                    return;
                 }
             } catch (err) {
                 console.error('Torrent fetch error:', err);
@@ -313,14 +315,12 @@ export default function WatchPage() {
         setCurrentEpisode(finalEpisode);
         setShouldAutoPlay(true);
 
-        // Restore time if switching versions of the same episode
         if (isSameEpisode) {
             setStartTime(playerTime);
         } else {
             setStartTime(0);
         }
 
-        // Update URL
         const newUrl = `/movie/${slug}/watch?episode=${episode.slug}`;
         window.history.replaceState({}, '', newUrl);
 
@@ -341,19 +341,16 @@ export default function WatchPage() {
 
     const getCleanServerName = (rawName: string) => {
         const lowerName = rawName.toLowerCase();
-
-        // 1. Detect Type (Priority)
         if (lowerName.includes('vietsub')) return 'Vietsub';
         if (lowerName.includes('thuyết minh') || lowerName.includes('thuyet minh')) return 'Thuyết Minh';
         if (lowerName.includes('lồng tiếng') || lowerName.includes('long tieng')) return 'Lồng Tiếng';
         if (lowerName.includes('engsub')) return 'Engsub';
         if (lowerName.includes('premium')) return 'Premium';
 
-        // 2. Clean up if no type detected (Fallback)
         return rawName
             .replace(/^(NC|KK|OP|SERVER)[\s-]*#?/i, '')
-            .replace(/#[\w\s\.]+/, '') // Remove #Location
-            .replace(/\(.*\)/, '')      // Remove (...)
+            .replace(/#[\w\s\.]+/, '')
+            .replace(/\(.*\)/, '')
             .trim() || 'Server Dự Phòng';
     };
 
@@ -375,11 +372,6 @@ export default function WatchPage() {
                             {currentEpisode ? `Đang xem: ${currentEpisode.name}` : movie.origin_name}
                         </p>
                     </div>
-                    <div className="hidden md:flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="text-xs text-gray-400 hover:text-red-400">
-                            <AlertTriangle className="w-4 h-4 mr-1" /> Báo lỗi
-                        </Button>
-                    </div>
                 </div>
             </div>
 
@@ -395,32 +387,45 @@ export default function WatchPage() {
 
                     <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (
-                            <VideoPlayer
-                                key={currentEpisode.link_m3u8}
-                                src={currentEpisode.link_m3u8}
-                                poster={movie.poster_url}
-                                embedUrl={currentEpisode.link_embed}
-                                autoPlay={shouldAutoPlay}
-                                movieSlug={movie.slug}
-                                movieName={movie.name}
-                                movieThumb={movie.thumb_url}
-                                episodeSlug={currentEpisode.slug}
-                                episodeName={currentEpisode.name}
-                                serverName={currentServerName}
-                                startTime={startTime}
-                                onTimeUpdate={(time) => setPlayerTime(time)}
-                                onEnded={handleNextEpisode}
-                                nextEpisodeInfo={nextEpisode ? {
-                                    name: nextEpisode.episode.name,
-                                    serverName: getCleanServerName(nextEpisode.server)
-                                } : undefined}
-                                prevEpisodeInfo={prevEpisode ? {
-                                    name: prevEpisode.episode.name,
-                                    serverName: getCleanServerName(prevEpisode.server)
-                                } : undefined}
-                                onNextEpisode={handleNextEpisode}
-                                onPrevEpisode={handlePrevEpisode}
-                            />
+                            isPremium ? (
+                                <VideoPlayer
+                                    key={currentEpisode.link_m3u8}
+                                    src={currentEpisode.link_m3u8}
+                                    poster={movie.poster_url}
+                                    autoPlay={shouldAutoPlay}
+                                    movieSlug={movie.slug}
+                                    movieName={movie.name}
+                                    movieThumb={movie.thumb_url}
+                                    episodeSlug={currentEpisode.slug}
+                                    episodeName={currentEpisode.name}
+                                    serverName={currentServerName}
+                                    startTime={startTime}
+                                    onTimeUpdate={(time) => setPlayerTime(time)}
+                                    onEnded={handleNextEpisode}
+                                    onNextEpisode={handleNextEpisode}
+                                    onPrevEpisode={handlePrevEpisode}
+                                    subtitles={memoizedSubtitles}
+                                />
+                            ) : (
+                                <LegacyVideoPlayer
+                                    key={currentEpisode.link_m3u8}
+                                    src={currentEpisode.link_m3u8}
+                                    poster={movie.poster_url}
+                                    embedUrl={currentEpisode.link_embed}
+                                    autoPlay={shouldAutoPlay}
+                                    movieSlug={movie.slug}
+                                    movieName={movie.name}
+                                    movieThumb={movie.thumb_url}
+                                    episodeSlug={currentEpisode.slug}
+                                    episodeName={currentEpisode.name}
+                                    serverName={currentServerName}
+                                    startTime={startTime}
+                                    onTimeUpdate={(time) => setPlayerTime(time)}
+                                    onEnded={handleNextEpisode}
+                                    onNextEpisode={handleNextEpisode}
+                                    onPrevEpisode={handlePrevEpisode}
+                                />
+                            )
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-surface-900">
                                 <p className="text-gray-500">Đang tải player...</p>
@@ -450,6 +455,14 @@ export default function WatchPage() {
                                         </>
                                     )}
                                 </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <ReportModal
+                                    movieSlug={movie.slug}
+                                    movieName={movie.name}
+                                    episodeSlug={currentEpisode?.slug}
+                                    episodeName={currentEpisode?.name}
+                                />
                             </div>
                         </div>
 
@@ -486,13 +499,13 @@ export default function WatchPage() {
                         </div>
 
                         <div className="p-4 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-                            {filteredServers.map((server: { server_name: string; server_data: { slug: string; name: string; link_m3u8: string; link_embed: string }[] }) => (
+                            {filteredServers.map((server) => (
                                 <div key={server.server_name}>
                                     <h4 className="inline-block px-3 py-1 rounded bg-primary/20 text-primary text-xs font-bold mb-3 uppercase tracking-wider border border-primary/20">
                                         {getCleanServerName(server.server_name)}
                                     </h4>
                                     <div className="grid grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                                        {server.server_data.map((ep: { slug: string; name: string; link_m3u8: string; link_embed: string }) => {
+                                        {server.server_data.map((ep) => {
                                             const isActive = currentEpisode === ep;
                                             return (
                                                 <button
