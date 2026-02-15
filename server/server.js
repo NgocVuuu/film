@@ -25,6 +25,7 @@ const commentRoutes = require('./routes/commentRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const movieListRoutes = require('./routes/movieListRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
+const torrentRoutes = require('./routes/torrentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -140,6 +141,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/torrent', torrentRoutes);
 
 // Error Handler (Last Middleware)
 app.use(errorHandler);

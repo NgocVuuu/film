@@ -55,6 +55,17 @@ const movieSchema = new mongoose.Schema({
     },
   ],
 
+  // High quality sources (Torrent/Magnet)
+  torrents: [
+    {
+      magnet: String,
+      quality: String, // 4K, 1080p, Bluray, etc.
+      size: String,
+      seeders: Number,
+      isPremiumOnly: { type: Boolean, default: true }
+    }
+  ],
+
   isFeatured: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   lastNotifiedEpisode: { type: String }, // Tránh spam thông báo cho cùng một tập

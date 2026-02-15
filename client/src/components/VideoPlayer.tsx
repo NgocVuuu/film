@@ -566,6 +566,16 @@ export default function VideoPlayer({
                     });
                 });
             }
+        } else {
+            // Support for direct video files (MP4, MKV, etc.)
+            video.src = src;
+            if (autoPlay) {
+                video.play().catch(() => {
+                    setIsMuted(true);
+                    video.muted = true;
+                    video.play();
+                });
+            }
         }
 
         return () => {

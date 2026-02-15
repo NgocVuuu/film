@@ -6,6 +6,9 @@ import { Play, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
+import { useAuth } from '@/contexts/auth-context';
+import { Crown } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export const runtime = 'edge';
 import { PWAAds } from '@/components/PWAAds';
@@ -42,6 +45,13 @@ interface MovieDetail {
     quality?: string;
     lang?: string;
     time?: string;
+    torrents?: {
+        magnet: string;
+        quality: string;
+        size: string;
+        seeders: number;
+        isPremiumOnly: boolean;
+    }[];
 }
 
 export default function WatchPage() {
@@ -49,6 +59,8 @@ export default function WatchPage() {
     const searchParams = useSearchParams();
     const [movie, setMovie] = useState<MovieDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
+    const isPremium = user?.subscription?.tier === 'premium';
 
     // Player State
     const [currentEpisode, setCurrentEpisode] = useState<{ name: string; slug: string; link_m3u8: string; link_embed: string } | null>(null);
@@ -100,10 +112,20 @@ export default function WatchPage() {
             else sources.add('Khác');
         });
 
+        // Add Torrent as a source for premium users if movie has torrents
+        if (isPremium && movie.torrents && movie.torrents.length > 0) {
+            sources.add('Premium');
+        }
+
         // Priority Order
-        const sourceOrder = ['NguonC', 'KKPhim', 'Ophim', 'Khác'];
+        const sourceOrder = ['Premium', 'NguonC', 'KKPhim', 'Ophim', 'Khác'];
         const sortedSources = Array.from(sources).sort((a, b) => {
-            return sourceOrder.indexOf(a) - sourceOrder.indexOf(b);
+            const indexA = sourceOrder.indexOf(a);
+            const indexB = sourceOrder.indexOf(b);
+            // Handle sources not in order list
+            const weightA = indexA === -1 ? 99 : indexA;
+            const weightB = indexB === -1 ? 99 : indexB;
+            return weightA - weightB;
         });
 
         setAvailableSources(sortedSources);
@@ -133,7 +155,24 @@ export default function WatchPage() {
                 }
                 return ep.server_name.startsWith(prefix);
             });
-            setFilteredServers(filtered);
+
+            // Add Premium Torrent servers if active source is Premium
+            if (activeSource === 'Premium' && movie.torrents) {
+                const torrentServer: Episode = {
+                    server_name: 'PREMIUM - 4K TORRENT',
+                    server_data: movie.torrents.map(t => ({
+                        name: `${t.quality} (${t.size})`,
+                        slug: `torrent-${t.quality}-${t.size}`.toLowerCase().replace(/\s+/g, '-'),
+                        // Placeholder for torrent-to-http proxy
+                        // We will handle this in handleEpisodeClick to generate the actual streaming URL
+                        link_m3u8: t.magnet,
+                        link_embed: ''
+                    }))
+                };
+                setFilteredServers([torrentServer]);
+            } else {
+                setFilteredServers(filtered);
+            }
 
             // 4. Auto-select episode from URL or first episode
             if (!currentEpisode && filtered.length > 0) {
@@ -243,11 +282,35 @@ export default function WatchPage() {
         }
     }, [currentEpisode, currentServerName, filteredServers]);
 
-    const handleEpisodeClick = (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string }) => {
+    const handleEpisodeClick = async (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string }) => {
         const isSameEpisode = currentEpisode?.slug === episode.slug;
+        let finalEpisode = { ...episode };
+
+        // Handle Torrent Magnet -> Proxy Stream URL conversion
+        if (serverName.includes('PREMIUM') && episode.link_m3u8.startsWith('magnet:')) {
+            const loadingToast = toast.loading('Đang khởi tạo luồng Torrent Premium (4K)...');
+            try {
+                const res = await fetch(`${API_URL}/api/torrent/stream?magnet=${encodeURIComponent(episode.link_m3u8)}`, {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+
+                if (data.success && data.data.streamUrl) {
+                    finalEpisode.link_m3u8 = data.data.streamUrl;
+                    toast.success('Đã sẵn sàng luồng chất lượng cao!', { id: loadingToast });
+                } else {
+                    toast.error(data.message || 'Lỗi khi khởi tạo luồng Torrent', { id: loadingToast });
+                    return; // Don't switch if it failed
+                }
+            } catch (err) {
+                console.error('Torrent fetch error:', err);
+                toast.error('Không thể kết nối với server Torrent', { id: loadingToast });
+                return;
+            }
+        }
 
         setCurrentServerName(serverName);
-        setCurrentEpisode(episode);
+        setCurrentEpisode(finalEpisode);
         setShouldAutoPlay(true);
 
         // Restore time if switching versions of the same episode
@@ -284,6 +347,7 @@ export default function WatchPage() {
         if (lowerName.includes('thuyết minh') || lowerName.includes('thuyet minh')) return 'Thuyết Minh';
         if (lowerName.includes('lồng tiếng') || lowerName.includes('long tieng')) return 'Lồng Tiếng';
         if (lowerName.includes('engsub')) return 'Engsub';
+        if (lowerName.includes('premium')) return 'Premium';
 
         // 2. Clean up if no type detected (Fallback)
         return rawName
@@ -397,12 +461,13 @@ export default function WatchPage() {
                                     <button
                                         key={source}
                                         onClick={() => setCurrentSource(source)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${currentSource === source
+                                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${currentSource === source
                                             ? 'bg-primary text-black shadow-lg shadow-primary/20'
                                             : 'bg-surface-800 text-gray-400 hover:bg-surface-700 hover:text-white border border-white/5'
                                             }`}
                                     >
-                                        Server {index + 1}
+                                        {source === 'Premium' && <Crown className="w-3.5 h-3.5" />}
+                                        {source === 'Premium' ? '4K VIP' : `Server ${index + (availableSources.includes('Premium') ? 0 : 1)}`}
                                     </button>
                                 ))}
                             </div>

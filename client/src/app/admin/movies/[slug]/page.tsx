@@ -62,6 +62,13 @@ interface Movie {
     episodes: ServerData[];
     isFeatured: boolean;
     isActive: boolean;
+    torrents?: {
+        magnet: string;
+        quality: string;
+        size: string;
+        seeders: number;
+        isPremiumOnly: boolean;
+    }[];
 }
 
 interface EditMoviePageProps {
@@ -99,6 +106,21 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
     const [newActor, setNewActor] = useState('');
     const [newDirector, setNewDirector] = useState('');
 
+    const [torrents, setTorrents] = useState<{
+        magnet: string;
+        quality: string;
+        size: string;
+        seeders: number;
+        isPremiumOnly: boolean;
+    }[]>([]);
+    const [newTorrent, setNewTorrent] = useState({
+        magnet: '',
+        quality: '1080p',
+        size: '',
+        seeders: 0,
+        isPremiumOnly: true
+    });
+
     const fetchMovieDetail = useCallback(async () => {
         try {
             setLoading(true);
@@ -128,6 +150,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                 });
                 setActors(movieData.actor || []);
                 setDirectors(movieData.director || []);
+                setTorrents(movieData.torrents || []);
             } else {
                 toast.error(data.message);
             }
@@ -169,6 +192,23 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
         setDirectors(directors.filter(d => d !== director));
     };
 
+    const addTorrent = () => {
+        if (newTorrent.magnet.trim()) {
+            setTorrents([...torrents, newTorrent]);
+            setNewTorrent({
+                magnet: '',
+                quality: '1080p',
+                size: '',
+                seeders: 0,
+                isPremiumOnly: true
+            });
+        }
+    };
+
+    const removeTorrent = (index: number) => {
+        setTorrents(torrents.filter((_, i) => i !== index));
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
@@ -177,6 +217,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                 ...formData,
                 actor: actors,
                 director: directors,
+                torrents: torrents,
                 // Keep existing category, country, episodes
                 ...(movie && {
                     category: movie.category,
@@ -518,6 +559,81 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                         ))}
                     </div>
                     <p className="text-gray-500 text-sm mt-3">Cập nhật tập phim từ crawler</p>
+                </div>
+
+                {/* Torrent Sources */}
+                <div className="bg-surface-900 rounded-lg p-6 space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-semibold text-white">Nguồn chất lượng cao (Torrent/Magnet)</h2>
+                        <span className="bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded font-bold uppercase">Premium Feature</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface-800 p-4 rounded-lg border border-white/5">
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Magnet Link</label>
+                            <Input
+                                value={newTorrent.magnet}
+                                onChange={(e) => setNewTorrent({ ...newTorrent, magnet: e.target.value })}
+                                placeholder="magnet:?xt=urn:btih:..."
+                                className="bg-surface-900 border-white/10 text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Chất lượng</label>
+                            <select
+                                value={newTorrent.quality}
+                                onChange={(e) => setNewTorrent({ ...newTorrent, quality: e.target.value })}
+                                className="w-full bg-surface-900 border border-white/10 text-white rounded-md px-3 py-2"
+                            >
+                                <option value="1080p">1080p</option>
+                                <option value="4K">4K</option>
+                                <option value="Bluray">Bluray</option>
+                                <option value="Remux">Remux</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Dung lượng</label>
+                            <Input
+                                value={newTorrent.size}
+                                onChange={(e) => setNewTorrent({ ...newTorrent, size: e.target.value })}
+                                placeholder="15 GB"
+                                className="bg-surface-900 border-white/10 text-white"
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            <Button onClick={addTorrent} className="w-full bg-primary hover:bg-primary/90 text-black font-bold">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Thêm nguồn Torrent
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 mt-6">
+                        {torrents.map((t, index) => (
+                            <div key={index} className="bg-surface-800 p-4 rounded-lg border border-white/5 flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="bg-primary text-black text-[10px] px-2 py-0.5 rounded font-black">{t.quality}</span>
+                                        <span className="text-gray-400 text-xs font-mono">{t.size}</span>
+                                    </div>
+                                    <p className="text-gray-300 text-sm truncate font-mono bg-black/20 p-2 rounded">{t.magnet}</p>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeTorrent(index)}
+                                    className="text-gray-500 hover:text-red-500"
+                                >
+                                    <X className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        ))}
+                        {torrents.length === 0 && (
+                            <div className="text-center py-8 bg-surface-800/50 rounded-lg border border-dashed border-white/10">
+                                <p className="text-gray-500 text-sm">Chưa có nguồn Torrent chất lượng cao</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

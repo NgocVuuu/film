@@ -79,7 +79,7 @@ exports.updateMovie = async (req, res) => {
             'name', 'origin_name', 'content', 'thumb_url', 'poster_url', 'trailer_url',
             'year', 'quality', 'lang', 'status', 'type', 'time', 'episode_current',
             'episode_total', 'notify', 'showtimes', 'is_copyright', 'sub_docquyen',
-            'chieurap', 'actor', 'director', 'category', 'country', 'episodes'
+            'chieurap', 'actor', 'director', 'category', 'country', 'episodes', 'torrents'
         ];
         const filteredUpdates = {};
 
