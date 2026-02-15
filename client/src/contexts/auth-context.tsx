@@ -1,8 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { API_URL } from '@/lib/config';
-import { setAuthToken, getAuthToken, removeAuthToken, customFetch } from '@/lib/api';
+import { setAuthToken, removeAuthToken, customFetch } from '@/lib/api';
 
 interface User {
     id: string;
