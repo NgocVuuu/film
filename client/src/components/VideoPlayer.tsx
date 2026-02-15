@@ -10,6 +10,12 @@ import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useWatchProgress } from '@/hooks/useWatchProgress';
 
+interface WebKitVideoElement extends HTMLVideoElement {
+    webkitSupportsPresentationMode?: (mode: string) => boolean;
+    webkitPresentationMode?: string;
+    webkitSetPresentationMode?: (mode: string) => void;
+}
+
 interface VideoPlayerProps {
     src: string;
     poster?: string;
@@ -382,9 +388,10 @@ export default function VideoPlayer({
                 }
             }
             // iOS WebKit Fallback (Safari / PWA)
-            else if ((video as any).webkitSupportsPresentationMode && (video as any).webkitSupportsPresentationMode('picture-in-picture')) {
-                const mode = (video as any).webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture';
-                (video as any).webkitSetPresentationMode(mode);
+            else if ((video as WebKitVideoElement).webkitSupportsPresentationMode && (video as WebKitVideoElement).webkitSupportsPresentationMode!('picture-in-picture')) {
+                const webkitVideo = video as WebKitVideoElement;
+                const mode = webkitVideo.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture';
+                webkitVideo.webkitSetPresentationMode!(mode);
             }
             else {
                 console.warn('PIP not supported on this browser/device');
@@ -573,7 +580,7 @@ export default function VideoPlayer({
             document.removeEventListener('fullscreenchange', onFullscreenChange);
             document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
             video.removeEventListener('webkitendfullscreen', () => setIsFullscreen(false));
-            video.removeEventListener('webkitpresentationmodechanged' as any, () => {
+            video.removeEventListener('webkitpresentationmodechanged', () => {
                 // handle iOS pip state change if needed
             });
         };
