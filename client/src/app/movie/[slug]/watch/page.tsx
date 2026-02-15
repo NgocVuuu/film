@@ -8,7 +8,6 @@ import Link from 'next/link';
 import { API_URL } from '@/lib/config';
 
 export const runtime = 'edge';
-import { usePWA } from '@/hooks/usePWA';
 import { PWAAds } from '@/components/PWAAds';
 
 

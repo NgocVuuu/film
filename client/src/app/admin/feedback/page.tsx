@@ -78,7 +78,7 @@ export default function AdminFeedbackPage() {
                 toast.success('Đã cập nhật trạng thái');
                 setFeedbacks(prev => prev.map(f => f._id === id ? { ...f, status: status as Feedback['status'] } : f));
             }
-        } catch (_error) {
+        } catch {
             toast.error('Lỗi khi cập nhật trạng thái');
         }
     };
@@ -98,7 +98,7 @@ export default function AdminFeedbackPage() {
                 toast.success('Đã xóa góp ý');
                 setFeedbacks(prev => prev.filter(f => f._id !== id));
             }
-        } catch (_error) {
+        } catch {
             toast.error('Lỗi khi xóa góp ý');
         }
     };
