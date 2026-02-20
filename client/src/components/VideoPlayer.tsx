@@ -823,8 +823,6 @@ export default function VideoPlayer({
                 </div>
             )}
 
-            )}
-
             {/* Skip Intro Button */}
             {showSkipIntro && intro && (
                 <div className="absolute bottom-24 right-4 z-30 animate-in fade-in slide-in-from-bottom-4">
