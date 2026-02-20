@@ -547,6 +547,18 @@ export default function VideoPlayer({
             hls = new Hls({
                 capLevelToPlayerSize: true,
                 autoStartLoad: true,
+                // === Memory Management (critical for long sessions / PWA) ===
+                // Max forward buffer (seconds). Default is 60s which causes memory issues.
+                maxBufferLength: 30,
+                // Back buffer: only keep 10s of already-watched video in memory.
+                // Default is Infinity - this is the #1 cause of memory leak after 30+ minutes!
+                backBufferLength: 10,
+                // Hard cap on buffer to prevent excessive RAM use
+                maxMaxBufferLength: 60,
+                // Reduce max buffer size in bytes (10MB per fragment)
+                maxBufferSize: 10 * 1024 * 1024,
+                // Disable progressive loading to avoid fragment pre-fetching too aggressively
+                progressive: false,
             });
             hlsRef.current = hls;
 

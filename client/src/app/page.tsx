@@ -31,6 +31,7 @@ export default function Home() {
 
   const [loading, setLoading] = useState(true);
   const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]); // Array for Hero
+  const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]); // New Upcoming Movies
   const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]); // New Trending
   const [continueWatchingMovies, setContinueWatchingMovies] = useState<Movie[]>([]); // New Continue Watching
 
@@ -60,6 +61,8 @@ export default function Home() {
   const [fantasyMovies, setFantasyMovies] = useState<Movie[]>([]);
   const [hkMovies, setHkMovies] = useState<Movie[]>([]);
   const [vnMovies, setVnMovies] = useState<Movie[]>([]);
+  const [hotAnimeMovies, setHotAnimeMovies] = useState<Movie[]>([]);
+  const [legendaryAnimeMovies, setLegendaryAnimeMovies] = useState<Movie[]>([]);
 
   useEffect(() => {
     // Fetch data from our Node.js server
@@ -70,6 +73,7 @@ export default function Home() {
           const {
             trendingMovies,
             featuredMovies,
+            upcomingMovies,
             latestMovies,
             continueWatching,
             chinaMovies,
@@ -95,11 +99,14 @@ export default function Home() {
             documentaryMovies,
             fantasyMovies,
             hkMovies,
-            vnMovies
+            vnMovies,
+            hotAnimeMovies,
+            legendaryAnimeMovies
           } = data.data;
 
           setTrendingMovies(trendingMovies || []);
           setFeaturedMovies(featuredMovies || []);
+          setUpcomingMovies(upcomingMovies || []);
           setContinueWatchingMovies(continueWatching || []);
 
           setLatestMovies(latestMovies || []);
@@ -127,6 +134,8 @@ export default function Home() {
           setFantasyMovies(fantasyMovies || []);
           setHkMovies(hkMovies || []);
           setVnMovies(vnMovies || []);
+          setHotAnimeMovies(hotAnimeMovies || []);
+          setLegendaryAnimeMovies(legendaryAnimeMovies || []);
         }
         setLoading(false);
       })
@@ -156,6 +165,15 @@ export default function Home() {
           <MovieCarousel
             title="Phim lẻ chiếu rạp đẳng cấp nhất"
             movies={featuredMovies}
+            viewAllLink="/danh-sach/phim-chieu-rap"
+          />
+        )}
+
+        {/* 1.5 Upcoming Movies (Chiếu rạp nhưng chỉ mới có trailer) */}
+        {upcomingMovies.length > 0 && (
+          <MovieCarousel
+            title="Phim rạp sắp chiếu"
+            movies={upcomingMovies}
             viewAllLink="/danh-sach/phim-chieu-rap"
           />
         )}
@@ -190,7 +208,21 @@ export default function Home() {
           </div>
         )}
 
-        {/* 4. Animation */}
+        {/* 4. Hot Anime */}
+        <LazyMovieSection
+          title="Top Anime & Hoạt hình Hot nhất"
+          movies={hotAnimeMovies}
+          viewAllLink="/hoat-hinh"
+        />
+
+        {/* 4.1 Legendary Anime */}
+        <LazyMovieSection
+          title="Anime Huyền thoại vượt thời gian"
+          movies={legendaryAnimeMovies}
+          viewAllLink="/hoat-hinh"
+        />
+
+        {/* 4.2 Animation */}
         <LazyMovieSection
           title="Thế giới hoạt hình đa sắc màu"
           movies={cartoonMovies}

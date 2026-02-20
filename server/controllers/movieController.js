@@ -181,6 +181,7 @@ const getHomeData = async (req, res) => {
         const [
             trendingMovies,
             featuredMovies,
+            upcomingMovies,
             latestMovies,
             chinaMovies,
             koreaMovies,
@@ -206,11 +207,15 @@ const getHomeData = async (req, res) => {
             documentaryMovies,
             fantasyMovies,
             hkMovies,
-            vnMovies
+            vnMovies,
+            hotAnimeMovies,
+            legendaryAnimeMovies
         ] = await Promise.all([
             getTrendingMoviesPromise,
-            // 2. Featured (Cinema)
-            Movie.find({ chieurap: true, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 2. Featured (Cinema - Exclude Trailer only)
+            Movie.find({ chieurap: true, isActive: { $ne: false }, episode_current: { $not: /trailer/i } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 2.5 Upcoming (Cinema - Only Trailer)
+            Movie.find({ chieurap: true, isActive: { $ne: false }, episode_current: { $regex: /trailer/i } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 3. Latest
             Movie.find({ isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 4. China
@@ -262,16 +267,20 @@ const getHomeData = async (req, res) => {
             // 26. Hong Kong
             Movie.find({ 'country.slug': 'hong-kong', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 27. Vietnam
-            Movie.find({ 'country.slug': 'viet-nam', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean()
+            Movie.find({ 'country.slug': 'viet-nam', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 28. Hot Anime
+            Movie.find({ type: 'hoathinh', isActive: { $ne: false } }).sort({ view: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 29. Legendary Anime (Older than or equal to 2015)
+            Movie.find({ type: 'hoathinh', year: { $lte: 2015 }, isActive: { $ne: false } }).sort({ view: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean()
         ]);
 
         let responseData = {
-            trendingMovies, featuredMovies, latestMovies, chinaMovies, koreaMovies,
+            trendingMovies, featuredMovies, upcomingMovies, latestMovies, chinaMovies, koreaMovies,
             usukMovies, cartoonMovies, horrorMovies, familyMovies, thailandMovies,
             japanMovies, actionMovies, romanceMovies, comedyMovies, adventureMovies,
             scifiMovies, crimeMovies, historyDramaMovies, martialArtsMovies, shortDramaMovies,
             tvShows, warMovies, mysteryMovies, schoolMovies, documentaryMovies, fantasyMovies,
-            hkMovies, vnMovies
+            hkMovies, vnMovies, hotAnimeMovies, legendaryAnimeMovies
         };
 
         if (req.user) {
@@ -280,12 +289,12 @@ const getHomeData = async (req, res) => {
 
                 // 1. Optimization: Batch fetch progress for ALL home page movies at once
                 const allMovies = [
-                    ...trendingMovies, ...featuredMovies, ...latestMovies, ...chinaMovies, ...koreaMovies,
+                    ...trendingMovies, ...featuredMovies, ...upcomingMovies, ...latestMovies, ...chinaMovies, ...koreaMovies,
                     ...usukMovies, ...cartoonMovies, ...horrorMovies, ...familyMovies, ...thailandMovies,
                     ...japanMovies, ...actionMovies, ...romanceMovies, ...comedyMovies, ...adventureMovies,
                     ...scifiMovies, ...crimeMovies, ...historyDramaMovies, ...martialArtsMovies, ...shortDramaMovies,
                     ...tvShows, ...warMovies, ...mysteryMovies, ...schoolMovies, ...documentaryMovies, ...fantasyMovies,
-                    ...hkMovies, ...vnMovies
+                    ...hkMovies, ...vnMovies, ...hotAnimeMovies, ...legendaryAnimeMovies
                 ];
 
                 const allSlugs = [...new Set(allMovies.map(m => m.slug))];
