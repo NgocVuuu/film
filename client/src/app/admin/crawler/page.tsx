@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Play, Loader2, RefreshCw, Trash2, ShieldAlert, Download } from 'lucide-react';
+import { Play, Loader2, RefreshCw, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
@@ -106,7 +106,7 @@ export default function AdminCrawlerPage() {
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi khởi động crawler');
         }
     };
@@ -121,7 +121,7 @@ export default function AdminCrawlerPage() {
                 toast.success(data.message);
                 fetchStatus();
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi dừng crawler');
         }
     };
@@ -143,7 +143,7 @@ export default function AdminCrawlerPage() {
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi thêm blacklist');
         }
     };
@@ -163,7 +163,7 @@ export default function AdminCrawlerPage() {
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi xóa blacklist');
         }
     };
@@ -196,7 +196,7 @@ export default function AdminCrawlerPage() {
             } else {
                 toast.error(data.message, { id: 'fetch-movie' });
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi khi tải phim', { id: 'fetch-movie' });
         } finally {
             setFetching(false);

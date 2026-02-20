@@ -95,6 +95,7 @@ export default function AdminDashboardPage() {
 
     const maxViews = Math.max(...(stats?.topMovies.map(m => m.view) || [1]));
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (

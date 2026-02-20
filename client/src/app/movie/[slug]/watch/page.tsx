@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
 import { Play, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { ReportModal } from '@/components/ReportModal';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
