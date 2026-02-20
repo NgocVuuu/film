@@ -262,7 +262,7 @@ export default function Home() {
 
         {/* 14. Family / Animation for kids */}
         <LazyMovieSection
-          title="Phim hoạt hình cho trẻ em và gia đình"
+          title="Phim Gia Đình Gắn Kết Yêu Thương"
           movies={familyMovies}
           viewAllLink="/the-loai/gia-dinh"
         />

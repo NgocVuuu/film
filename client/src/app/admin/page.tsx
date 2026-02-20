@@ -32,6 +32,20 @@ interface DashboardStats {
     userTrends: TrendData[];
 }
 
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    BarChart,
+    Bar
+} from 'recharts';
+
+// ... (keep existing interfaces except TrendData might need adjustment if not compatible)
+
 export default function AdminDashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -80,6 +94,20 @@ export default function AdminDashboardPage() {
     }
 
     const maxViews = Math.max(...(stats?.topMovies.map(m => m.view) || [1]));
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-surface-800 border border-white/10 p-3 rounded shadow-xl">
+                    <p className="text-white font-medium mb-1">{new Date(label).toLocaleDateString('vi-VN')}</p>
+                    <p className="text-primary text-sm">
+                        {payload[0].name}: {formatNumber(payload[0].value)}
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    };
 
     return (
         <div>
@@ -184,80 +212,98 @@ export default function AdminDashboardPage() {
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {/* Top Movies Chart */}
-                <div className="bg-surface-900 border border-white/10 rounded-xl p-6 overflow-hidden">
-                    <h2 className="text-xl font-bold text-white mb-6">Top 10 Movies by Views</h2>
-                    <div className="space-y-4">
-                        {stats?.topMovies.slice(0, 10).map((movie, index) => (
-                            <div key={movie.slug}>
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        <span className="text-gray-500 font-mono text-sm w-6 shrink-0">#{index + 1}</span>
-                                        <span className="text-white text-sm truncate">{movie.name}</span>
-                                    </div>
-                                    <span className="text-primary text-sm font-semibold ml-2 shrink-0">
-                                        {formatNumber(movie.view)}
-                                    </span>
-                                </div>
-                                <div className="w-full bg-surface-800 rounded-full h-2 overflow-hidden">
-                                    <div
-                                        className="bg-linear-to-r from-primary to-yellow-500 h-full rounded-full transition-all"
-                                        style={{ width: `${(movie.view / maxViews) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-                        ))}
+                {/* View Trends Chart */}
+                <div className="bg-surface-900 border border-white/10 rounded-xl p-6">
+                    <h2 className="text-xl font-bold text-white mb-6">Lượt xem (30 ngày qua)</h2>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={stats?.viewTrends.slice(-30)}>
+                                <defs>
+                                    <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#E50914" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#E50914" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                                <XAxis
+                                    dataKey="date"
+                                    stroke="#6b7280"
+                                    fontSize={12}
+                                    tickFormatter={(str) => {
+                                        const date = new Date(str);
+                                        return `${date.getDate()}/${date.getMonth() + 1}`;
+                                    }}
+                                />
+                                <YAxis stroke="#6b7280" fontSize={12} />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Area
+                                    type="monotone"
+                                    dataKey="views"
+                                    name="Lượt xem"
+                                    stroke="#E50914"
+                                    fillOpacity={1}
+                                    fill="url(#colorViews)"
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* View Trends Chart */}
-                <div className="bg-surface-900 border border-white/10 rounded-xl p-6 overflow-hidden">
-                    <h2 className="text-xl font-bold text-white mb-6">View Trends (Last 30 Days)</h2>
-                    <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-white/10">
-                        <div className="h-64 flex items-end gap-1 min-w-[500px]">
-                            {stats?.viewTrends.slice(-30).map((trend, index) => {
-                                const maxTrendViews = Math.max(...(stats?.viewTrends.map(t => t.views || 0) || [1]));
-                                const height = ((trend.views || 0) / maxTrendViews) * 100;
-                                return (
-                                    <div key={index} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                                        <div
-                                            className="w-full bg-linear-to-t from-blue-500 to-purple-500 rounded-t transition-all hover:opacity-80"
-                                            style={{ height: `${height}%` }}
-                                        />
-                                        <div className="absolute -top-12 hidden group-hover:block bg-surface-800 p-2 rounded text-[10px] text-white whitespace-nowrap z-30 shadow-xl border border-white/10">
-                                            {formatNumber(trend.views || 0)} views<br />
-                                            {new Date(trend.date).toLocaleDateString('vi-VN')}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                {/* User Registration Trends */}
+                <div className="bg-surface-900 border border-white/10 rounded-xl p-6">
+                    <h2 className="text-xl font-bold text-white mb-6">Người dùng mới (30 ngày qua)</h2>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={stats?.userTrends.slice(-30)}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                                <XAxis
+                                    dataKey="date"
+                                    stroke="#6b7280"
+                                    fontSize={12}
+                                    tickFormatter={(str) => {
+                                        const date = new Date(str);
+                                        return `${date.getDate()}/${date.getMonth() + 1}`;
+                                    }}
+                                />
+                                <YAxis stroke="#6b7280" fontSize={12} allowDecimals={false} />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Bar
+                                    dataKey="users"
+                                    name="Người dùng mới"
+                                    fill="#3b82f6"
+                                    radius={[4, 4, 0, 0]}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
             </div>
 
-            {/* User Registration Trends */}
-            <div className="bg-surface-900 border border-white/10 rounded-xl p-6 mb-8 overflow-hidden">
-                <h2 className="text-xl font-bold text-white mb-6">User Registration Trends (Last 30 Days)</h2>
-                <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-white/10">
-                    <div className="h-48 flex items-end gap-1 min-w-[500px]">
-                        {stats?.userTrends.slice(-30).map((trend, index) => {
-                            const maxTrendUsers = Math.max(...(stats?.userTrends.map(t => t.users || 0) || [1]));
-                            const height = ((trend.users || 0) / maxTrendUsers) * 100;
-                            return (
-                                <div key={index} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                                    <div
-                                        className="w-full bg-linear-to-t from-blue-500 to-purple-500 rounded-t transition-all hover:opacity-80"
-                                        style={{ height: `${height}%` }}
-                                    />
-                                    <div className="absolute -top-12 hidden group-hover:block bg-surface-800 p-2 rounded text-[10px] text-white whitespace-nowrap z-30 shadow-xl border border-white/10">
-                                        {formatNumber(trend.users || 0)} users<br />
-                                        {new Date(trend.date).toLocaleDateString('vi-VN')}
-                                    </div>
+            {/* Top Movies List */}
+            <div className="bg-surface-900 border border-white/10 rounded-xl p-6 mb-8">
+                <h2 className="text-xl font-bold text-white mb-6">Top 10 Phim Xem Nhiều Nhất</h2>
+                <div className="space-y-4">
+                    {stats?.topMovies.slice(0, 10).map((movie, index) => (
+                        <div key={movie.slug}>
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <span className={`font-mono text-sm w-6 shrink-0 font-bold ${index < 3 ? 'text-primary' : 'text-gray-500'}`}>
+                                        #{index + 1}
+                                    </span>
+                                    <span className="text-white text-sm truncate">{movie.name}</span>
                                 </div>
-                            );
-                        })}
-                    </div>
+                                <span className="text-gray-400 text-sm font-semibold ml-2 shrink-0">
+                                    {formatNumber(movie.view)} lượt xem
+                                </span>
+                            </div>
+                            <div className="w-full bg-surface-800 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all ${index < 3 ? 'bg-primary' : 'bg-gray-600'}`}
+                                    style={{ width: `${(movie.view / maxViews) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

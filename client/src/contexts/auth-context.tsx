@@ -1,4 +1,5 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { setAuthToken, removeAuthToken, customFetch } from '@/lib/api';
@@ -33,6 +34,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+    const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -78,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             toast.success('Đã đăng xuất thành công');
             // Force a hard reload to login to clear all route history/cache
             // In PWA, redirecting might be smoother than href reload if state is cleared
-            window.location.href = '/login';
+            router.push('/login');
         }
     };
 

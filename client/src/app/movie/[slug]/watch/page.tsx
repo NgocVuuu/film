@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
-import { Play, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Play, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ReportModal } from '@/components/ReportModal';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
 
@@ -20,6 +21,8 @@ interface Episode {
         slug: string;
         link_m3u8: string;
         link_embed: string;
+        time_intro?: number[];
+        time_outro?: number[];
     }[];
 }
 
@@ -51,7 +54,7 @@ export default function WatchPage() {
     const [loading, setLoading] = useState(true);
 
     // Player State
-    const [currentEpisode, setCurrentEpisode] = useState<{ name: string; slug: string; link_m3u8: string; link_embed: string } | null>(null);
+    const [currentEpisode, setCurrentEpisode] = useState<{ name: string; slug: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] } | null>(null);
     const [currentServerName, setCurrentServerName] = useState<string>('');
     const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
     const [startTime, setStartTime] = useState<number>(0);
@@ -63,8 +66,8 @@ export default function WatchPage() {
     const [filteredServers, setFilteredServers] = useState<Episode[]>([]);
 
     // Next/Prev Episode State
-    const [prevEpisode, setPrevEpisode] = useState<{ server: string; episode: { name: string; slug: string; link_m3u8: string; link_embed: string } } | null>(null);
-    const [nextEpisode, setNextEpisode] = useState<{ server: string; episode: { name: string; slug: string; link_m3u8: string; link_embed: string } } | null>(null);
+    const [prevEpisode, setPrevEpisode] = useState<{ server: string; episode: { name: string; slug: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] } } | null>(null);
+    const [nextEpisode, setNextEpisode] = useState<{ server: string; episode: { name: string; slug: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] } } | null>(null);
 
     // Get query params
     const episodeParam = searchParams.get('episode');
@@ -243,7 +246,7 @@ export default function WatchPage() {
         }
     }, [currentEpisode, currentServerName, filteredServers]);
 
-    const handleEpisodeClick = (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string }) => {
+    const handleEpisodeClick = (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] }) => {
         const isSameEpisode = currentEpisode?.slug === episode.slug;
 
         setCurrentServerName(serverName);
@@ -312,9 +315,17 @@ export default function WatchPage() {
                         </p>
                     </div>
                     <div className="hidden md:flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="text-xs text-gray-400 hover:text-red-400">
-                            <AlertTriangle className="w-4 h-4 mr-1" /> Báo lỗi
-                        </Button>
+                        <div className="hidden md:flex items-center gap-2">
+                            {movie && (
+                                <ReportModal
+                                    movieSlug={movie.slug}
+                                    movieName={movie.name}
+                                    episodeSlug={currentEpisode?.slug}
+                                    episodeName={currentEpisode?.name}
+                                    serverName={currentServerName}
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -343,6 +354,8 @@ export default function WatchPage() {
                                 episodeSlug={currentEpisode.slug}
                                 episodeName={currentEpisode.name}
                                 serverName={currentServerName}
+                                intro={currentEpisode.time_intro}
+                                outro={currentEpisode.time_outro}
                                 startTime={startTime}
                                 onTimeUpdate={(time) => setPlayerTime(time)}
                                 onEnded={handleNextEpisode}
@@ -427,7 +440,7 @@ export default function WatchPage() {
                                         {getCleanServerName(server.server_name)}
                                     </h4>
                                     <div className="grid grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                                        {server.server_data.map((ep: { slug: string; name: string; link_m3u8: string; link_embed: string }) => {
+                                        {server.server_data.map((ep: { slug: string; name: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] }) => {
                                             const isActive = currentEpisode === ep;
                                             return (
                                                 <button

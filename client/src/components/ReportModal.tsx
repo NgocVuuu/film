@@ -23,9 +23,10 @@ interface ReportModalProps {
     movieName: string;
     episodeSlug?: string;
     episodeName?: string;
+    serverName?: string;
 }
 
-export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName }: ReportModalProps) {
+export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName, serverName }: ReportModalProps) {
     const [open, setOpen] = useState(false);
     const [content, setContent] = useState('');
     const [loading, setLoading] = useState(false);
@@ -44,6 +45,7 @@ export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName }: 
                     movieName,
                     episodeSlug,
                     episodeName,
+                    serverName,
                     content: `[${issueType}] ${content}`
                 })
             });
@@ -68,16 +70,8 @@ export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName }: 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 text-yellow-500 border-yellow-500/50 hover:bg-yellow-500/10"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }}
-                >
-                    <Flag className="w-4 h-4" /> Báo lỗi
+                <Button variant="ghost" size="sm" className="text-xs text-gray-400 hover:text-red-400 gap-1">
+                    <AlertTriangle className="w-4 h-4" /> Báo lỗi
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-106.25 max-w-[90vw] bg-surface-900 border-white/10 text-white">

@@ -281,16 +281,17 @@ exports.getDashboardStats = async (req, res) => {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const viewTrends = await WatchProgress.aggregate([
+        const ViewLog = require('../models/ViewLog');
+        const viewTrends = await ViewLog.aggregate([
             {
                 $match: {
-                    updatedAt: { $gte: thirtyDaysAgo }
+                    createdAt: { $gte: thirtyDaysAgo }
                 }
             },
             {
                 $group: {
                     _id: {
-                        $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' }
+                        $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
                     },
                     count: { $sum: 1 }
                 }
@@ -349,4 +350,32 @@ exports.getDashboardStats = async (req, res) => {
             message: 'Lỗi khi lấy thống kê'
         });
     }
+};
+
+// Crawler Control
+const crawler = require('../crawler');
+
+exports.getCrawlerStatus = (req, res) => {
+    const status = crawler.getStatus();
+    res.json({ success: true, data: status });
+};
+
+exports.getCrawlerLogs = (req, res) => {
+    const logs = crawler.getLogs();
+    res.json({ success: true, data: logs });
+};
+
+exports.startCrawler = async (req, res) => {
+    const options = req.body; // { full: boolean, fromPage, toPage }
+    const result = await crawler.startCrawl(options);
+    if (result.success) {
+        res.json(result);
+    } else {
+        res.status(400).json(result);
+    }
+};
+
+exports.stopCrawler = (req, res) => {
+    const result = crawler.stopCrawl();
+    res.json(result);
 };

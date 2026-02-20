@@ -27,6 +27,8 @@ interface VideoPlayerProps {
     episodeSlug?: string;
     episodeName?: string;
     serverName?: string;
+    intro?: number[];
+    outro?: number[];
     startTime?: number;  // Optional start time from URL param
     onEnded?: () => void;  // Callback when video ends
     nextEpisodeInfo?: {
@@ -65,6 +67,8 @@ export default function VideoPlayer({
     episodeSlug,
     episodeName,
     serverName,
+    intro,
+    outro,
     startTime = 0,
     onEnded,
     nextEpisodeInfo,
@@ -148,6 +152,19 @@ export default function VideoPlayer({
             savedTimeRef.current = time;
             setDuration(dur);
 
+            // SKIP INTRO LOGIC
+            if (intro && intro.length === 2 && time >= intro[0] && time < intro[1]) {
+                setShowSkipIntro(true);
+            } else {
+                setShowSkipIntro(false);
+            }
+
+            // AUTO NEXT / SKIP OUTRO LOGIC (Optional auto-skip or button)
+            if (outro && outro.length === 2 && time >= outro[0] && time < outro[1]) {
+                // For now, maybe just show a button or do nothing until requested
+                // setShowSkipOutro(true);
+            }
+
             if (onTimeUpdate) onTimeUpdate(time);
 
             // Auto-save progress (debounced)
@@ -188,6 +205,8 @@ export default function VideoPlayer({
             setIsMuted(value === 0);
         }
     };
+
+    const [showSkipIntro, setShowSkipIntro] = useState(false);
 
     // Seek forward/backward
     const seekVideo = (seconds: number) => {
@@ -423,6 +442,21 @@ export default function VideoPlayer({
     };
 
     // -- HLS & Init --
+
+    // Track view for anonymous users
+    useEffect(() => {
+        if (!user && movieSlug && episodeSlug) {
+            // Wait a bit to ensure it's a real view (e.g. 5s)
+            const timer = setTimeout(() => {
+                fetch('/api/progress/track-view', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ movieSlug, episodeSlug })
+                }).catch(err => console.error('Track view error', err));
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [user, movieSlug, episodeSlug]);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -786,6 +820,28 @@ export default function VideoPlayer({
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 pointer-events-none">
                     <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                </div>
+            )}
+
+            )}
+
+            {/* Skip Intro Button */}
+            {showSkipIntro && intro && (
+                <div className="absolute bottom-24 right-4 z-30 animate-in fade-in slide-in-from-bottom-4">
+                    <Button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (videoRef.current && intro) {
+                                videoRef.current.currentTime = intro[1];
+                                setCurrentTime(intro[1]);
+                                setShowSkipIntro(false);
+                            }
+                        }}
+                        className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/10 gap-2 pl-3 pr-4 h-10 rounded-full font-medium shadow-lg transition-all"
+                    >
+                        <SkipForward className="w-4 h-4 fill-current" />
+                        Bỏ qua giới thiệu
+                    </Button>
                 </div>
             )}
 

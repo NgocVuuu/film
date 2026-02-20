@@ -3,7 +3,10 @@ const router = express.Router();
 const progressController = require('../controllers/progressController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
-// All routes require authentication
+// Public route for tracking views (anonymous allowed)
+router.post('/track-view', progressController.trackView);
+
+// All routes below require authentication
 router.use(authMiddleware);
 
 // Save/update progress

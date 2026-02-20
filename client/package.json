@@ -27,6 +27,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.6.0",
+    "recharts": "^3.7.0",
     "tailwind-merge": "^3.4.0",
     "workbox-core": "^7.3.0",
     "workbox-precaching": "^7.3.0",

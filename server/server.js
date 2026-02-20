@@ -67,33 +67,73 @@ app.use(helmet({
     referrerPolicy: { policy: "strict-origin-when-cross-origin" }
 }));
 
-// Custom Mongo Sanitize (In-place to support Express 5)
-app.use((req, res, next) => {
-    const sanitize = (obj) => {
-        if (obj instanceof Object) {
-            for (const key in obj) {
-                if (/^\$/.test(key)) {
-                    delete obj[key];
-                } else {
-                    sanitize(obj[key]);
-                }
+const mongoSanitize = (obj) => {
+    if (obj instanceof Object) {
+        for (const key in obj) {
+            if (key.startsWith('$') || key.includes('.')) {
+                delete obj[key];
+            } else {
+                mongoSanitize(obj[key]);
             }
         }
-    };
-    sanitize(req.body);
-    sanitize(req.query);
-    sanitize(req.params);
+    }
+    return obj;
+};
+
+// Custom Mongo Sanitize Middleware (In-place)
+app.use((req, res, next) => {
+    if (req.body) mongoSanitize(req.body);
+    if (req.query) mongoSanitize(req.query);
+    if (req.params) mongoSanitize(req.params);
     next();
 });
 
-// app.use(xss()); // Incompatible
+// Custom XSS Sanitizer (Alternative to xss-clean for Express 5)
+app.use((req, res, next) => {
+    const sanitizeXss = (obj) => {
+        if (!obj) return null;
+
+        if (Array.isArray(obj)) {
+            for (let i = 0; i < obj.length; i++) {
+                if (typeof obj[i] === 'string') {
+                    obj[i] = obj[i].replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                } else if (typeof obj[i] === 'object' && obj[i] !== null) {
+                    sanitizeXss(obj[i]);
+                }
+            }
+        } else if (typeof obj === 'object') {
+            Object.keys(obj).forEach(key => {
+                const value = obj[key];
+                if (typeof value === 'string') {
+                    obj[key] = value.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                } else if (typeof value === 'object' && value !== null) {
+                    sanitizeXss(value);
+                }
+            });
+        }
+    };
+
+    if (req.body) sanitizeXss(req.body);
+    if (req.query) sanitizeXss(req.query);
+    if (req.params) sanitizeXss(req.params);
+
+    next();
+});
+
 app.use(hpp());
 
 // Rate Limiting (100 requests per 10 minutes)
+// Check for essential environment variables
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL ERROR: JWT_SECRET is not defined in .env');
+    process.exit(1);
+}
+
+// Rate Limiting (1000 requests per 15 minutes)
 const limiter = rateLimit({
-    windowMs: 10 * 60 * 1000,
-    max: 100,
-    message: { success: false, message: 'Bạn đã yêu cầu quá nhanh, vui lòng thử lại sau 10 phút.' },
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    message: { success: false, message: 'Bạn đã yêu cầu quá nhanh, vui lòng thử lại sau 15 phút.' },
     standardHeaders: true,
     legacyHeaders: false,
 });

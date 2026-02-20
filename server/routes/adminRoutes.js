@@ -75,4 +75,10 @@ router.get('/notifications/sent', adminNotificationController.getSentNotificatio
 const adminEmailController = require('../controllers/adminEmailController');
 router.post('/test-email', adminEmailController.testEmail);
 
+// Crawler
+router.get('/crawler/status', adminController.getCrawlerStatus);
+router.get('/crawler/logs', adminController.getCrawlerLogs);
+router.post('/crawler/start', adminController.startCrawler);
+router.post('/crawler/stop', adminController.stopCrawler);
+
 module.exports = router;

@@ -16,78 +16,74 @@ const multiSourceSearch = async (keyword) => {
 
     // Parallel search across 3 sources
     const results = await Promise.allSettled([
-        axios.get(`https://ophim1.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}`, { timeout: 5000 }),
-        axios.get(`https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}`, { timeout: 5000 }),
-        axios.get(`https://phim.nguonc.com/api/films/search?keyword=${encodeURIComponent(keyword)}`, { timeout: 5000 })
+        axios.get(`https://ophim1.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}`, { timeout: 3000 }), // Adjusted to 3s
+        axios.get(`https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}`, { timeout: 3000 }), // Adjusted to 3s
+        axios.get(`https://phim.nguonc.com/api/films/search?keyword=${encodeURIComponent(keyword)}`, { timeout: 3000 }) // Adjusted to 3s
     ]);
 
     const allMovies = new Map(); // Use Map to merge by slug
 
-    // 1. Process KKPhim (Priority 1)
-    if (results[1].status === 'fulfilled' && results[1].value.data.status === 'success') {
-        const items = results[1].value.data.data.items || [];
-        items.forEach(m => {
-            allMovies.set(m.slug, {
-                _id: m._id,
-                name: m.name,
-                slug: m.slug,
-                origin_name: m.origin_name,
-                thumb_url: m.thumb_url,
-                poster_url: m.poster_url,
-                year: m.year,
-                type: m.type,
-                quality: m.quality,
-                episode_current: m.episode_current,
-                fromExternal: true,
-                source: 'KKPhim'
-            });
-        });
-    }
+    results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+            try {
+                // Ophim (Index 0) & KKPhim (Index 1) - Similar structure
+                if (index === 0 || index === 1) {
+                    const data = result.value.data;
+                    // Check for different response structures
+                    const items = data?.data?.items || data?.items || [];
 
-    // 2. Process NguonC (Priority 2)
-    if (results[2].status === 'fulfilled' && results[2].value.data.status === 'success') {
-        const items = results[2].value.data.items || [];
-        items.forEach(m => {
-            if (!allMovies.has(m.slug)) {
-                allMovies.set(m.slug, {
-                    name: m.name,
-                    slug: m.slug,
-                    origin_name: m.original_name,
-                    thumb_url: m.thumb_url,
-                    poster_url: m.poster_url,
-                    year: m.year,
-                    type: m.type,
-                    quality: m.quality,
-                    episode_current: m.episode_current,
-                    fromExternal: true,
-                    source: 'NguonC'
-                });
+                    items.forEach(m => {
+                        const sourceName = index === 0 ? 'Ophim' : 'KKPhim';
+                        // Prioritize existing entries/higher priority sources if needed
+                        if (!allMovies.has(m.slug)) {
+                            allMovies.set(m.slug, {
+                                name: m.name,
+                                slug: m.slug,
+                                origin_name: m.origin_name,
+                                thumb_url: m.thumb_url,
+                                poster_url: m.poster_url,
+                                year: m.year,
+                                type: m.type,
+                                // KKPhim/Ophim specific fields
+                                _id: m._id,
+                                quality: m.quality,
+                                episode_current: m.episode_current,
+                                fromExternal: true,
+                                source: sourceName
+                            });
+                        }
+                    });
+                }
+                // NguonC (Index 2)
+                else if (index === 2) {
+                    const data = result.value.data;
+                    const items = data?.items || [];
+                    items.forEach(m => {
+                        if (!allMovies.has(m.slug)) {
+                            allMovies.set(m.slug, {
+                                name: m.name,
+                                slug: m.slug,
+                                origin_name: m.original_name, // NguonC uses original_name
+                                thumb_url: m.thumb_url,
+                                poster_url: m.poster_url,
+                                year: m.year, // Verify if NguonC provides year
+                                type: m.type,
+                                quality: m.quality,
+                                episode_current: m.current_episode, // NguonC might use different field
+                                fromExternal: true,
+                                source: 'NguonC'
+                            });
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error(`Error processing result from source ${index}:`, err.message);
             }
-        });
-    }
-
-    // 3. Process Ophim (Priority 3)
-    if (results[0].status === 'fulfilled' && (results[0].value.data.status === 'success' || results[0].value.data.status === true)) {
-        const items = results[0].value.data.data.items || [];
-        items.forEach(m => {
-            if (!allMovies.has(m.slug)) {
-                allMovies.set(m.slug, {
-                    _id: m._id,
-                    name: m.name,
-                    slug: m.slug,
-                    origin_name: m.origin_name,
-                    thumb_url: m.thumb_url,
-                    poster_url: m.poster_url,
-                    year: m.year,
-                    type: m.type,
-                    quality: m.quality,
-                    episode_current: m.episode_current,
-                    fromExternal: true,
-                    source: 'Ophim'
-                });
-            }
-        });
-    }
+        } else {
+            // Log failure but don't stop
+            // console.warn(`Source ${index} failed:`, result.reason?.message);
+        }
+    });
 
     const finalResults = Array.from(allMovies.values()).map(m => {
         const processImg = (path, source) => {
@@ -95,7 +91,7 @@ const multiSourceSearch = async (keyword) => {
             let base = '';
             if (source === 'KKPhim') base = 'https://phimimg.com';
             if (source === 'NguonC') base = 'https://phim.nguonc.com';
-            if (source === 'Ophim') base = 'https://img.ophim.live/uploads/movies'; // OPhim base usually varies but search results often use this or similar
+            if (source === 'Ophim') base = 'https://img.ophim.live/uploads/movies';
 
             if (!base) return path;
             return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
@@ -107,6 +103,7 @@ const multiSourceSearch = async (keyword) => {
             poster_url: processImg(m.poster_url, m.source)
         };
     });
+
     searchCache.set(cacheKey, finalResults);
     return finalResults;
 };
@@ -114,6 +111,73 @@ const multiSourceSearch = async (keyword) => {
 // 1. Get Home Data (Aggregated)
 const getHomeData = async (req, res) => {
     try {
+        const start = Date.now();
+        // 0. Trending Logic (TMDB + Local Fallback)
+        const getTrendingMoviesPromise = (async () => {
+            let trendingMovies = [];
+            try {
+                const TMDB_API_KEY = process.env.TMDB_API_KEY;
+                if (TMDB_API_KEY) {
+                    const cacheKey = 'tmdb_trending_day';
+                    let tmdbData = searchCache.get(cacheKey);
+
+                    if (!tmdbData) {
+                        try {
+                            const tmdbRes = await axios.get(`https://api.themoviedb.org/3/trending/all/day?api_key=${TMDB_API_KEY}&language=vi`, { timeout: 3000 });
+                            tmdbData = tmdbRes.data.results || [];
+                            searchCache.set(cacheKey, tmdbData, 3600);
+                        } catch (timeoutErr) {
+                            console.error('TMDB Fetch Timeout/Error:', timeoutErr.message);
+                        }
+                    }
+
+                    if (tmdbData && tmdbData.length > 0) {
+                        const tmdbTitles = tmdbData.map(m => m.title || m.name).filter(Boolean);
+                        const tmdbOriginalTitles = tmdbData.map(m => m.original_title || m.original_name).filter(Boolean);
+
+                        const localMatches = await Movie.find({
+                            isActive: { $ne: false },
+                            $or: [
+                                { name: { $in: tmdbTitles } },
+                                { origin_name: { $in: tmdbOriginalTitles } }
+                            ]
+                        }).select('-content -episodes -director -actor').lean();
+
+                        if (localMatches.length > 0) {
+                            const orderMap = new Map();
+                            tmdbData.forEach((item, index) => {
+                                if (item.title) orderMap.set(item.title.toLowerCase(), index);
+                                if (item.name) orderMap.set(item.name.toLowerCase(), index);
+                                if (item.original_title) orderMap.set(item.original_title.toLowerCase(), index);
+                                if (item.original_name) orderMap.set(item.original_name.toLowerCase(), index);
+                            });
+
+                            trendingMovies = localMatches.sort((a, b) => {
+                                const indexA = orderMap.get((a.name || '').toLowerCase()) ?? orderMap.get((a.origin_name || '').toLowerCase()) ?? 100;
+                                const indexB = orderMap.get((b.name || '').toLowerCase()) ?? orderMap.get((b.origin_name || '').toLowerCase()) ?? 100;
+                                return indexA - indexB;
+                            });
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Trending Logic Error:', err.message);
+            }
+
+            if (trendingMovies.length < 5) {
+                const localTrending = await Movie.find({
+                    isActive: { $ne: false },
+                    updatedAt: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 3)) }
+                }).sort({ view: -1 }).limit(10).select('-content -episodes -director -actor').lean();
+
+                const existingIds = new Set(trendingMovies.map(m => m._id.toString()));
+                const additional = localTrending.filter(m => !existingIds.has(m._id.toString()));
+                trendingMovies = [...trendingMovies, ...additional].slice(0, 10);
+            }
+            return trendingMovies;
+        })();
+
+        // Execute all queries in parallel
         const [
             trendingMovies,
             featuredMovies,
@@ -144,125 +208,127 @@ const getHomeData = async (req, res) => {
             hkMovies,
             vnMovies
         ] = await Promise.all([
-            // 1. Trending
-            Movie.find({ isActive: { $ne: false } }).sort({ view: -1 }).limit(10).select('-content -episodes -director -actor'),
+            getTrendingMoviesPromise,
             // 2. Featured (Cinema)
-            Movie.find({ chieurap: true, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ chieurap: true, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 3. Latest
-            Movie.find({ isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 4. China
-            Movie.find({ 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 5. Korea
-            Movie.find({ 'country.slug': 'han-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'country.slug': 'han-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 6. Western (Holland/USUK) - Single movies only for blockbuster feel
-            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] }, type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 7. Cartoon/Anime (All countries as per user request)
-            Movie.find({ type: 'hoathinh', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] }, type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 7. Cartoon/Anime (Kids & Family only as per label)
+            Movie.find({ type: 'hoathinh', 'category.slug': 'gia-dinh', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 8. Horror - Single movies prioritize
-            Movie.find({ 'category.slug': 'kinh-di', type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 9. Family/Kids
-            Movie.find({ 'category.slug': 'gia-dinh', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'category.slug': 'kinh-di', type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 9. Family/Kids - Live Action Only (Exclude Animation)
+            Movie.find({ 'category.slug': 'gia-dinh', type: { $ne: 'hoathinh' }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 10. Thailand
-            Movie.find({ 'country.slug': 'thai-lan', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 11. Action - Single movies only for high-octane feel
-            Movie.find({ 'category.slug': 'hanh-dong', type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 12. Romance
-            Movie.find({ 'category.slug': 'tinh-cam', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 13. Comedy
-            Movie.find({ 'category.slug': 'hai-huoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 14. Adventure
-            Movie.find({ 'category.slug': 'phieu-luu', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 15. Sci-Fi - Single movies prioritize
-            Movie.find({ 'category.slug': 'vien-tuong', type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 16. Crime
-            Movie.find({ 'category.slug': 'hinh-su', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'country.slug': 'thai-lan', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 11. Japan
+            Movie.find({ 'country.slug': 'nhat-ban', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 12. Action - Exclude Animation & TV Shows
+            Movie.find({ 'category.slug': 'hanh-dong', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 12. Romance - Exclude Animation & TV Shows
+            Movie.find({ 'category.slug': 'tinh-cam', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 13. Comedy - Exclude Animation & TV Shows
+            Movie.find({ 'category.slug': 'hai-huoc', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 14. Adventure - Exclude Animation & TV Shows
+            Movie.find({ 'category.slug': 'phieu-luu', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 15. Sci-Fi - Exclude Animation & TV Shows
+            Movie.find({ 'category.slug': 'vien-tuong', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 16. Crime - Exclude Animation & TV Shows
+            Movie.find({ 'category.slug': 'hinh-su', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 17. Historical/Cổ Trang (Strictly China as per plan)
-            Movie.find({ 'category.slug': 'co-trang', 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 18. Martial Arts (Series allowed as per user request)
-            Movie.find({ 'category.slug': 'vo-thuat', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'category.slug': 'co-trang', 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 18. Martial Arts - Exclude Animation & TV Shows
+            Movie.find({ 'category.slug': 'vo-thuat', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 19. Short Drama
-            Movie.find({ 'category.slug': 'short-drama', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 20. TV Show
-            Movie.find({ type: 'tvshows', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 21. War
-            Movie.find({ 'category.slug': 'chien-tranh', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 22. Mystery
-            Movie.find({ 'category.slug': 'bi-an', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 23. School (Strictly China as per user request)
-            Movie.find({ 'category.slug': 'hoc-duong', 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 24. Documentary
-            Movie.find({ 'category.slug': 'tai-lieu', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 25. Fantasy
-            Movie.find({ 'category.slug': 'than-thoai', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 26. Hong Kong - Single movies focus
-            Movie.find({ 'country.slug': 'hong-kong', type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
-            // 27. Vietnam - Single movies focus
-            Movie.find({ 'country.slug': 'viet-nam', type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor'),
+            Movie.find({ 'category.slug': 'short-drama', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 20. TV Shows - Use type: 'tvshows' strictly
+            Movie.find({ type: 'tvshows', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 21. War - Exclude Animation & TV Shows
+            Movie.find({ 'category.slug': 'chien-tranh', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 22. Mystery - Exclude Animation & TV Shows
+            Movie.find({ 'category.slug': 'bi-an', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 23. School - Filter by China & Exclude Animation
+            Movie.find({ 'category.slug': 'hoc-duong', 'country.slug': 'trung-quoc', type: { $ne: 'hoathinh' }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 24. Documentary - Exclude Animation
+            Movie.find({ 'category.slug': 'tai-lieu', type: { $ne: 'hoathinh' }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 25. Fantasy - Exclude Animation & TV Shows
+            Movie.find({ 'category.slug': 'than-thoai', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 26. Hong Kong
+            Movie.find({ 'country.slug': 'hong-kong', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 27. Vietnam
+            Movie.find({ 'country.slug': 'viet-nam', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean()
         ]);
 
         let responseData = {
-            trendingMovies,
-            featuredMovies,
-            latestMovies,
-            chinaMovies,
-            koreaMovies,
-            usukMovies,
-            cartoonMovies,
-            horrorMovies,
-            familyMovies,
-            thailandMovies,
-            japanMovies,
-            actionMovies,
-            romanceMovies,
-            comedyMovies,
-            adventureMovies,
-            scifiMovies,
-            crimeMovies,
-            historyDramaMovies,
-            martialArtsMovies,
-            shortDramaMovies,
-            tvShows,
-            warMovies,
-            mysteryMovies,
-            schoolMovies,
-            documentaryMovies,
-            fantasyMovies,
-            hkMovies,
-            vnMovies
+            trendingMovies, featuredMovies, latestMovies, chinaMovies, koreaMovies,
+            usukMovies, cartoonMovies, horrorMovies, familyMovies, thailandMovies,
+            japanMovies, actionMovies, romanceMovies, comedyMovies, adventureMovies,
+            scifiMovies, crimeMovies, historyDramaMovies, martialArtsMovies, shortDramaMovies,
+            tvShows, warMovies, mysteryMovies, schoolMovies, documentaryMovies, fantasyMovies,
+            hkMovies, vnMovies
         };
 
         if (req.user) {
             try {
                 const userId = req.user._id;
-                responseData.trendingMovies = await attachProgressToMovies(trendingMovies, userId);
-                responseData.featuredMovies = await attachProgressToMovies(featuredMovies, userId);
-                responseData.latestMovies = await attachProgressToMovies(latestMovies, userId);
-                responseData.chinaMovies = await attachProgressToMovies(chinaMovies, userId);
-                responseData.koreaMovies = await attachProgressToMovies(koreaMovies, userId);
-                responseData.usukMovies = await attachProgressToMovies(usukMovies, userId);
-                responseData.cartoonMovies = await attachProgressToMovies(cartoonMovies, userId);
-                responseData.familyMovies = await attachProgressToMovies(familyMovies, userId);
-                responseData.thailandMovies = await attachProgressToMovies(thailandMovies, userId);
-                responseData.actionMovies = await attachProgressToMovies(actionMovies, userId);
-                responseData.romanceMovies = await attachProgressToMovies(romanceMovies, userId);
 
-                // Fetch Continue Watching
+                // 1. Optimization: Batch fetch progress for ALL home page movies at once
+                const allMovies = [
+                    ...trendingMovies, ...featuredMovies, ...latestMovies, ...chinaMovies, ...koreaMovies,
+                    ...usukMovies, ...cartoonMovies, ...horrorMovies, ...familyMovies, ...thailandMovies,
+                    ...japanMovies, ...actionMovies, ...romanceMovies, ...comedyMovies, ...adventureMovies,
+                    ...scifiMovies, ...crimeMovies, ...historyDramaMovies, ...martialArtsMovies, ...shortDramaMovies,
+                    ...tvShows, ...warMovies, ...mysteryMovies, ...schoolMovies, ...documentaryMovies, ...fantasyMovies,
+                    ...hkMovies, ...vnMovies
+                ];
+
+                const allSlugs = [...new Set(allMovies.map(m => m.slug))];
+
                 const WatchProgress = require('../models/WatchProgress');
-                // Use aggregation to get unique movies (most recently watched episode per movie)
+                const allProgress = await WatchProgress.find({
+                    userId,
+                    movieSlug: { $in: allSlugs }
+                }).lean();
+
+                const progressMap = {};
+                allProgress.forEach(p => {
+                    progressMap[p.movieSlug] = {
+                        currentTime: p.currentTime,
+                        duration: p.duration,
+                        percentage: p.duration > 0 ? Math.round((p.currentTime / p.duration) * 100) : 0,
+                        episodeSlug: p.episodeSlug,
+                        episodeName: p.episodeName
+                    };
+                });
+
+                // Attach progress to all lists in memory
+                const attachLocal = (movies) => {
+                    return movies.map(movie => {
+                        // movie is a plain object due to .lean() in the queries
+                        if (progressMap[movie.slug]) {
+                            movie.progress = progressMap[movie.slug];
+                        }
+                        return movie;
+                    });
+                };
+
+                for (const key in responseData) {
+                    if (Array.isArray(responseData[key])) {
+                        responseData[key] = attachLocal(responseData[key]);
+                    }
+                }
+
+                // 2. Fetch Continue Watching (Recent History)
                 const recentProgress = await WatchProgress.aggregate([
-                    {
-                        $match: {
-                            userId: req.user._id,
-                            completed: false  // Only show incomplete episodes
-                        }
-                    },
+                    { $match: { userId: req.user._id, completed: false } },
                     { $sort: { lastWatched: -1 } },
-                    {
-                        $group: {
-                            _id: "$movieSlug",
-                            doc: { $first: "$$ROOT" }
-                        }
-                    },
+                    { $group: { _id: "$movieSlug", doc: { $first: "$$ROOT" } } },
                     { $replaceRoot: { newRoot: "$doc" } },
                     { $sort: { lastWatched: -1 } },
                     { $limit: 10 }
@@ -270,36 +336,36 @@ const getHomeData = async (req, res) => {
 
                 if (recentProgress.length > 0) {
                     const slugs = recentProgress.map(p => p.movieSlug);
-                    // Fetch movies to get latest details (thumb, name, etc)
-                    const movies = await Movie.find({ slug: { $in: slugs }, isActive: { $ne: false } }).select('name slug thumb_url year episode_current type poster_url');
+                    const movies = await Movie.find({ slug: { $in: slugs }, isActive: { $ne: false } })
+                        .select('name slug thumb_url year episode_current type poster_url')
+                        .lean();
 
-                    // Map back to preserve order and attach progress
                     responseData.continueWatching = recentProgress.map(p => {
                         const movie = movies.find(m => m.slug === p.movieSlug);
                         if (!movie) return null;
-                        const movieObj = movie.toObject();
-                        movieObj.progress = {
+                        // movie is lean object
+                        movie.progress = {
                             currentTime: p.currentTime,
                             duration: p.duration,
                             percentage: p.duration > 0 ? Math.round((p.currentTime / p.duration) * 100) : 0,
                             episodeSlug: p.episodeSlug,
                             episodeName: p.episodeName
                         };
-                        return movieObj;
+                        return movie;
                     }).filter(Boolean);
                 } else {
                     responseData.continueWatching = [];
                 }
 
-            } catch (progressError) {
-                console.error('Error attaching progress in getHomeData:', progressError);
-                // Continue without progress if error occurs
+            } catch (error) {
+                console.error('Error attaching progress:', error);
             }
         }
 
         res.json({
             success: true,
-            data: responseData
+            data: responseData,
+            debug: { executionTime: `${Date.now() - start}ms` }
         });
     } catch (err) {
         console.error('Home data error:', err);
@@ -327,7 +393,21 @@ const getMovies = async (req, res) => {
             ];
         }
 
-        if (category) query['category.slug'] = category;
+        if (category && category !== 'all') {
+            query['category.slug'] = category;
+
+            // Special filters for specific categories to match Home Page logic
+            if (category === 'vien-tuong' || category === 'kinh-di' || category === 'hanh-dong' || category === 'hinh-su' || category === 'chien-tranh' || category === 'bi-an') {
+                query.type = { $nin: ['hoathinh', 'tvshows'] };
+            }
+            if (category === 'tinh-cam' || category === 'gia-dinh') {
+                query.type = { $ne: 'hoathinh' };
+            }
+            if (category === 'hoc-duong') {
+                query['country.slug'] = 'trung-quoc';
+                query.type = { $ne: 'hoathinh' };
+            }
+        }
         if (country) query['country.slug'] = country;
         if (year) query.year = parseInt(year);
         if (status) query.status = status; // 'completed' | 'ongoing'
@@ -366,8 +446,19 @@ const getMovies = async (req, res) => {
                     }
 
                     if (activeExternalMovies.length > 0) {
-                        movies = activeExternalMovies;
-                        total = activeExternalMovies.length;
+                        // In-memory filtering for external results (Year, Type)
+                        // Note: Category/Country usually not available in search results, so we can't filter strictly by them.
+                        let filteredExternal = activeExternalMovies;
+
+                        if (year) {
+                            filteredExternal = filteredExternal.filter(m => m.year === parseInt(year));
+                        }
+                        if (type) {
+                            filteredExternal = filteredExternal.filter(m => m.type === type);
+                        }
+
+                        movies = filteredExternal;
+                        total = filteredExternal.length;
 
                         // Background sync (gentle queue)
                         setImmediate(async () => {

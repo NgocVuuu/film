@@ -10,6 +10,7 @@ interface PremiumUpsellCardProps {
 }
 
 export function PremiumUpsellCard({ feature, compact = false }: PremiumUpsellCardProps) {
+  return null; // Upsell card removed as per request
   if (compact) {
     return (
       <div className="p-4 rounded-xl bg-linear-to-br from-yellow-500/10 to-orange-500/5 border border-yellow-500/30">

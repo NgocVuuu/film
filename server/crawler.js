@@ -201,14 +201,10 @@ async function processMovie(adapter, slug, retryCount = 0) {
 
         const existingMovie = await Movie.findOne({ slug: slug });
 
-        // Logic View: Giữ view cũ nếu có, nếu chưa có (phim mới) thì random để tạo hiệu ứng "Trending"
-        // Random từ 1000 -> 10000 view cho phim mới
+        // Logic View: Keep old view if exists, else 0 for new movies
         let finalView = coreData.view || 0;
-        if (existingMovie) {
-            finalView = existingMovie.view > 0 ? existingMovie.view : (Math.floor(Math.random() * 9000) + 1000);
-        } else {
-            // Phim mới hoàn toàn
-            finalView = Math.floor(Math.random() * 9000) + 1000;
+        if (existingMovie && existingMovie.view > 0) {
+            finalView = existingMovie.view;
         }
         coreData.view = finalView;
 
@@ -357,7 +353,10 @@ async function syncPage(adapter, page) {
     const failures = results.filter(r => !r || !r.success).length;
 
     if (failures > 0) {
+        addLog(`[${adapter.name}] Page ${page}: ${successes} synced, ${failures} failed.`, 'warning');
         console.warn(`[${adapter.name}] Page ${page}: ${successes} synced, ${failures} failed.`);
+    } else {
+        addLog(`[${adapter.name}] Page ${page}: ${successes} synced.`, 'success');
     }
 
     return successes;
@@ -384,6 +383,7 @@ async function syncAll(options = {}) {
             toPage = isFull ? 500 : fromPage;
         }
 
+        addLog(`Starting Sync. Mode: ${isFull ? 'FULL CRAWL' : 'UPDATE'} (Pages: ${fromPage} - ${toPage})`, 'info');
         console.log(`Starting Sync. Mode: ${isFull ? 'FULL CRAWL' : 'UPDATE'} (Pages: ${fromPage} - ${toPage})`);
 
         let totalProcessed = 0;
@@ -414,12 +414,43 @@ async function syncAll(options = {}) {
     }
 }
 
+// Log Buffer
+const logBuffer = [];
+const MAX_LOGS = 100;
+
+const addLog = (message, type = 'info') => {
+    const log = {
+        time: new Date(),
+        message,
+        type
+    };
+    logBuffer.unshift(log); // Add to beginning
+    if (logBuffer.length > MAX_LOGS) logBuffer.pop();
+};
+
+const getLogs = () => logBuffer;
+
 const setupCrawler = () => {
-    // Cron moved to GitHub Actions to save resources
-    // cron.schedule('*/30 * * * *', () => {
-    //     syncAll({ full: false });
-    // });
     console.log('Crawler: Manual Mode Only (Auto-run moved to GitHub Actions).');
+};
+
+const startCrawl = async (options) => {
+    if (isRunning) return { success: false, message: 'Crawler is already running' };
+
+    // Run in background
+    syncAll(options).then(() => {
+        addLog('Crawl finished', 'success');
+    }).catch(err => {
+        addLog(`Crawl failed: ${err.message}`, 'error');
+    });
+
+    return { success: true, message: 'Crawler started in background' };
+};
+
+const stopCrawl = () => {
+    stopSync();
+    addLog('Crawler stopped by user', 'warning');
+    return { success: true, message: 'Stopping crawler...' };
 };
 
 // Sync a specific movie by slug from all sources
@@ -641,6 +672,8 @@ module.exports = {
     addToBlacklist,
     removeFromBlacklist,
     getBlacklist,
-    getStatus,
-    stopSync
+    stopSync,
+    getLogs,
+    startCrawl,
+    stopCrawl
 };

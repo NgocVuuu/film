@@ -14,7 +14,7 @@ const authMiddleware = async (req, res, next) => {
         }
 
         // Verify token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Get user from database
         const user = await User.findById(decoded.userId).select('-__v');
@@ -55,7 +55,7 @@ const optionalAuthMiddleware = async (req, res, next) => {
         const token = req.headers.authorization?.split(' ')[1] || req.cookies?.token;
 
         if (token) {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const user = await User.findById(decoded.userId).select('-__v');
             if (user) {
                 req.user = user;

@@ -50,6 +50,8 @@ const movieSchema = new mongoose.Schema({
           filename: String,
           link_embed: String,
           link_m3u8: String,
+          time_intro: [{ type: Number }], // [start, end] in seconds
+          time_outro: [{ type: Number }], // [start, end] in seconds
         },
       ],
     },

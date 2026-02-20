@@ -13,6 +13,7 @@ const reportSchema = new mongoose.Schema({
     movieName: String,
     episodeSlug: String,
     episodeName: String,
+    serverName: String,
     content: {
         type: String,
         required: true
