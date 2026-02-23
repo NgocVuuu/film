@@ -71,6 +71,7 @@ export default function WatchPage() {
     // Get query params
     const episodeParam = searchParams.get('episode');
     const timestampParam = searchParams.get('t');
+    const serverParam = searchParams.get('server');
 
     useEffect(() => {
         if (!slug) return;
@@ -113,7 +114,20 @@ export default function WatchPage() {
         // 2. Set Default Source
         let activeSource = currentSource;
         if ((!activeSource || !sources.has(activeSource)) && sortedSources.length > 0) {
-            activeSource = sortedSources[0];
+            if (serverParam && movie?.episodes) {
+                // Find which prefix this exact serverParam belongs to
+                const matchedServer = movie.episodes.find(ep => ep.server_name === serverParam);
+                if (matchedServer) {
+                    const name = matchedServer.server_name;
+                    if (name.startsWith('NC -')) activeSource = 'NguonC';
+                    else if (name.startsWith('KK -')) activeSource = 'KKPhim';
+                    else if (name.startsWith('OP -')) activeSource = 'Ophim';
+                    else activeSource = 'Khác';
+                }
+            }
+            if (!activeSource || !sources.has(activeSource)) {
+                activeSource = sortedSources[0];
+            }
             setCurrentSource(activeSource);
         }
 
@@ -144,13 +158,38 @@ export default function WatchPage() {
 
                 // Try to find episode from URL param
                 if (episodeParam) {
-                    for (const server of filtered) {
-                        const found = server.server_data.find((ep: { slug: string }) => ep.slug === episodeParam);
-                        if (found) {
-                            selectedEpisode = found;
-                            selectedServer = server.server_name;
-                            break;
+                    // Try to match serverParam first if provided (check full movie episodes list too)
+                    if (serverParam && movie?.episodes) {
+                        const targetServer = movie.episodes.find(s => s.server_name === serverParam);
+                        if (targetServer) {
+                            const found = targetServer.server_data.find((ep: { slug: string }) => ep.slug === episodeParam);
+                            if (found) {
+                                selectedEpisode = found;
+                                selectedServer = targetServer.server_name;
+                            }
                         }
+                    }
+
+                    // Fallback to searching all filtered servers if no exact serverParam match
+                    if (!selectedEpisode) {
+                        for (const server of filtered) {
+                            const found = server.server_data.find((ep: { slug: string }) => ep.slug === episodeParam);
+                            if (found) {
+                                selectedEpisode = found;
+                                selectedServer = server.server_name;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // If not found or no param, but we have serverParam, try to pick first ep of that exact server
+                // We check against all movie episodes because `filtered` might just be a broad category prefix
+                if (!selectedEpisode && serverParam && movie?.episodes) {
+                    const targetServer = movie.episodes.find(s => s.server_name === serverParam);
+                    if (targetServer && targetServer.server_data.length > 0) {
+                        selectedEpisode = targetServer.server_data[0];
+                        selectedServer = targetServer.server_name;
                     }
                 }
 
@@ -176,7 +215,7 @@ export default function WatchPage() {
             }
         }
 
-    }, [movie, currentSource, episodeParam, timestampParam]);
+    }, [movie, currentSource, episodeParam, timestampParam, serverParam]);
 
     // Find prev/next episode
     useEffect(() => {
@@ -260,10 +299,56 @@ export default function WatchPage() {
         }
 
         // Update URL
-        const newUrl = `/movie/${slug}/watch?episode=${episode.slug}`;
+        const newUrl = `/movie/${slug}/watch?episode=${episode.slug}&server=${encodeURIComponent(serverName)}`;
         window.history.replaceState({}, '', newUrl);
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleSourceChange = (newSource: string) => {
+        if (newSource === currentSource) return;
+
+        setCurrentSource(newSource);
+
+        // Auto-switch to same episode on new source if we have a currentEpisode
+        if (movie?.episodes) {
+            const prefixMap: Record<string, string> = {
+                'NguonC': 'NC -',
+                'KKPhim': 'KK -',
+                'Ophim': 'OP -',
+                'Khác': ''
+            };
+            const prefix = prefixMap[newSource];
+
+            const targetServers = movie.episodes.filter((ep: Episode) => {
+                if (newSource === 'Khác') {
+                    return !ep.server_name.startsWith('NC -') &&
+                        !ep.server_name.startsWith('KK -') &&
+                        !ep.server_name.startsWith('OP -');
+                }
+                return ep.server_name.startsWith(prefix);
+            });
+
+            if (targetServers.length > 0) {
+                // Try to match exact server type (e.g. Vietsub -> Vietsub)
+                const currentType = getCleanServerName(currentServerName || '');
+
+                let bestServer = targetServers.find(s => getCleanServerName(s.server_name) === currentType);
+                if (!bestServer) bestServer = targetServers[0];
+
+                let epInNewServer = null;
+                if (currentEpisode) {
+                    epInNewServer = bestServer.server_data.find(ep => ep.slug === currentEpisode.slug);
+                }
+                if (!epInNewServer && bestServer.server_data.length > 0) {
+                    epInNewServer = bestServer.server_data[0];
+                }
+
+                if (epInNewServer) {
+                    handleEpisodeClick(bestServer.server_name, epInNewServer);
+                }
+            }
+        }
     };
 
     const handleNextEpisode = () => {
@@ -399,6 +484,19 @@ export default function WatchPage() {
                                     )}
                                 </p>
                             </div>
+
+                            {/* Report Button - Visible on Mobile too */}
+                            <div className="flex md:hidden shrink-0 mt-3 sm:mt-0">
+                                {movie && (
+                                    <ReportModal
+                                        movieSlug={movie.slug}
+                                        movieName={movie.name}
+                                        episodeSlug={currentEpisode?.slug}
+                                        episodeName={currentEpisode?.name}
+                                        serverName={currentServerName}
+                                    />
+                                )}
+                            </div>
                         </div>
 
                         {/* Source Tabs */}
@@ -408,7 +506,7 @@ export default function WatchPage() {
                                 {availableSources.map((source, index) => (
                                     <button
                                         key={source}
-                                        onClick={() => setCurrentSource(source)}
+                                        onClick={() => handleSourceChange(source)}
                                         className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${currentSource === source
                                             ? 'bg-primary text-black shadow-lg shadow-primary/20'
                                             : 'bg-surface-800 text-gray-400 hover:bg-surface-700 hover:text-white border border-white/5'
@@ -424,7 +522,7 @@ export default function WatchPage() {
 
                 {/* 2. EPISODE SIDEBAR (Right/Bottom) */}
                 <div className="w-full lg:w-96 px-4 md:px-0 space-y-4 shrink-0">
-                    <div className="bg-surface-900/30 rounded-xl border border-white/5 overflow-hidden flex flex-col h-full max-h-[calc(100vh-100px)] lg:sticky lg:top-24">
+                    <div className="bg-surface-900/30 rounded-xl border border-white/5 overflow-hidden flex flex-col h-full lg:max-h-[calc(100vh-100px)] lg:sticky lg:top-24">
                         <div className="p-4 border-b border-white/5 bg-surface-900/80 backdrop-blur-sm">
                             <h3 className="font-bold text-white flex items-center gap-2">
                                 <Play className="w-4 h-4 text-primary fill-current" />

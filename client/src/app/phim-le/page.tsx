@@ -35,7 +35,7 @@ function PhimLeContent() {
         setLoading(true);
         try {
             const res = await fetch(
-                `${API_URL}/api/movies?type=single&page=${page}&limit=24`,
+                `${API_URL}/api/movies?type=single&page=${page}&limit=30`,
                 { credentials: 'include' }
             );
             const data = await res.json();

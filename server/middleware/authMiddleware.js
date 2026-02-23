@@ -4,9 +4,15 @@ const User = require('../models/User');
 const authMiddleware = async (req, res, next) => {
     try {
         // Get token from header or cookie
-        const token = req.headers.authorization?.split(' ')[1] || req.cookies?.token;
+        let token = null;
+        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+            token = req.headers.authorization.split(' ')[1];
+        } else if (req.cookies && req.cookies.token) {
+            token = req.cookies.token;
+        }
 
-        if (!token) {
+        if (!token || token === 'undefined' || token === 'null') {
+            console.log(`[AuthMiddleware] 401 Unauthorized for ${req.originalUrl}. Headers:`, req.headers.authorization, 'Cookies:', !!req.cookies?.token);
             return res.status(401).json({
                 success: false,
                 message: 'Vui lòng đăng nhập để tiếp tục'
@@ -52,9 +58,14 @@ const adminMiddleware = async (req, res, next) => {
 // Optional auth - doesn't fail if no token
 const optionalAuthMiddleware = async (req, res, next) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1] || req.cookies?.token;
+        let token = null;
+        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+            token = req.headers.authorization.split(' ')[1];
+        } else if (req.cookies && req.cookies.token) {
+            token = req.cookies.token;
+        }
 
-        if (token) {
+        if (token && token !== 'undefined' && token !== 'null') {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const user = await User.findById(decoded.userId).select('-__v');
             if (user) {

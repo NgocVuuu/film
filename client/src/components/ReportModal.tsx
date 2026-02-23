@@ -74,7 +74,7 @@ export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName, se
                     <AlertTriangle className="w-4 h-4" /> Báo lỗi
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-106.25 max-w-[90vw] bg-surface-900 border-white/10 text-white">
+            <DialogContent className="sm:max-w-md max-w-[95vw] bg-[#111111] border border-white/20 text-white shadow-2xl rounded-xl p-6">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-yellow-500">
                         <AlertTriangle className="w-5 h-5" /> Báo lỗi phim
@@ -87,10 +87,10 @@ export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName, se
                     <div className="space-y-2">
                         <Label>Loại lỗi</Label>
                         <Select value={issueType} onValueChange={setIssueType}>
-                            <SelectTrigger className="bg-surface-800 border-white/10">
+                            <SelectTrigger className="bg-black/60 border border-white/20 text-white focus:ring-1 focus:ring-yellow-500">
                                 <SelectValue placeholder="Chọn loại lỗi" />
                             </SelectTrigger>
-                            <SelectContent className="bg-surface-800 border-white/10 text-white">
+                            <SelectContent className="bg-[#1a1a1a] border-white/20 text-white shadow-xl">
                                 <SelectItem value="error-loading">Không tải được phim</SelectItem>
                                 <SelectItem value="no-sub">Thiếu Vietsub/Thuyết minh</SelectItem>
                                 <SelectItem value="wrong-ep">Sai tập phim</SelectItem>
@@ -105,12 +105,12 @@ export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName, se
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             placeholder="Mô tả thêm về lỗi..."
-                            className="bg-surface-800 border-white/10 h-24"
+                            className="bg-black/60 border border-white/20 text-white focus:ring-1 focus:ring-yellow-500 h-24 resize-none"
                             required
                         />
                     </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={loading} className="bg-yellow-500 text-black hover:bg-yellow-600">
+                    <DialogFooter className="mt-2">
+                        <Button type="submit" disabled={loading} className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
                             {loading ? 'Đang gửi...' : 'Gửi báo cáo'}
                         </Button>
                     </DialogFooter>

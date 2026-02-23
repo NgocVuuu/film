@@ -29,10 +29,14 @@ const COUNTRY_NAMES: Record<string, string> = {
     'han-quoc': 'Hàn Quốc',
     'thai-lan': 'Thái Lan',
     'nhat-ban': 'Nhật Bản',
-    'au-my': 'Âu Mỹ',
+    'au-my': 'Âu Mỹ (Hollywood)',
     'anh': 'Anh',
     'my': 'Mỹ',
-    'viet-nam': 'Việt Nam'
+    'viet-nam': 'Việt Nam',
+    'hong-kong': 'Hồng Kông',
+    'phap': 'Pháp',
+    'duc': 'Đức',
+    'an-do': 'Ấn Độ',
 };
 
 function CountryPageContent() {
@@ -52,10 +56,14 @@ function CountryPageContent() {
     const fetchMovies = async () => {
         setLoading(true);
         try {
-            const res = await fetch(
-                `${API_URL}/api/movies?country=${countrySlug}&page=${page}&limit=24`,
-                { credentials: 'include' }
-            );
+            // 'au-my' in home slide fetches country IN [au-my, anh, my] + type=single
+            // We match this by using a custom query for au-my
+            const isWestern = countrySlug === 'au-my';
+            const url = isWestern
+                ? `${API_URL}/api/movies?country=au-my&type=single&page=${page}&limit=30`
+                : `${API_URL}/api/movies?country=${countrySlug}&page=${page}&limit=30`;
+
+            const res = await fetch(url, { credentials: 'include' });
             const data = await res.json();
             if (data.success) {
                 setMovies(data.data);

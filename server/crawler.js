@@ -613,19 +613,20 @@ async function processPendingRequests() {
                         status: 'completed'
                     }).populate('userId');
 
-                    const notifications = allRequests
+                    const userIdsToNotify = Array.from(new Set(allRequests
                         .filter(req => req.userId && req.userId._id)
-                        .map(req => ({
-                            recipient: req.userId._id,
+                        .map(req => req.userId._id.toString())));
+
+                    if (userIdsToNotify.length > 0) {
+                        const { sendToMultiple } = require('./utils/notificationService');
+                        await sendToMultiple(userIdsToNotify, {
+                            title: '🎬 Phim yêu cầu đã có!',
                             content: `Phim "${request.movieName || 'bạn yêu cầu'}" đã có sẵn! Xem ngay`,
                             link: `/movie/${slug}`,
                             type: 'movie_request',
-                            isRead: false
-                        }));
-
-                    if (notifications.length > 0) {
-                        await Notification.insertMany(notifications);
-                        console.log(`[REQUESTS] ✓ Sent ${notifications.length} notifications for ${request.movieName}`);
+                            icon: '/logo.png'
+                        });
+                        console.log(`[REQUESTS] ✓ Sent ${userIdsToNotify.length} notifications for ${request.movieName}`);
                     }
 
                     successful++;

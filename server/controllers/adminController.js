@@ -166,9 +166,9 @@ exports.manualUpgradePremium = async (req, res) => {
         await user.save();
 
         // Create notification for user
-        const Notification = require('../models/Notification');
-        await Notification.create({
-            recipient: user._id,
+        const { sendNotification } = require('../utils/notificationService');
+        await sendNotification(user._id, {
+            title: '🏅 Nâng cấp Premium',
             content: `Chúc mừng! Tài khoản của bạn đã được nâng cấp lên Premium (${durationDays} ngày) bởi Admin.`,
             type: 'system',
             link: '/profile'

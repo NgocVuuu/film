@@ -136,7 +136,7 @@ export default function VideoPlayer({
 
     const togglePlay = () => {
         if (!videoRef.current) return;
-        if (isPlaying) {
+        if (!videoRef.current.paused) {
             videoRef.current.pause();
         } else {
             videoRef.current.play();
@@ -192,7 +192,7 @@ export default function VideoPlayer({
 
     const toggleMute = () => {
         if (!videoRef.current) return;
-        const newMuted = !isMuted;
+        const newMuted = !videoRef.current.muted;
         videoRef.current.muted = newMuted;
         setIsMuted(newMuted);
     };
@@ -211,7 +211,9 @@ export default function VideoPlayer({
     // Seek forward/backward
     const seekVideo = (seconds: number) => {
         if (!videoRef.current) return;
-        const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
+        const currentVideoTime = videoRef.current.currentTime;
+        const videoDuration = videoRef.current.duration || 0;
+        const newTime = Math.max(0, Math.min(videoDuration, currentVideoTime + seconds));
         videoRef.current.currentTime = newTime;
         setCurrentTime(newTime);
 
@@ -621,6 +623,7 @@ export default function VideoPlayer({
             video.removeEventListener('playing', onVideoPlaying);
             video.removeEventListener('pause', onVideoPause);
             video.removeEventListener('ended', onVideoEnded);
+            video.removeEventListener('loadedmetadata', onLoadedMetadata);
             video.removeEventListener('timeupdate', handleTimeUpdate);
             // Cleanup fullscreen listeners
             document.removeEventListener('fullscreenchange', onFullscreenChange);
@@ -701,7 +704,7 @@ export default function VideoPlayer({
 
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [currentTime, duration, isPlaying]);
+    }, [onPrevEpisode, onNextEpisode]);
 
 
     if (error || (useEmbed && embedUrl)) {

@@ -1,7 +1,7 @@
 'use client';
 import { Suspense } from 'react';
-import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
 import LoadingScreen from '@/components/LoadingScreen';
 import { API_URL } from '@/lib/config';
@@ -15,58 +15,20 @@ interface Movie {
     year: number;
     episode_current?: string;
     quality?: string;
-    progress?: {
-        currentTime: number;
-        duration: number;
-        percentage: number;
-        episodeSlug: string;
-        episodeName: string;
-    };
 }
 
-const CATEGORY_NAMES: Record<string, string> = {
-    'hanh-dong': 'Hành Động',
-    'tinh-cam': 'Tình Cảm',
-    'hai-huoc': 'Hài Hước',
-    'co-trang': 'Cổ Trang',
-    'tam-ly': 'Tâm Lý',
-    'hinh-su': 'Hình Sự',
-    'chien-tranh': 'Chiến Tranh',
-    'the-thao': 'Thể Thao',
-    'vo-thuat': 'Võ Thuật',
-    'vien-tuong': 'Viễn Tưởng',
-    'phieu-luu': 'Phiêu Lưu',
-    'khoa-hoc': 'Khoa Học',
-    'kinh-di': 'Kinh Dị',
-    'am-nhac': 'Âm Nhạc',
-    'than-thoai': 'Thần Thoại',
-    'tai-lieu': 'Tài Liệu',
-    'gia-dinh': 'Gia Đình',
-    'chinh-kich': 'Chính Kịch',
-    'bi-an': 'Bí Ẩn',
-    'hoc-duong': 'Học Đường',
-    'short-drama': 'Short Drama'
-};
-
-function CategoryPageContent() {
-    const params = useParams();
+function TvShowsContent() {
     const searchParams = useSearchParams();
-    const categorySlug = params.slug as string;
     const page = parseInt(searchParams.get('page') || '1');
-
     const [movies, setMovies] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
     const [totalPages, setTotalPages] = useState(1);
 
-    useEffect(() => {
-        fetchMovies();
-    }, [categorySlug, page]);
-
-    const fetchMovies = async () => {
+    const fetchMovies = useCallback(async () => {
         setLoading(true);
         try {
             const res = await fetch(
-                `${API_URL}/api/movies?category=${categorySlug}&page=${page}&limit=30`,
+                `${API_URL}/api/movies?type=tvshows&page=${page}&limit=30`,
                 { credentials: 'include' }
             );
             const data = await res.json();
@@ -75,24 +37,25 @@ function CategoryPageContent() {
                 setTotalPages(data.pagination?.totalPages || 1);
             }
         } catch (error) {
-            console.error('Error fetching movies:', error);
+            console.error('Error:', error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [page]);
+
+    useEffect(() => {
+        fetchMovies();
+    }, [fetchMovies]);
 
     if (loading) return <LoadingScreen />;
-
-    const categoryName = CATEGORY_NAMES[categorySlug] || categorySlug;
 
     return (
         <div className="min-h-screen bg-deep-black text-foreground pt-20 pb-20">
             <div className="container mx-auto px-4">
                 <h1 className="text-2xl md:text-3xl font-bold text-white mb-6 flex items-center gap-2">
                     <span className="w-1 h-8 bg-primary rounded-full"></span>
-                    Phim {categoryName}
+                    TV Shows
                 </h1>
-
                 {movies.length > 0 ? (
                     <>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -100,26 +63,16 @@ function CategoryPageContent() {
                                 <MovieCard key={movie._id} movie={movie} />
                             ))}
                         </div>
-
-                        {/* Pagination */}
                         {totalPages > 1 && (
                             <div className="flex justify-center gap-2 mt-8">
                                 {page > 1 && (
-                                    <a
-                                        href={`/the-loai/${categorySlug}?page=${page - 1}`}
-                                        className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors"
-                                    >
+                                    <a href={`/tv-shows?page=${page - 1}`} className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors">
                                         Trang trước
                                     </a>
                                 )}
-                                <span className="px-4 py-2 bg-primary text-black rounded font-bold">
-                                    {page} / {totalPages}
-                                </span>
+                                <span className="px-4 py-2 bg-primary text-black rounded font-bold">{page} / {totalPages}</span>
                                 {page < totalPages && (
-                                    <a
-                                        href={`/the-loai/${categorySlug}?page=${page + 1}`}
-                                        className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors"
-                                    >
+                                    <a href={`/tv-shows?page=${page + 1}`} className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors">
                                         Trang sau
                                     </a>
                                 )}
@@ -134,10 +87,10 @@ function CategoryPageContent() {
     );
 }
 
-export default function CategoryPage() {
+export default function TvShowsPage() {
     return (
         <Suspense fallback={<LoadingScreen />}>
-            <CategoryPageContent />
+            <TvShowsContent />
         </Suspense>
     );
 }

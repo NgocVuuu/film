@@ -76,6 +76,7 @@ export function useWatchProgress({
                         percentage,
                         episodeSlug,
                         episodeName: episodeName || '',
+                        serverName: serverName || '',
                     },
                     viewedAt: new Date().toISOString()
                 };
@@ -105,6 +106,7 @@ export function useWatchProgress({
                             percentage,
                             episodeSlug,
                             episodeName: episodeName || '',
+                            serverName: serverName || '',
                         }
                     };
                     history.unshift(newItem);

@@ -358,7 +358,8 @@ const getHomeData = async (req, res) => {
                             duration: p.duration,
                             percentage: p.duration > 0 ? Math.round((p.currentTime / p.duration) * 100) : 0,
                             episodeSlug: p.episodeSlug,
-                            episodeName: p.episodeName
+                            episodeName: p.episodeName,
+                            serverName: p.serverName
                         };
                         return movie;
                     }).filter(Boolean);
@@ -390,7 +391,7 @@ const getMovies = async (req, res) => {
         const skip = (page - 1) * limit;
 
         // Filters
-        const { category, country, year, status, sort, type, chieurap, q, actor } = req.query;
+        const { category, country, year, maxYear, status, sort, type, chieurap, q, actor } = req.query;
         let query = { isActive: { $ne: false } };
 
         // Text search (if 'q' is present)
@@ -405,20 +406,28 @@ const getMovies = async (req, res) => {
         if (category && category !== 'all') {
             query['category.slug'] = category;
 
-            // Special filters for specific categories to match Home Page logic
-            if (category === 'vien-tuong' || category === 'kinh-di' || category === 'hanh-dong' || category === 'hinh-su' || category === 'chien-tranh' || category === 'bi-an') {
+            // Match home slide filters exactly:
+            const excludeAnimationAndTv = ['vien-tuong', 'kinh-di', 'hanh-dong', 'hinh-su', 'chien-tranh', 'bi-an', 'hai-huoc', 'phieu-luu', 'vo-thuat', 'than-thoai'];
+            const excludeAnimation = ['tinh-cam', 'gia-dinh', 'tai-lieu'];
+
+            if (excludeAnimationAndTv.includes(category)) {
                 query.type = { $nin: ['hoathinh', 'tvshows'] };
             }
-            if (category === 'tinh-cam' || category === 'gia-dinh') {
+            if (excludeAnimation.includes(category)) {
                 query.type = { $ne: 'hoathinh' };
             }
             if (category === 'hoc-duong') {
                 query['country.slug'] = 'trung-quoc';
                 query.type = { $ne: 'hoathinh' };
             }
+            // co-trang in home slide = co-trang + trung-quoc only
+            if (category === 'co-trang') {
+                query['country.slug'] = 'trung-quoc';
+            }
         }
         if (country) query['country.slug'] = country;
         if (year) query.year = parseInt(year);
+        if (maxYear) query.year = { ...(query.year || {}), $lte: parseInt(maxYear) };
         if (status) query.status = status; // 'completed' | 'ongoing'
         if (type) query.type = type; // 'series' | 'single' | 'hoathinh' | 'tvshows'
         if (chieurap === 'true') query.chieurap = true;
@@ -554,8 +563,83 @@ const getMovieDetail = async (req, res) => {
     }
 };
 
+const getMarvelMovies = async (req, res) => {
+    try {
+        const mcuTitles = [
+            { en: 'Iron Man', year: 2008 },
+            { en: 'The Incredible Hulk', year: 2008 },
+            { en: 'Iron Man 2', year: 2010 },
+            { en: 'Thor', year: 2011 },
+            { en: 'Captain America: The First Avenger', year: 2011 },
+            { en: 'The Avengers', year: 2012 },
+            { en: 'Iron Man 3', year: 2013 },
+            { en: 'Thor: The Dark World', year: 2013 },
+            { en: 'Captain America: The Winter Soldier', year: 2014 },
+            { en: 'Guardians of the Galaxy', year: 2014 },
+            { en: 'Avengers: Age of Ultron', year: 2015 },
+            { en: 'Ant-Man', year: 2015 },
+            { en: 'Captain America: Civil War', year: 2016 },
+            { en: 'Doctor Strange', year: 2016 },
+            { en: 'Guardians of the Galaxy Vol. 2', year: 2017 },
+            { en: 'Spider-Man: Homecoming', year: 2017 },
+            { en: 'Thor: Ragnarok', year: 2017 },
+            { en: 'Black Panther', year: 2018 },
+            { en: 'Avengers: Infinity War', year: 2018 },
+            { en: 'Ant-Man and the Wasp', year: 2018 },
+            { en: 'Captain Marvel', year: 2019 },
+            { en: 'Avengers: Endgame', year: 2019 },
+            { en: 'Spider-Man: Far From Home', year: 2019 },
+            { en: 'Black Widow', year: 2021 },
+            { en: 'Shang-Chi and the Legend of the Ten Rings', year: 2021 },
+            { en: 'Eternals', year: 2021 },
+            { en: 'Spider-Man: No Way Home', year: 2021 },
+            { en: 'Doctor Strange in the Multiverse of Madness', year: 2022 },
+            { en: 'Thor: Love and Thunder', year: 2022 },
+            { en: 'Black Panther: Wakanda Forever', year: 2022 },
+            { en: 'Ant-Man and the Wasp: Quantumania', year: 2023 },
+            { en: 'Guardians of the Galaxy Vol. 3', year: 2023 },
+            { en: 'The Marvels', year: 2023 },
+            { en: 'Deadpool & Wolverine', year: 2024 },
+            { en: 'Captain America: Brave New World', year: 2025 },
+            { en: 'Thunderbolts', year: 2025 },
+            { en: 'The Fantastic 4: First Steps', year: 2025 },
+        ];
+
+        const results = [];
+
+        for (const mcu of mcuTitles) {
+            const escaped = mcu.en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Find candidates matching title
+            const candidates = await Movie.find({
+                isActive: { $ne: false },
+                origin_name: { $regex: `^${escaped}$`, $options: 'i' }
+            })
+                .select('name slug thumb_url origin_name year type quality episode_current view')
+                .lean();
+
+            if (candidates.length === 0) continue;
+
+            // Pick the one with year closest to official release year
+            const best = candidates.reduce((a, b) =>
+                Math.abs((a.year || 0) - mcu.year) <= Math.abs((b.year || 0) - mcu.year) ? a : b
+            );
+            best._mcuYear = mcu.year; // for sorting
+            results.push(best);
+        }
+
+        // Sort by official MCU release year
+        results.sort((a, b) => (a._mcuYear || a.year) - (b._mcuYear || b.year));
+        results.forEach(m => delete m._mcuYear);
+
+        res.json({ success: true, data: results, total: results.length });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getHomeData,
     getMovies,
-    getMovieDetail
+    getMovieDetail,
+    getMarvelMovies
 };

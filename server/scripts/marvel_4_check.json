@@ -1,0 +1,86 @@
+[
+  {
+    "search": "The Incredible Hulk",
+    "dbName": "Người Khổng Lồ Xanh Phi Thường",
+    "dbOrigin": "The Incredible Hulk",
+    "year": 2008,
+    "slug": "nguoi-khong-lo-xanh-phi-thuong",
+    "isActive": true,
+    "episode_current": "Full",
+    "totalServers": 1,
+    "servers": [
+      {
+        "serverName": "KK - #Hà Nội (Vietsub)",
+        "totalEps": 1,
+        "sampleLinks": [
+          {
+            "name": "Người Khổng Lồ Xanh Phi Thường - The Incredible Hulk - 2008 - 1080p - Vietsub - Full",
+            "link_m3u8": "https://s1.phim1280.tv/20231021/vrClMKQ8/index.m3u8",
+            "link_embed": "https://player.phimapi.com/player/?url=https://s1.phim1280.tv/20231021/vrClMKQ8/"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "search": "Shang-Chi and the Legend of the Ten Rings",
+    "dbName": "Shang-Chi và Huyền Thoại Thập Luân",
+    "dbOrigin": "Shang-Chi and the Legend of the Ten Rings",
+    "year": 2021,
+    "slug": "shangchi-va-huyen-thoai-thap-luan",
+    "isActive": true,
+    "episode_current": "Full",
+    "totalServers": 1,
+    "servers": [
+      {
+        "serverName": "KK - #Hà Nội (Vietsub)",
+        "totalEps": 1,
+        "sampleLinks": [
+          {
+            "name": "Shang-Chi và Huyền Thoại Thập Luân - Shang-Chi and the Legend of the Ten Rings - 2021 - 1080p - Vietsub - Full",
+            "link_m3u8": "https://s1.phim1280.tv/20231020/TZvkJegN/index.m3u8",
+            "link_embed": "https://player.phimapi.com/player/?url=https://s1.phim1280.tv/20231020/TZvkJegN/"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "search": "Eternals",
+    "dbName": "Eternals: Chủng Tộc Bất Tử",
+    "dbOrigin": "Eternals",
+    "year": 2021,
+    "slug": "eternals-chung-toc-bat-tu",
+    "isActive": true,
+    "episode_current": "Full",
+    "totalServers": 2,
+    "servers": [
+      {
+        "serverName": "KK - #Hà Nội (Vietsub)",
+        "totalEps": 1,
+        "sampleLinks": [
+          {
+            "name": "Eternals: Chủng Tộc Bất Tử - Eternals - 2021 - 1080p - Vietsub - Full",
+            "link_m3u8": "https://s4.phim1280.tv/20250219/H2JZhbas/index.m3u8",
+            "link_embed": "https://player.phimapi.com/player/?url=https://s4.phim1280.tv/20250219/H2JZhbas/"
+          }
+        ]
+      },
+      {
+        "serverName": "KK - #Hà Nội (Thuyết Minh)",
+        "totalEps": 1,
+        "sampleLinks": [
+          {
+            "name": "Eternals: Chủng Tộc Bất Tử - Eternals - 2021 - 1080p - Thuyết Minh - Full",
+            "link_m3u8": "https://s4.phim1280.tv/20250219/oUZe91oV/index.m3u8",
+            "link_embed": "https://player.phimapi.com/player/?url=https://s4.phim1280.tv/20250219/oUZe91oV/"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "search": "The Fantastic Four: First Steps",
+    "status": "NOT_FOUND_IN_DB"
+  }
+]

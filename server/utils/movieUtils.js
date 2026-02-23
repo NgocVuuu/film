@@ -30,7 +30,8 @@ const attachProgressToMovies = async (movies, userId) => {
                 duration: p.duration,
                 percentage,
                 episodeSlug: p.episodeSlug,
-                episodeName: p.episodeName
+                episodeName: p.episodeName,
+                serverName: p.serverName
             };
         });
 

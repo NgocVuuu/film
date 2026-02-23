@@ -1,0 +1,42 @@
+﻿[dotenv@17.2.4] injecting env (20) from .env -- tip: Γ£à audit secrets and track compliance: https://dotenvx.com/ops
+
+Γ£à T├îM THß║ñY (34/37):
+  Γ£à Iron Man ΓåÆ "Ng╞░ß╗¥i Sß║»t V├┤ ─Éß╗ïch" (2007) [nguoi-sat-vo-dich]
+  Γ£à The Incredible Hulk ΓåÆ "Ng╞░ß╗¥i Khß╗òng Lß╗ô Xanh" (2003) [nguoi-khong-lo-xanh]
+  Γ£à Iron Man 2 ΓåÆ "Ng╞░ß╗¥i Sß║»t 2" (2010) [nguoi-sat-2]
+  Γ£à Thor ΓåÆ "Tay S├║ng Viß╗àn T├óy" (2011) [tay-sung-vien-tay]
+  Γ£à Captain America: The First Avenger ΓåÆ "Captain America: Kß║╗ B├ío Th├╣ ─Éß║ºu Ti├¬n" (2011) [captain-america-ke-bao-thu-dau-tien]
+  Γ£à The Avengers ΓåÆ "Biß╗çt ─Éß╗Öi Si├¬u Anh H├╣ng" (2012) [biet-doi-sieu-anh-hung]
+  Γ£à Iron Man 3 ΓåÆ "Ng╞░ß╗¥i Sß║»t 3" (2013) [nguoi-sat-3]
+  Γ£à Thor: The Dark World ΓåÆ "Thß║ºn Sß║Ñm II: Thß║┐ Giß╗¢i B├│ng Tß╗æi" (2013) [than-sam-ii-the-gioi-bong-toi]
+  Γ£à Captain America: The Winter Soldier ΓåÆ "Captain America: Chiß║┐n Binh M├╣a ─É├┤ng" (2014) [captain-america-chien-binh-mua-dong]
+  Γ£à Guardians of the Galaxy ΓåÆ "Kß╗│ Nghß╗ë ─Éß║╖c Biß╗çt Cß╗ºa Vß╗ç Binh Dß║úi Ng├ón H├á" (2022) [ky-nghi-dac-biet-cua-ve-binh-dai-ngan-ha]
+  Γ£à Avengers: Age of Ultron ΓåÆ "Biß╗çt ─Éß╗Öi Si├¬u Anh H├╣ng 2: ─Éß║┐ Chß║┐ Ultron" (2015) [biet-doi-sieu-anh-hung-2-de-che-ultron]
+  Γ£à Ant-Man ΓåÆ "Ng╞░ß╗¥i Kiß║┐n V├á Chiß║┐n Binh Ong" (2018) [nguoi-kien-va-chien-binh-ong]
+  Γ£à Captain America: Civil War ΓåÆ "Captain America: Nß╗Öi Chiß║┐n Si├¬u Anh H├╣ng" (2016) [captain-america-noi-chien-sieu-anh-hung]
+  Γ£à Doctor Strange ΓåÆ "Ph├╣ Thß╗ºy Tß╗æi Th╞░ß╗úng: ─Éa V┼⌐ Trß╗Ñ Hß╗ùn Loß║ín" (2022) [phu-thuy-toi-thuong-da-vu-tru-hon-loan]
+  Γ£à Guardians of the Galaxy Vol. 2 ΓåÆ "Vß╗ç Binh Dß║úi Ng├ón H├á 2" (2017) [ve-binh-dai-ngan-ha-2]
+  Γ£à Spider-Man: Homecoming ΓåÆ "Ng╞░ß╗¥i Nhß╗çn: Trß╗ƒ Vß╗ü Nh├á" (2017) [nguoi-nhen-tro-ve-nha]
+  Γ£à Thor: Ragnarok ΓåÆ "Thß║ºn Sß║Ñm III: Tß║¡n Thß║┐ Ragnarok" (2017) [than-sam-iii-tan-the-ragnarok]
+  Γ£à Black Panther ΓåÆ "─Éß╗Öi SWAT B├ío ─Éen" (2023) [doi-swat-bao-den]
+  Γ£à Avengers: Infinity War ΓåÆ "Biß╗çt ─Éß╗Öi Si├¬u Anh H├╣ng 3: Cuß╗Öc Chiß║┐n V├┤ Cß╗▒c" (2018) [biet-doi-sieu-anh-hung-3-cuoc-chien-vo-cuc]
+  Γ£à Ant-Man and the Wasp ΓåÆ "Ng╞░ß╗¥i Kiß║┐n V├á Chiß║┐n Binh Ong" (2018) [nguoi-kien-va-chien-binh-ong]
+  Γ£à Captain Marvel ΓåÆ "─Éß║íi ├Üy Marvel" (2019) [dai-uy-marvel]
+  Γ£à Avengers: Endgame ΓåÆ "Biß╗çt ─Éß╗Öi Si├¬u Anh H├╣ng 4: Hß╗ôi Kß║┐t" (2019) [biet-doi-sieu-anh-hung-4-hoi-ket]
+  Γ£à Spider-Man: Far From Home ΓåÆ "Ng╞░ß╗¥i Nhß╗çn: Xa Nh├á" (2019) [nguoi-nhen-xa-nha]
+  Γ£à Black Widow ΓåÆ "Biß╗çt ─Éß╗Öi Si├¬u Anh H├╣ng B├¡ Mß║¡t: Black Widow v├á Punisher" (2014) [biet-doi-sieu-anh-hung-bi-mat-black-widow-va-punisher]
+  Γ£à Spider-Man: No Way Home ΓåÆ "Ng╞░ß╗¥i Nhß╗çn: Kh├┤ng C├▓n Nh├á" (2021) [nguoi-nhen-khong-con-nha]
+  Γ£à Doctor Strange in the Multiverse of Madness ΓåÆ "Ph├╣ Thß╗ºy Tß╗æi Th╞░ß╗úng: ─Éa V┼⌐ Trß╗Ñ Hß╗ùn Loß║ín" (2022) [phu-thuy-toi-thuong-da-vu-tru-hon-loan]
+  Γ£à Thor: Love and Thunder ΓåÆ "Thß║ºn Sß║Ñm IV:  T├¼nh Y├¬u V├á Sß║Ñm S├⌐t" (2022) [than-sam-iv-tinh-yeu-va-sam-set]
+  Γ£à Black Panther: Wakanda Forever ΓåÆ "Chiß║┐n Binh B├ío ─Éen: Wakanda Bß║Ñt Diß╗çt" (2022) [chien-binh-bao-den-wakanda-bat-diet]
+  Γ£à Ant-Man and the Wasp: Quantumania ΓåÆ "Ng╞░ß╗¥i Kiß║┐n V├á Chiß║┐n Binh Ong: Thß║┐ Giß╗¢i L╞░ß╗úng Tß╗¡" (2023) [nguoi-kien-va-chien-binh-ong-the-gioi-luong-tu]
+  Γ£à Guardians of the Galaxy Vol. 3 ΓåÆ "Vß╗ç Binh Dß║úi Ng├ón H├á 3" (2023) [ve-binh-dai-ngan-ha-3]
+  Γ£à The Marvels ΓåÆ "Biß╗çt ─Éß╗Öi Marvel" (2023) [biet-doi-marvel]
+  Γ£à Deadpool & Wolverine ΓåÆ "Deadpool V├á Wolverine" (2024) [deadpool-va-wolverine]
+  Γ£à Captain America: Brave New World ΓåÆ "Captain America: Thß║┐ Giß╗¢i Mß╗¢i" (2025) [captain-america-the-gioi-moi]
+  Γ£à Thunderbolts ΓåÆ "Biß╗çt ─Éß╗Öi Sß║Ñm S├⌐t*" (2025) [biet-doi-sam-set]
+
+Γ¥î THIß║╛U (3/37):
+  Γ¥î Shang-Chi v├á Truyß╗ün thuyß║┐t Thß║¡p Lu├ón / Shang-Chi and the Legend of the Ten Rings (2021)
+  Γ¥î Eternals / Eternals (2021)
+  Γ¥î Bß╗Ö Tß╗⌐ Si├¬u ─Éß║│ng: Nhß╗»ng B╞░ß╗¢c ─Éi ─Éß║ºu Ti├¬n / The Fantastic Four: First Steps (2025)

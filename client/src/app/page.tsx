@@ -8,6 +8,7 @@ import { TrendingCarousel } from '@/components/TrendingCarousel';
 import { PWAAds } from '@/components/PWAAds';
 import LoadingScreen from '@/components/LoadingScreen';
 import { customFetch } from '@/lib/api';
+import { MarvelBanner } from '@/components/MarvelBanner';
 
 interface Movie {
   _id: string;
@@ -157,8 +158,13 @@ export default function Home() {
         <HeroSlider movies={featuredMovies} />
       )}
 
+      {/* MARVEL UNIVERSE BANNER */}
+      <div className="container mx-auto px-4 -mt-4 relative z-20 mb-2">
+        <MarvelBanner />
+      </div>
+
       {/* Carousel Sections */}
-      <div className="container mx-auto px-4 space-y-12 -mt-10 relative z-20">
+      <div className="container mx-auto px-4 space-y-12 mt-4 relative z-20">
 
         {/* 1. Cinema / Featured */}
         {featuredMovies.length > 0 && (
@@ -219,14 +225,14 @@ export default function Home() {
         <LazyMovieSection
           title="Anime Huyền thoại vượt thời gian"
           movies={legendaryAnimeMovies}
-          viewAllLink="/hoat-hinh"
+          viewAllLink="/hoat-hinh?sort=view&maxYear=2015"
         />
 
         {/* 4.2 Animation */}
         <LazyMovieSection
           title="Thế giới hoạt hình đa sắc màu"
           movies={cartoonMovies}
-          viewAllLink="/hoat-hinh"
+          viewAllLink="/hoat-hinh?category=gia-dinh&sort=newest"
         />
 
         {/* 5. China */}

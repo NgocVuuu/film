@@ -55,17 +55,17 @@ exports.sendToUser = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng (ID hoặc Email không tồn tại)' });
         }
 
-        const notification = await Notification.create({
-            recipient: user._id,
+        const { sendNotification } = require('../utils/notificationService');
+        await sendNotification(user._id, {
             content,
             link: link || '/',
-            type: type || 'system'
+            type: type || 'system',
+            title: 'Thông báo từ Pchill'
         });
 
         res.json({
             success: true,
-            message: `Đã gửi thông báo đến ${user.displayName} (${user.email || 'không có email'})`,
-            data: notification
+            message: `Đã gửi thông báo đến ${user.displayName} (${user.email || 'không có email'})`
         });
     } catch (error) {
         console.error('Send notification error:', error);

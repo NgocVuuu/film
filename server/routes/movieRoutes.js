@@ -14,4 +14,7 @@ router.get('/movies', cacheMiddleware(120), optionalAuthMiddleware, movieControl
 // Movie Detail (Existing: /api/movie/:slug) - Cache for 10 minutes
 router.get('/movie/:slug', cacheMiddleware(600), optionalAuthMiddleware, movieController.getMovieDetail);
 
+// Marvel Universe Collection
+router.get('/movies/marvel', cacheMiddleware(600), movieController.getMarvelMovies);
+
 module.exports = router;

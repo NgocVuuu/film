@@ -49,6 +49,7 @@ interface MovieDetail {
         percentage: number;
         episodeSlug: string;
         episodeName: string;
+        serverName?: string;
     };
 }
 
@@ -198,13 +199,12 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
 
     const handleWatchNow = () => {
         if (movie) {
-            // If has progress, maybe we want to direct to specific episode?
-            // For now, let's just go to watch page, it should handle resume or default to first ep
-            // But if we have valid episodeSlug in progress, we can append it? 
-            // The current routing seems to be /movie/:slug/watch. 
-            // If the watch page supports query param or segments like /watch?ep=slug, that would be better.
-            // Assuming default behavior for now.
-            router.push(`/movie/${movie.slug}/watch`);
+            if (movie.progress && movie.progress.episodeSlug) {
+                const serverQuery = movie.progress.serverName ? `&server=${encodeURIComponent(movie.progress.serverName)}` : '';
+                router.push(`/movie/${movie.slug}/watch?episode=${movie.progress.episodeSlug}${serverQuery}`);
+            } else {
+                router.push(`/movie/${movie.slug}/watch`);
+            }
         }
     };
 
@@ -262,9 +262,11 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                     <span className="px-3 py-1 bg-white/20 text-white font-bold text-xs rounded uppercase tracking-wider backdrop-blur-sm border border-white/10">
                                         {movie.lang || 'Vietsub'}
                                     </span>
-                                    <span className="px-3 py-1 bg-red-600 text-white font-bold text-xs rounded uppercase tracking-wider shadow-lg">
-                                        18+
-                                    </span>
+                                    {movie.category?.some(c => c.id === 'phim-18' || c.name.includes('18')) && (
+                                        <span className="px-3 py-1 bg-red-600 text-white font-bold text-xs rounded uppercase tracking-wider shadow-lg">
+                                            18+
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Title */}

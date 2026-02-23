@@ -44,15 +44,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const fetchCurrentUser = async () => {
         try {
+            // This API call sends the cookie implicitly if credentials: 'include' is set
             const response = await customFetch('/api/auth/me');
 
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
                     setUser(data.data);
+                    // In PWA, localStorage might be cleared by the OS. 
+                    // If the backend returned success via Cookie, but localStorage token is missing, 
+                    // we still consider the user logged in. We can optionally get a fresh token from backend here 
+                    // if the backend provided it, but since backend uses cookie too, it's fine.
                 }
             } else if (response.status === 401) {
-                // Token invalid or expired
+                // Token really invalid or expired
                 removeAuthToken();
                 setUser(null);
             }
