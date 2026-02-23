@@ -126,21 +126,30 @@ export default function VideoPlayer({
 
     // -- Logic --
 
-    const handleMouseMove = () => {
-        setShowControls(true);
-        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-        if (isPlaying) {
-            controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
+    // Auto-hide controls effect
+    useEffect(() => {
+        if (isPlaying && showControls && !showSettings) {
+            const timer = setTimeout(() => setShowControls(false), 3000);
+            return () => clearTimeout(timer);
         }
+    }, [isPlaying, showControls, showSettings]);
+
+    const handleMouseMove = () => {
+        if (!showControls) setShowControls(true);
     };
 
-    const togglePlay = () => {
+    const togglePlay = (e?: React.MouseEvent | React.TouchEvent) => {
+        if (e) {
+            e.stopPropagation();
+        }
         if (!videoRef.current) return;
+
         if (!videoRef.current.paused) {
             videoRef.current.pause();
         } else {
             videoRef.current.play();
         }
+        setShowControls(true);
     };
 
     const handleTimeUpdate = () => {
@@ -188,6 +197,7 @@ export default function VideoPlayer({
             videoRef.current.currentTime = time;
             setCurrentTime(time);
         }
+        if (!showControls) setShowControls(true);
     };
 
     const toggleMute = () => {
@@ -204,6 +214,7 @@ export default function VideoPlayer({
             setVolume(value);
             setIsMuted(value === 0);
         }
+        if (!showControls) setShowControls(true);
     };
 
     const [showSkipIntro, setShowSkipIntro] = useState(false);
@@ -293,14 +304,17 @@ export default function VideoPlayer({
         const y = touch.clientY;
         const container = containerRef.current;
 
+        // Show controls on any touch end
+        if (!showControls) setShowControls(true);
+
         // Check if this was a quick tap (not a long press or swipe)
         const touchDuration = now - touchStartTimeRef.current;
-        const wasTap = touchDuration < 200; // Quick tap < 200ms
+        const wasTap = touchDuration < 250;
 
         // Check if touch moved significantly (swipe vs tap)
         const touchMoved = touchStartRef.current && (
-            Math.abs(x - touchStartRef.current.x) > 10 ||
-            Math.abs(y - touchStartRef.current.y) > 10
+            Math.abs(x - touchStartRef.current.x) > 15 ||
+            Math.abs(y - touchStartRef.current.y) > 15
         );
 
         if (container && wasTap && !touchMoved) {
@@ -312,9 +326,11 @@ export default function VideoPlayer({
                 now - lastTapRef.current.time < 300 &&
                 lastTapRef.current.side === side) {
 
-                // Prevent default click/play behavior on double tap
-                e.preventDefault();
-                e.stopPropagation();
+                // Clear single tap timer
+                if (singleTapTimerRef.current) {
+                    clearTimeout(singleTapTimerRef.current);
+                    singleTapTimerRef.current = null;
+                }
 
                 // Double tap detected - seek video
                 if (side === 'left') {
@@ -327,12 +343,26 @@ export default function VideoPlayer({
             } else {
                 // First tap - record time and position
                 lastTapRef.current = { time: now, x, side };
+
+                // Set a timer for single tap action
+                if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+                singleTapTimerRef.current = setTimeout(() => {
+                    // Show controls if they are hidden, or toggle play if already shown
+                    if (!showControls) {
+                        setShowControls(true);
+                    } else {
+                        // togglePlay(e); // This might cause multiple triggers if not careful
+                    }
+                    singleTapTimerRef.current = null;
+                }, 300);
             }
         }
 
         touchStartRef.current = null;
         setTimeout(() => setGestureFeedback(null), 1000);
     };
+
+    const singleTapTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const toggleFullscreen = async () => {
         try {
