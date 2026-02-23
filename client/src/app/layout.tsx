@@ -1,3 +1,4 @@
+import { useState, useEffect, Suspense } from 'react';
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -84,7 +85,9 @@ export default function RootLayout({
           <MainLayout>
             {children}
           </MainLayout>
-          <ChatWidget />
+          <Suspense fallback={null}>
+            <ChatWidget />
+          </Suspense>
           <ToastProvider />
         </AuthProvider>
       </body>
