@@ -1,11 +1,12 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { getAuthToken } from '@/lib/api';
-import { API_URL } from '@/lib/config';
 import { MessageCircle, Send, Loader2, ArrowLeft } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import Image from 'next/image';
+import { customFetch, getAuthToken } from '@/lib/api';
+import { API_URL } from '@/lib/config';
+import { toast } from 'react-hot-toast';
 
 interface Message {
     _id: string;
@@ -36,29 +37,24 @@ export default function ProfileChatTab({ onBack }: { onBack?: () => void }) {
 
     const fetchConversation = useCallback(async () => {
         try {
-            const token = getAuthToken();
-            const res = await fetch(`${API_URL}/api/chat/my`, {
-                headers: { Authorization: `Bearer ${token}` },
-                credentials: 'include'
-            });
+            const res = await customFetch('/api/chat/my');
             const data = await res.json();
             if (data.success) {
                 setConversation(data.data);
                 return data.data;
+            } else {
+                toast.error('Không thể tải thông tin hội thoại');
             }
         } catch (err) {
             console.error('fetchConversation error:', err);
+            toast.error('Lỗi kết nối máy chủ chat');
         }
         return null;
     }, []);
 
     const fetchMessages = useCallback(async (convId: string) => {
         try {
-            const token = getAuthToken();
-            const res = await fetch(`${API_URL}/api/chat/${convId}/messages`, {
-                headers: { Authorization: `Bearer ${token}` },
-                credentials: 'include'
-            });
+            const res = await customFetch(`/api/chat/${convId}/messages`);
             const data = await res.json();
             if (data.success) {
                 setMessages(data.data);

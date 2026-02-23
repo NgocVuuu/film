@@ -20,10 +20,9 @@ export default function ChatWidget() {
     const dragStart = useRef({ x: 0, y: 0 });
     const initialPos = useRef({ x: 0, y: 0 });
 
+    // Removed sessionStorage check to allow widget to reappear on reload
     useEffect(() => {
-        if (typeof window !== 'undefined' && sessionStorage.getItem('hideChatWidget') === 'true') {
-            setIsHidden(true);
-        }
+        // Initial setup if needed
     }, []);
 
     const fetchConversation = useCallback(async () => {
@@ -84,7 +83,7 @@ export default function ChatWidget() {
         // If swiped far enough on any axis, hide it
         if (Math.abs(pos.x) > 80 || pos.y > 80 || pos.y < -80) {
             setIsHidden(true);
-            sessionStorage.setItem('hideChatWidget', 'true');
+            // Removed sessionStorage.setItem to allow reappear on reload as requested by user
         } else {
             // snap back
             setPos({ x: 0, y: 0 });
