@@ -3,8 +3,6 @@ import { useEffect, useState } from 'react';
 import { MovieCard } from '@/components/MovieCard';
 import LoadingScreen from '@/components/LoadingScreen';
 import { API_URL } from '@/lib/config';
-import Link from 'next/link';
-
 interface Movie {
     _id: string;
     name: string;
