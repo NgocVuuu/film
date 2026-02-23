@@ -71,50 +71,65 @@ export default function ProfileChatTab({ onBack }: { onBack?: () => void }) {
         }
 
         const token = getAuthToken();
-        if (!token) return;
+        // Don't return if token is missing, customFetch and Socket handshake fallback to cookies on server
+        if (!token) {
+            console.log('[Chat] No token found in localStorage, relying on cookies.');
+        }
 
         let mounted = true;
 
         const initChat = async () => {
             setLoading(true);
-            let conv = await fetchConversation();
+            try {
+                let conv = await fetchConversation();
 
-            if (!conv) {
-                if (mounted) setLoading(false);
-                return;
-            }
-
-            await fetchMessages(conv._id);
-            if (mounted) setLoading(false);
-
-            // Connect socket
-            const socket = io(API_URL, {
-                auth: { token },
-                transports: ['websocket', 'polling'],
-                reconnection: true,
-                reconnectionAttempts: 10
-            });
-            socketRef.current = socket;
-
-            socket.on('connect', () => {
-                console.log('[Socket] Connected, joining room:', conv!._id);
-                socket.emit('join_conversation', conv!._id);
-                socket.emit('mark_read', conv!._id);
-            });
-
-            socket.on('new_message', (msg: Message) => {
-                setMessages(prev => {
-                    if (prev.find(m => m._id === msg._id)) return prev;
-                    return [...prev, msg];
-                });
-            });
-
-            socket.on('conversation_updated', (update: { conversationId: string; senderRole: string }) => {
-                // Auto-mark read since chat is open
-                if (update.conversationId === conv?._id) {
-                    socket.emit('mark_read', conv._id);
+                if (!conv) {
+                    if (mounted) setLoading(false);
+                    return;
                 }
-            });
+
+                await fetchMessages(conv._id);
+                if (mounted) setLoading(false);
+
+                // Connect socket
+                const socket = io(API_URL, {
+                    auth: { token: token || '' },
+                    transports: ['websocket', 'polling'],
+                    reconnection: true,
+                    reconnectionAttempts: 10,
+                    withCredentials: true
+                });
+                socketRef.current = socket;
+
+                socket.on('connect', () => {
+                    console.log('[Socket] Connected, joining room:', conv!._id);
+                    socket.emit('join_conversation', conv!._id);
+                    socket.emit('mark_read', conv!._id);
+                    // toast.success('Đã kết nối máy chủ chat');
+                });
+
+                socket.on('connect_error', (err) => {
+                    console.error('[Socket] Connection error:', err);
+                    toast.error('Lỗi kết nối Socket: ' + err.message);
+                });
+
+                socket.on('new_message', (msg: Message) => {
+                    setMessages(prev => {
+                        if (prev.find(m => m._id === msg._id)) return prev;
+                        return [...prev, msg];
+                    });
+                });
+
+                socket.on('conversation_updated', (update: { conversationId: string; senderRole: string }) => {
+                    // Auto-mark read since chat is open
+                    if (update.conversationId === conv?._id) {
+                        socket.emit('mark_read', conv._id);
+                    }
+                });
+            } catch (err) {
+                console.error('[Chat] initChat error:', err);
+                if (mounted) setLoading(false);
+            }
         };
 
         initChat();
@@ -133,7 +148,11 @@ export default function ProfileChatTab({ onBack }: { onBack?: () => void }) {
     }, [messages, loading]);
 
     const handleSend = () => {
-        if (!input.trim() || !conversation || !socketRef.current) return;
+        if (!input.trim() || !conversation) return;
+        if (!socketRef.current?.connected) {
+            toast.error('Chưa kết nối máy chủ chat. Vui lòng đợi trong giây lát.');
+            return;
+        }
         socketRef.current.emit('send_message', {
             conversationId: conversation._id,
             content: input.trim()
