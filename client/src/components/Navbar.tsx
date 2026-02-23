@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, Bell, User, LogOut, Check, Filter, Crown, Film, List, MessageSquare, Heart, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from './ui/button';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/contexts/notification-context';
 import { usePWA } from '@/hooks/usePWA';
@@ -53,6 +53,8 @@ export function Navbar() {
     const pathname = usePathname();
     const { user, loading, logout } = useAuth();
     const { isPWA } = usePWA();
+    const searchParams = useSearchParams();
+    const isChatOpen = pathname === '/profile' && searchParams.get('tab') === 'chat';
 
     const {
         notifications,
@@ -142,7 +144,7 @@ export function Navbar() {
     return (
         <>
             <header
-                className={`fixed top-0 z-[100] w-full transition-all duration-300 pt-[env(safe-area-inset-top)] ${isScrolled ? 'bg-deep-black/95 backdrop-blur-sm shadow-md shadow-primary/10' : 'bg-transparent'
+                className={`fixed top-0 z-[100] w-full transition-all duration-300 pt-[env(safe-area-inset-top)] ${isChatOpen ? 'hidden md:block' : ''} ${isScrolled ? 'bg-deep-black/95 backdrop-blur-sm shadow-md shadow-primary/10' : 'bg-transparent'
                     }`}
             >
                 <div className="container mx-auto flex h-14 md:h-16 items-center justify-between px-4 gap-4">

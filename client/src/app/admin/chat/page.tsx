@@ -81,28 +81,50 @@ export default function AdminChatPage() {
         }
     }, []);
 
-    // Connect socket
+    // 1. Initialize stable socket connection once
     useEffect(() => {
-        if (!user) return;
+        if (!user || user.role !== 'admin') return;
+
         const token = getAuthToken();
         if (!token) return;
 
         const socket = io(API_URL, {
             auth: { token },
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 10
         });
         socketRef.current = socket;
 
+        socket.on('connect', () => {
+            console.log('[Socket] Connected to server');
+            // If we have a selected conversation, re-join its room on reconnect
+            if (selectedRef.current) {
+                socket.emit('join_conversation', selectedRef.current._id);
+            }
+        });
+
         socket.on('new_message', (msg: Message) => {
             setMessages(prev => {
+                // Ensure we only add messages for the CURRENTLY selected conversation
+                // and avoid duplicates
+                if (selectedRef.current && msg.conversationId !== selectedRef.current._id) return prev;
                 if (prev.find(m => m._id === msg._id)) return prev;
                 return [...prev, msg];
             });
-            // Update conversation list unread
+
+            // Update conversation list sidebar
             setConversations(prev => prev.map(c => {
-                if (c._id === msg.conversationId || (selected && c._id === selected._id)) return c;
-                if (msg.senderRole === 'user') {
-                    return { ...c, unreadAdmin: c.unreadAdmin + 1, lastMessage: msg.content, lastMessageAt: msg.createdAt };
+                if (c._id === msg.conversationId) {
+                    const isOther = !selectedRef.current || selectedRef.current._id !== c._id;
+                    return {
+                        ...c,
+                        lastMessage: msg.content,
+                        lastMessageAt: msg.createdAt,
+                        // Only increment unread if it's a user message and NOT in the active conversation
+                        unreadAdmin: (msg.senderRole === 'user' && isOther)
+                            ? (c.unreadAdmin + 1) : c.unreadAdmin
+                    };
                 }
                 return c;
             }));
@@ -111,12 +133,13 @@ export default function AdminChatPage() {
         socket.on('conversation_updated', (update: { conversationId: string; lastMessage: string; lastMessageAt: string; senderRole: string }) => {
             setConversations(prev => prev.map(c => {
                 if (c._id === update.conversationId) {
+                    const isOther = !selectedRef.current || selectedRef.current._id !== c._id;
                     return {
                         ...c,
                         lastMessage: update.lastMessage,
                         lastMessageAt: update.lastMessageAt,
-                        unreadAdmin: update.senderRole === 'user' && (!selected || selected._id !== c._id)
-                            ? c.unreadAdmin + 1 : c.unreadAdmin
+                        unreadAdmin: (update.senderRole === 'user' && isOther)
+                            ? (c.unreadAdmin + 1) : c.unreadAdmin
                     };
                 }
                 return c;
@@ -127,24 +150,44 @@ export default function AdminChatPage() {
 
         return () => {
             socket.disconnect();
+            socketRef.current = null;
         };
-    }, [user, fetchConversations, selected]);
+    }, [user, fetchConversations]); // Note: No selected dependency here
+
+    // 2. Keep a ref to selected for socket handlers to use without closure issues
+    const selectedRef = useRef<Conversation | null>(null);
+    useEffect(() => {
+        selectedRef.current = selected;
+    }, [selected]);
+
+    // 3. Handle Room membership changes
+    useEffect(() => {
+        const socket = socketRef.current;
+        if (!socket || !user) return;
+
+        if (selected) {
+            console.log('[Socket] Joining room:', selected._id);
+            socket.emit('join_conversation', selected._id);
+            socket.emit('mark_read', selected._id);
+        }
+
+        return () => {
+            if (selected) {
+                console.log('[Socket] Leaving room:', selected._id);
+                socket.emit('leave_conversation', selected._id);
+            }
+        };
+    }, [selected, user]);
 
     // Select conversation
     const handleSelect = (conv: Conversation) => {
         if (selected?._id === conv._id) return;
 
-        // Leave old room, join new
-        if (selected) socketRef.current?.emit('leave_conversation', selected._id);
-
         setSelected(conv);
         setMessages([]);
         fetchMessages(conv._id);
 
-        socketRef.current?.emit('join_conversation', conv._id);
-        socketRef.current?.emit('mark_read', conv._id);
-
-        // Clear unread badge
+        // Clear unread badge locally
         setConversations(prev => prev.map(c => c._id === conv._id ? { ...c, unreadAdmin: 0 } : c));
     };
 

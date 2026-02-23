@@ -9,6 +9,8 @@ import { PWAAds } from '@/components/PWAAds';
 import LoadingScreen from '@/components/LoadingScreen';
 import { customFetch } from '@/lib/api';
 import { MarvelBanner } from '@/components/MarvelBanner';
+import { DCUBanner } from '@/components/DCUBanner';
+import { StephenChowBanner } from '@/components/StephenChowBanner';
 
 interface Movie {
   _id: string;
@@ -158,9 +160,19 @@ export default function Home() {
         <HeroSlider movies={featuredMovies} />
       )}
 
-      {/* MARVEL UNIVERSE BANNER */}
+      {/* UNIVERSE BANNERS */}
       <div className="container mx-auto px-4 -mt-4 relative z-20 mb-2">
-        <MarvelBanner />
+        <div className="flex overflow-x-auto gap-4 scrollbar-hide snap-x snap-mandatory pb-2">
+          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
+            <MarvelBanner />
+          </div>
+          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
+            <DCUBanner />
+          </div>
+          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
+            <StephenChowBanner />
+          </div>
+        </div>
       </div>
 
       {/* Carousel Sections */}

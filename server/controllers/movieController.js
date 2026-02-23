@@ -637,9 +637,203 @@ const getMarvelMovies = async (req, res) => {
     }
 };
 
+const getDCUMovies = async (req, res) => {
+    try {
+        const dcuTitles = [
+            { en: 'Man of Steel', year: 2013 },
+            { en: 'Batman v Superman: Dawn of Justice', year: 2016 },
+            { en: 'Suicide Squad', year: 2016 },
+            { en: 'Wonder Woman', year: 2017 },
+            { en: 'Justice League', year: 2017 },
+            { en: 'Zack Snyder\'s Justice League', year: 2021 }, // Bonus if exists
+            { en: 'Aquaman', year: 2018 },
+            { en: 'Shazam!', year: 2019 },
+            { en: 'Birds of Prey', year: 2020 },
+            { en: 'Wonder Woman 1984', year: 2020 },
+            { en: 'The Suicide Squad', year: 2021 },
+            { en: 'Peacemaker', year: 2022 }, // Bonus if exists
+            { en: 'Black Adam', year: 2022 },
+            { en: 'Shazam! Fury of the Gods', year: 2023 },
+            { en: 'The Flash', year: 2023 },
+            { en: 'Blue Beetle', year: 2023 },
+            { en: 'Aquaman and the Lost Kingdom', year: 2023 }
+        ];
+
+        const results = [];
+
+        for (const dcu of dcuTitles) {
+            const escaped = dcu.en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Allow loose matching (e.g. "Birds of Prey" might have a longer sub-title in DB)
+            const candidates = await Movie.find({
+                isActive: { $ne: false },
+                $or: [
+                    { origin_name: { $regex: escaped, $options: 'i' } },
+                    { name: { $regex: escaped, $options: 'i' } }
+                ]
+            })
+                .select('name slug thumb_url origin_name year type quality episode_current view')
+                .lean();
+
+            if (candidates.length === 0) continue;
+
+            // Pick the one closest to the official release year
+            const best = candidates.reduce((a, b) =>
+                Math.abs((a.year || 0) - dcu.year) <= Math.abs((b.year || 0) - dcu.year) ? a : b
+            );
+
+            // To handle cases where we find a mismatch but want to avoid duplicates
+            if (!results.find(r => r.slug === best.slug)) {
+                best._dcuYear = dcu.year; // for sorting
+                results.push(best);
+            }
+        }
+
+        // Sort by official DCU release year
+        results.sort((a, b) => (a._dcuYear || a.year) - (b._dcuYear || b.year));
+        results.forEach(m => delete m._dcuYear);
+
+        res.json({ success: true, data: results, total: results.length });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+const getStephenChowMovies = async (req, res) => {
+    try {
+        const stephenChowTitles = [
+            { vi: 'Quyết Chiến Giang Hồ', en: 'Dragon Fight', year: 1989 },
+            { vi: 'Anh Hùng Của Tôi', en: 'My Hero', year: 1990 },
+            { vi: 'Đỗ Thánh', en: 'All For The Winner', year: 1990 },
+            { vi: 'Sư Huynh Trúng Tà', en: 'Look Out Officer', year: 1990 },
+            { vi: 'Tình Yêu Và Cuộc Đời', en: 'Love Is Love', year: 1990 },
+            { vi: 'Trà Lầu Long Phụng', en: 'Lung Fung Restaurant', year: 1990 },
+            { vi: 'Vô Địch Vận Hạnh Tinh', en: 'When Fortune Smiles', year: 1990 },
+            { vi: 'Vỏ Quýt Dày Có Móng Tay Nhọn', en: 'Curry And Pepper', year: 1990 },
+            { vi: 'Chuyên Gia Xảo Quyệt', en: 'Tricky Brains', year: 1991 },
+            { vi: 'Đỗ Thánh 2', en: 'God Of Gamblers II', year: 1991 },
+            { vi: 'Đỗ Thánh 3', en: 'God Of Gamblers Back To Shanghai', year: 1991 },
+            { vi: 'Tân Tinh Võ Môn', en: 'Fist of Fury I', year: 1991 },
+            { vi: 'Tình Thánh', en: 'The Magnificent Scoundrels', year: 1991 },
+            { vi: 'Trường Học Uy Long', en: 'Fight Back To School', year: 1991 },
+            { vi: 'Long Tích Truyền Nhân', en: 'Legend Of The Dragon', year: 1991 },
+            { vi: 'Tân Tinh Võ Môn 2', en: 'Fist of Fury II', year: 1992 },
+            { vi: 'Gia Hữu Hỷ Sự', en: 'All’s Well End’s Well', year: 1992 },
+            { vi: 'Trạng Nguyên Tô Khất Nhi', en: 'King Of Beggars', year: 1992 },
+            { vi: 'Trường Học Uy Long 2', en: 'Fight Back To School II', year: 1992 },
+            { vi: 'Xẩm Xử Quan', en: 'Justice, My Foot', year: 1992 },
+            { vi: 'Tân Lộc Đỉnh Ký', en: 'Royal Tramp', year: 1992 },
+            { vi: 'Tân Lộc Đỉnh Ký 2', en: 'Royal Tramp II', year: 1992 },
+            { vi: 'Đường Bá Hổ Điểm Thu Hương', en: 'Flirting Scholar', year: 1993 },
+            { vi: 'Tế Công', en: 'The Mad Monk', year: 1993 },
+            { vi: 'Trường Học Uy Long 3', en: 'Fight Back To School III', year: 1993 },
+            { vi: 'Quan Xẩm Lốc Cốc', en: 'Hail the Judge', year: 1994 },
+            { vi: 'Quốc Sản 007', en: 'From Beijing with love', year: 1994 },
+            { vi: 'Vua Phá Hoại', en: 'Love On Delivery', year: 1994 },
+            { vi: 'Bách Biến Tinh Quân', en: 'Sixty Million Dollar Man', year: 1995 },
+            { vi: 'Chuyên Gia Bắt Ma', en: 'Out Of The Dark', year: 1995 },
+            { vi: 'Tây Du Ký: Nguyệt Quang Bảo Hạp', en: 'A Chinese Odyssey I: Pandora’s Box', year: 1995 },
+            { vi: 'Tây Du Ký: Tiên Lý Kì Duyên', en: 'A Chinese Odyssey II: Cinderella', year: 1995 },
+            { vi: 'Đại Nội Mật Thám', en: 'Forbidden City Cop', year: 1996 },
+            { vi: 'Thần Ăn', en: 'The God Of Cookery', year: 1996 },
+            { vi: 'Gia Hữu Hỷ Sự 1997', en: 'All’s Well End’s Well 1997', year: 1997 },
+            { vi: 'Trạng Sư Xảo Quyệt', en: 'Lawyer Lawyer', year: 1997 },
+            { vi: 'Hoàng Tử Bánh Trứng', en: 'The Lucky Guy', year: 1998 },
+            { vi: 'Phán Xét Cuối Cùng', en: 'Final Justice', year: 1988 },
+            { vi: 'Tình Anh Thợ Cạo', en: 'Faithfully Yours', year: 1988 },
+            { vi: 'Bịp Vương 2000', en: 'The Tricky Master', year: 1999 },
+            { vi: 'Vua Hài Kịch', en: 'The King Of Comedy', year: 1999 },
+            { vi: 'Đội Bóng Thiếu Lâm', en: 'Shaolin Soccer', year: 2001 },
+            { vi: 'Tuyệt Đỉnh Kungfu', en: 'Kungfu Hustle', year: 2004 },
+            { vi: 'Siêu Khuyển Thần Thông', en: 'CJ7', year: 2008 },
+            { vi: 'Tây Du Ký: Mối Tình Ngoại Truyện', en: 'Journey to the West: Conquering the Demons', year: 2013 },
+            { vi: 'Mỹ Nhân Ngư', en: 'The Mermaid', year: 2016 },
+            { vi: 'Tây Du Ký: Mối Tình Ngoại Truyện 2', en: 'Journey to the West: The Demons Strike Back', year: 2017 },
+            { vi: 'Tuyệt đỉnh Kungfu 2', en: 'Kungfu Hustle 2', year: 2025 }
+        ];
+
+        const results = [];
+
+        for (const titleObj of stephenChowTitles) {
+            // Normalize for matching
+            const nVi = titleObj.vi.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const candidates = await Movie.find({
+                isActive: { $ne: false },
+                $or: [
+                    { name: { $regex: titleObj.vi, $options: 'i' } },
+                    { origin_name: { $regex: titleObj.en, $options: 'i' } },
+                    { actor: { $regex: 'Châu Tinh Trì', $options: 'i' } } // Bonus hook
+                ]
+            }).select('name slug thumb_url origin_name year type quality episode_current view actor').lean();
+
+            if (candidates.length === 0) continue;
+
+            const strictCandidates = candidates.filter(c => {
+                const cName = (c.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                const cOrigin = (c.origin_name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+                const checkVi = titleObj.vi.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const checkEn = titleObj.en.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+                const hasActor = c.actor && Array.isArray(c.actor) && c.actor.some(a => /châu tinh trì|stephen chow/i.test(a));
+
+                // If exact matching name
+                if (cName === checkVi || cOrigin === checkEn) {
+                    // EXCLUSION: If it matches "Đường Bá Hổ Điểm Thu Hương" but it's the 2019 version, skip it
+                    if (c.name && c.name.includes('Đường Bá Hổ') && c.year === 2019) return false;
+                    if (c.origin_name && c.origin_name.includes('Flirting Scholar') && c.year === 2019) return false;
+
+                    // EXCLUSION: If it matches "Tuyệt Đỉnh Kungfu" but it's "Lục Vân Tiên" specifically
+                    if (c.slug && c.slug.includes('luc-van-tien')) return false;
+
+                    return true;
+                }
+
+                // If includes name AND has actor match (e.g. Lục Vân Tiên Tuyệt Đỉnh Kungfu won't pass without Chow as actor)
+                if ((cName.includes(checkVi) || cOrigin.includes(checkEn)) && hasActor) return true;
+
+                return false;
+            });
+
+            if (strictCandidates.length > 0) {
+                // Return best year match to deduplicate
+                const best = strictCandidates.reduce((a, b) =>
+                    Math.abs((a.year || 0) - titleObj.year) <= Math.abs((b.year || 0) - titleObj.year) ? a : b
+                );
+
+                if (!results.find(r => r.slug === best.slug)) {
+                    best._cttYear = titleObj.year;
+                    results.push(best);
+                }
+            }
+        }
+
+        // Also find all movies acting by him to capture those not in the list
+        const extraMovies = await Movie.find({
+            isActive: { $ne: false },
+            actor: { $regex: /châu tinh trì/i }
+        }).select('name slug thumb_url origin_name year type quality episode_current view actor').lean();
+
+        for (const extra of extraMovies) {
+            if (!results.find(r => r.slug === extra.slug)) {
+                extra._cttYear = extra.year || 1990;
+                results.push(extra);
+            }
+        }
+
+        results.sort((a, b) => (a._cttYear || a.year) - (b._cttYear || b.year));
+        results.forEach(m => delete m._cttYear);
+
+        res.json({ success: true, data: results, total: results.length });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getHomeData,
     getMovies,
     getMovieDetail,
-    getMarvelMovies
+    getMarvelMovies,
+    getDCUMovies,
+    getStephenChowMovies
 };

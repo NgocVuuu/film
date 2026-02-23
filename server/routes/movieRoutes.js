@@ -17,4 +17,10 @@ router.get('/movie/:slug', cacheMiddleware(600), optionalAuthMiddleware, movieCo
 // Marvel Universe Collection
 router.get('/movies/marvel', cacheMiddleware(600), movieController.getMarvelMovies);
 
+// DC Universe Collection
+router.get('/movies/dcu', cacheMiddleware(600), movieController.getDCUMovies);
+
+// Stephen Chow Collection
+router.get('/movies/stephenchow', cacheMiddleware(600), movieController.getStephenChowMovies);
+
 module.exports = router;

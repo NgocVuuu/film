@@ -2,12 +2,19 @@
 
 import { Home, Clock, Heart, User } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { usePWA } from '@/hooks/usePWA';
 
 export function BottomNav() {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { isPWA } = usePWA();
+
+    const isChatOpen = pathname === '/profile' && searchParams.get('tab') === 'chat';
+
+    if (isChatOpen) {
+        return null;
+    }
 
     const links = [
         // ...
