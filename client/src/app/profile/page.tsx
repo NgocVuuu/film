@@ -131,19 +131,19 @@ function ProfileContent() {
 
     return (
         <div className="bg-deep-black text-foreground h-[calc(100dvh-9.5rem)] md:h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
-            <div className={`container mx-auto w-full max-w-7xl flex-1 flex flex-col min-h-0 overflow-hidden ${activeTab === 'chat' ? 'px-0 md:px-4' : 'px-4'}`}>
+            <div className={`container mx-auto w-full max-w-full flex-1 flex flex-col min-h-0 overflow-hidden ${activeTab === 'chat' ? 'px-0 md:px-8' : 'px-4'}`}>
 
                 {activeTab !== 'chat' && (
-                    <h1 className={`text-2xl md:text-3xl font-bold mb-4 md:mb-6 mt-2 text-white items-center gap-3 shrink-0 ${isMobileSubView ? 'flex' : 'hidden md:flex'}`}>
+                    <h1 className={`text-xl md:text-2xl font-bold mb-3 md:mb-4 mt-1 text-white items-center gap-2 shrink-0 ${isMobileSubView ? 'flex' : 'hidden md:flex'}`}>
                         {isMobileSubView && (
                             <button onClick={() => {
                                 setActiveTab('profile');
                                 router.push('/profile');
                             }} className="md:hidden mr-2">
-                                <ArrowLeft className="w-6 h-6" />
+                                <ArrowLeft className="w-5 h-5" />
                             </button>
                         )}
-                        <User className="w-8 h-8 text-primary" />
+                        <User className="w-6 h-6 text-primary" />
                         Quản lý tài khoản
                     </h1>
                 )}
@@ -201,8 +201,16 @@ function ProfileContent() {
                                     </Button>
                                 </Link>
                             )}
-
                         </div>
+
+                        <a
+                            href="https://buymeacoffee.com/pchill_admin"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 flex w-full items-center justify-center gap-3 px-4 py-3.5 text-sm font-bold rounded-xl bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 text-black shadow-lg shadow-yellow-500/20 active:scale-[0.98] transition-all"
+                        >
+                            <span>Mời ad mỳ tôm 🍜</span>
+                        </a>
                     </div>
 
                     {/* PWA Features Section */}
@@ -262,69 +270,108 @@ function ProfileContent() {
 
                 <div className={`flex flex-col md:flex-row gap-4 md:gap-8 flex-1 overflow-hidden min-h-0 ${activeTab === 'chat' ? 'pb-0 md:pb-8' : 'pb-6 md:pb-8'} ${isMobileSubView ? 'flex' : 'hidden md:flex'}`}>
                     {/* Sidebar / Tabs */}
-                    <div className={`w-full md:w-64 shrink-0 px-4 md:px-0 ${activeTab === 'chat' ? 'hidden md:block' : ''}`}>
+                    <div className={`w-full md:w-72 shrink-0 px-4 md:px-0 ...`}>
                         <div className="bg-surface-900 border border-white/10 rounded-xl overflow-hidden">
-                            <div className="hidden md:block p-6 text-center border-b border-white/10 bg-surface-800">
-                                <div className="relative inline-block">
-                                    <img
-                                        src={user.avatar || `https://ui-avatars.com/api/?name=${user.displayName}`}
-                                        alt={user.displayName}
-                                        className="w-24 h-24 rounded-full border-4 border-primary mx-auto mb-3 object-cover shadow-lg"
-                                    />
-                                    <div className="absolute bottom-0 right-0 bg-surface-900 p-1.5 rounded-full border border-white/10">
-                                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                            <div className={`hidden md:block p-3 border-b border-white/10 ${user.isPremium ? 'bg-surface-900 relative' : 'bg-surface-800'}`}>
+                                {user.isPremium && (
+                                    <div className="absolute inset-0 bg-yellow-500/5 pointer-events-none" />
+                                )}
+                                <div className="relative z-10 flex items-center gap-3">
+                                    <div className="relative shrink-0">
+                                        <img
+                                            src={user.avatar || `https://ui-avatars.com/api/?name=${user.displayName}`}
+                                            alt={user.displayName}
+                                            className={`w-12 h-12 rounded-full border ${user.isPremium ? 'border-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'border-primary'} object-cover shadow-lg`}
+                                        />
+                                        <div className="absolute -bottom-0.5 -right-0.5 bg-surface-910 p-0.5 rounded-full border border-white/10">
+                                            <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0 text-left">
+                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                            <h3 className={`text-base font-bold truncate ${user.isPremium ? 'text-yellow-400' : 'text-white'}`}>{user.displayName}</h3>
+                                            {user.isPremium && <Crown className="w-4 h-4 text-yellow-500 shrink-0 animate-pulse" />}
+                                        </div>
+                                        <p className="text-xs truncate text-gray-400 leading-tight">{user.email}</p>
+                                        {user.role === 'admin' && (
+                                            <span className="mt-1 inline-block px-1.5 py-0.5 bg-red-500/20 text-red-500 text-[9px] font-bold rounded border border-red-500/20 uppercase tracking-tighter">
+                                                Admin
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
-                                <h3 className="text-lg font-bold text-white truncate">{user.displayName}</h3>
-                                <p className="text-sm text-gray-400 truncate">{user.email}</p>
-                                {user.role === 'admin' && (
-                                    <span className="mt-2 inline-block px-2 py-0.5 bg-red-500/20 text-red-500 text-xs font-bold rounded border border-red-500/20 uppercase">
-                                        Admin
-                                    </span>
-                                )}
                             </div>
                             <nav className="flex md:flex-col overflow-x-auto p-2 gap-2 md:gap-0 md:space-y-1 custom-scrollbar-hide">
+                                {/* Desktop Sidebar Status Banner */}
+                                <div className={`hidden md:block mb-2 p-3 rounded-lg border relative overflow-hidden group ${user.isPremium ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-surface-800/50 border-white/5'}`}>
+                                    <div className="absolute -top-1 -right-1 opacity-10 group-hover:opacity-15 transition-opacity">
+                                        <Crown className={`w-8 h-8 ${user.isPremium ? 'text-yellow-500' : 'text-gray-600'}`} />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <p className={`text-sm font-bold mb-1 ${user.isPremium ? 'text-yellow-400' : 'text-gray-300'}`}>
+                                            {user.isPremium ? 'Thành viên Premium' : 'Thành viên Miễn phí'}
+                                        </p>
+                                        <p className="text-xs text-gray-500 leading-normal font-vietnamese">
+                                            {user.isPremium
+                                                ? 'Cảm ơn bạn đã "nuôi" ad! Nhờ bạn mà server vẫn chạy phà phà, cùng tận hưởng đặc quyền thôi nào! ✨🙏'
+                                                : 'Sếp ơi, nâng cấp Premium để ad có thêm bát phở, còn sếp được hưởng đặc quyền thượng lưu nhé! 🥺🍜👑'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <a
+                                    href="https://buymeacoffee.com/pchill_admin"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hidden md:flex shrink-0 w-full items-center justify-center px-3 py-2.5 mb-1.5 text-xs font-bold rounded-lg bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 text-black shadow-lg shadow-yellow-500/20 hover:scale-[1.02] transition-all group/donate"
+                                >
+                                    <span className="whitespace-nowrap">Mời ad mỳ tôm 🍜</span>
+                                </a>
+
                                 <button
                                     onClick={() => setActiveTab('profile')}
-                                    className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                    className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:px-3 md:py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                                 >
-                                    <User className="w-4 h-4" />
+                                    <User className="w-3.5 h-3.5" />
                                     <span className="whitespace-nowrap">Thông tin cá nhân</span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('security')}
-                                    className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'security' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                    className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:px-3 md:py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'security' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                                 >
-                                    <Lock className="w-4 h-4" />
+                                    <Lock className="w-3.5 h-3.5" />
                                     <span className="whitespace-nowrap">Bảo mật & Mật khẩu</span>
                                 </button>
-                                <button
-                                    onClick={() => setActiveTab('pwa')}
-                                    className={`hidden md:flex w-full items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'pwa' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                                >
-                                    <Smartphone className="w-4 h-4 shrink-0" />
-                                    <span className="flex-1 text-left whitespace-nowrap">Ứng dụng di động</span>
-                                    {user.isPremium && (
-                                        <Crown className="w-3 h-3 text-yellow-500 shrink-0" />
-                                    )}
-                                </button>
+                                {/* Hidden: Ứng dụng di động on desktop */}
+                                {false && (
+                                    <button
+                                        onClick={() => setActiveTab('pwa')}
+                                        className={`hidden md:flex w-full items-center gap-3 px-3 py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'pwa' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                    >
+                                        <Smartphone className="w-3.5 h-3.5 shrink-0" />
+                                        <span className="flex-1 text-left whitespace-nowrap">Ứng dụng di động</span>
+                                        {user?.isPremium && (
+                                            <Crown className="w-3 h-3 text-yellow-500 shrink-0" />
+                                        )}
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => {
                                         setActiveTab('chat');
                                         router.push('/profile?tab=chat');
                                     }}
-                                    className={`hidden md:flex w-full items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'chat' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                    className={`hidden md:flex w-full items-center gap-3 px-3 py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'chat' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                                 >
-                                    <MessageCircle className="w-4 h-4 shrink-0" />
+                                    <MessageCircle className="w-3.5 h-3.5 shrink-0" />
                                     <span className="flex-1 text-left whitespace-nowrap">Chat with Ad</span>
                                 </button>
 
-                                <div className="hidden md:block border-t border-white/10 my-2 pt-2">
+                                <div className="hidden md:block border-t border-white/10 my-1.5 pt-1.5">
                                     <button
                                         onClick={handleLogout}
-                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                                     >
-                                        <LogOut className="w-4 h-4 shrink-0" />
+                                        <LogOut className="w-3.5 h-3.5 shrink-0" />
                                         <span>Đăng xuất</span>
                                     </button>
                                 </div>

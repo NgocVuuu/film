@@ -888,7 +888,7 @@ export default function VideoPlayer({
             )}
 
             {/* Controls Overlay */}
-            <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end px-3 py-3 md:p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
 
                 {/* Progress Bar */}
                 <div
@@ -927,8 +927,8 @@ export default function VideoPlayer({
                 </div>
 
                 {/* Main Controls */}
-                <div className="flex items-center justify-between gap-1" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+                <div className="flex items-center justify-between gap-0.5" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-0.5 sm:gap-2 md:gap-4">
                         <Button variant="ghost" size="icon" onClick={togglePlay} className="text-white hover:text-primary hover:bg-transparent">
                             {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
                         </Button>
@@ -963,7 +963,7 @@ export default function VideoPlayer({
                             </Button>
                         </div>
 
-                        <div className="flex items-center gap-2 group/volume">
+                        <div className="flex items-center gap-1 group/volume">
                             <Button variant="ghost" size="icon" onClick={toggleMute} className="text-white hover:text-primary hover:bg-transparent">
                                 {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                             </Button>
@@ -979,12 +979,12 @@ export default function VideoPlayer({
                             />
                         </div>
 
-                        <span className="text-white text-[10px] sm:text-xs font-mono ml-1 sm:ml-2 whitespace-nowrap">
+                        <span className="text-white text-[9px] sm:text-xs font-mono whitespace-nowrap">
                             {formatTime(currentTime)} / {formatTime(duration)}
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-1 sm:gap-2">
+                    <div className="flex items-center gap-1 sm:gap-3">
                         {/* Settings Button logic */}
                         <div className="relative">
                             <Button
@@ -1066,7 +1066,7 @@ export default function VideoPlayer({
                             <PictureInPicture className="w-5 h-5" />
                         </Button>
 
-                        <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:text-primary hover:bg-transparent">
+                        <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center">
                             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
                         </Button>
                     </div>

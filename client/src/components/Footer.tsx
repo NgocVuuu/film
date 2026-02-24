@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+
 export default function Footer() {
     return (
         <footer className="w-full border-t border-white/10 bg-deep-black py-4 mt-auto">
@@ -28,6 +29,16 @@ export default function Footer() {
                     <Link href="/feedback" className="hover:text-primary transition-colors">Góp ý</Link>
                     <Link href="/dmca" className="hover:text-primary transition-colors">DMCA</Link>
                 </div>
+
+                {/* Donate Button - Desktop only */}
+                <a
+                    href="https://buymeacoffee.com/pchill_admin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hidden md:flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-black bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 rounded-full hover:opacity-90 transition-all shadow-lg"
+                >
+                    Mời ad mỳ tôm 🍜
+                </a>
 
                 {/* Copyright */}
                 <div className="text-[10px] text-gray-600">

@@ -398,7 +398,15 @@ export default function WatchPage() {
                             {currentEpisode ? `Đang xem: ${currentEpisode.name}` : movie.origin_name}
                         </p>
                     </div>
-                    <div className="hidden md:flex items-center gap-2">
+                    <div className="hidden md:flex items-center gap-4">
+                        <a
+                            href="https://buymeacoffee.com/pchill_admin"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-black bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 rounded-full hover:opacity-90 transition-all shadow-lg"
+                        >
+                            Mời ad mỳ tôm 🍜
+                        </a>
                         <div className="hidden md:flex items-center gap-2">
                             {movie && (
                                 <ReportModal
@@ -485,8 +493,16 @@ export default function WatchPage() {
                                 </p>
                             </div>
 
-                            {/* Report Button - Visible on Mobile too */}
-                            <div className="flex md:hidden shrink-0 mt-3 sm:mt-0">
+                            {/* Report & Donate Buttons - Mobile and Tablet */}
+                            <div className="flex md:hidden items-center gap-2 shrink-0 mt-3 sm:mt-0">
+                                <a
+                                    href="https://buymeacoffee.com/pchill_admin"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-black bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 rounded-full hover:opacity-90 transition-all shadow-md"
+                                >
+                                    Mời ad mỳ tôm 🍜
+                                </a>
                                 {movie && (
                                     <ReportModal
                                         movieSlug={movie.slug}
