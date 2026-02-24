@@ -282,7 +282,7 @@ export default function VideoPlayer({
         }
         // Right side: Volume
         else {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as { MSStream?: unknown }).MSStream;
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             if (isIOS) {
                 // iOS does not allow volume control via JS
                 // Show feedback but don't change volume
@@ -364,7 +364,8 @@ export default function VideoPlayer({
 
     const singleTapTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    const toggleFullscreen = async () => {
+    const toggleFullscreen = async (e?: React.MouseEvent | React.TouchEvent) => {
+        if (e) e.stopPropagation();
         try {
             const container = containerRef.current;
             const video = videoRef.current;
@@ -373,49 +374,66 @@ export default function VideoPlayer({
 
             // Check if standard fullscreen calls are available on container
             const requestFS = container.requestFullscreen ||
-                (container as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen ||
-                (container as HTMLElement & { mozRequestFullScreen?: () => Promise<void> }).mozRequestFullScreen ||
-                (container as HTMLElement & { msRequestFullscreen?: () => Promise<void> }).msRequestFullscreen;
+                (container as any).webkitRequestFullscreen ||
+                (container as any).webkitRequestFullScreen ||
+                (container as any).mozRequestFullScreen ||
+                (container as any).msRequestFullscreen;
 
             const exitFS = document.exitFullscreen ||
-                (document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen ||
-                (document as Document & { mozCancelFullScreen?: () => Promise<void> }).mozCancelFullScreen ||
-                (document as Document & { msExitFullscreen?: () => Promise<void> }).msExitFullscreen;
+                (document as any).webkitExitFullscreen ||
+                (document as any).webkitCancelFullScreen ||
+                (document as any).mozCancelFullScreen ||
+                (document as any).msExitFullscreen;
 
-            // iOS Safari often doesn't support container fullscreen, acts on video element
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
+            // Detection
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
+            const hasNativeFallback = !!(video as any).webkitEnterFullscreen;
 
-            if (!document.fullscreenElement && !(document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement) {
+            // Current state check (more robust)
+            const activeFullscreenElement = document.fullscreenElement ||
+                (document as any).webkitFullscreenElement ||
+                (document as any).mozFullScreenElement ||
+                (document as any).msFullscreenElement ||
+                (video as any).webkitDisplayingFullscreen;
+
+            if (!activeFullscreenElement) {
                 // ENTER FULLSCREEN
-                if (isIOS && (video as HTMLVideoElement & { webkitEnterFullscreen?: () => void }).webkitEnterFullscreen) {
-                    // Use native iOS fullscreen
-                    (video as HTMLVideoElement & { webkitEnterFullscreen: () => void }).webkitEnterFullscreen();
-                } else if (requestFS) {
-                    // Use standard/standard-ish container fullscreen
-                    await requestFS.call(container);
-                    setIsFullscreen(true);
+                // Priority: Use standard API if available, UNLESS on iOS Safari (non-standalone) where it's buggy
+                if (requestFS && (!isIOS || isStandalone || !hasNativeFallback)) {
+                    try {
+                        await requestFS.call(container);
+                        setIsFullscreen(true);
 
-                    // Attempt Orientation Lock (Android)
-                    if (screen.orientation && (screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> }).lock) {
-                        try {
-                            await (screen.orientation as ScreenOrientation & { lock: (orientation: string) => Promise<void> }).lock('landscape');
-                        } catch {
-                            console.log('Orientation lock not supported/allowed');
+                        // Orientation Lock (Android)
+                        if (screen.orientation && (screen.orientation as any).lock) {
+                            try { await (screen.orientation as any).lock('landscape'); } catch { }
+                        }
+                    } catch (err) {
+                        console.warn('Standard Fullscreen failed:', err);
+                        if (hasNativeFallback) {
+                            (video as any).webkitEnterFullscreen();
+                            setIsFullscreen(true);
                         }
                     }
+                } else if (hasNativeFallback) {
+                    (video as any).webkitEnterFullscreen();
+                    setIsFullscreen(true);
                 }
             } else {
                 // EXIT FULLSCREEN
                 if (exitFS) {
                     await exitFS.call(document);
-                } else if ((video as HTMLVideoElement & { webkitExitFullscreen?: () => void }).webkitExitFullscreen) {
-                    (video as HTMLVideoElement & { webkitExitFullscreen: () => void }).webkitExitFullscreen();
+                } else if ((video as any).webkitExitFullscreen) {
+                    (video as any).webkitExitFullscreen();
+                } else if ((video as any).webkitExitFullscreen) {
+                    (video as any).webkitExitFullscreen();
                 }
                 setIsFullscreen(false);
 
-                // Unlock Orientation
-                if (screen.orientation && (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock) {
-                    try { (screen.orientation as ScreenOrientation & { unlock: () => void }).unlock(); } catch { }
+                if (screen.orientation && (screen.orientation as any).unlock) {
+                    try { (screen.orientation as any).unlock(); } catch { }
                 }
             }
 
@@ -425,7 +443,8 @@ export default function VideoPlayer({
     };
 
     // -- PIP Logic --
-    const togglePIP = async () => {
+    const togglePIP = async (e?: React.MouseEvent | React.TouchEvent) => {
+        if (e) e.stopPropagation();
         try {
             const video = videoRef.current;
             if (!video) return;
@@ -573,6 +592,7 @@ export default function VideoPlayer({
         // Listen for fullscreen changes to update state correctly
         document.addEventListener('fullscreenchange', onFullscreenChange);
         document.addEventListener('webkitfullscreenchange', onFullscreenChange); // iOS/Safari
+        video.addEventListener('webkitbeginfullscreen', () => setIsFullscreen(true));
         video.addEventListener('webkitendfullscreen', () => setIsFullscreen(false)); // iOS native exit
 
         if (Hls.isSupported()) {
@@ -811,7 +831,7 @@ export default function VideoPlayer({
                             </div>
                         )}
                         {gestureFeedback.type === 'error' && (
-                            <span className="text-xs text-center text-gray-300">iPhone không hỗ trợ<br />chỉnh âm lượng cảm ứng</span>
+                            <span className="text-xs text-center text-gray-300">iPhone/iPad không hỗ trợ<br />chỉnh âm lượng cảm ứng</span>
                         )}
                     </div>
                 </div>
@@ -990,7 +1010,7 @@ export default function VideoPlayer({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setShowSettings(!showSettings)}
+                                onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); }}
                                 className={`text-white hover:text-primary hover:bg-transparent ${showSettings ? 'rotate-90 text-primary' : ''} transition-all`}
                             >
                                 <Settings className="w-5 h-5" />
@@ -1059,14 +1079,14 @@ export default function VideoPlayer({
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={togglePIP}
+                            onClick={(e) => togglePIP(e)}
                             className="text-white hover:text-primary hover:bg-transparent flex"
                             title="Picture-in-Picture"
                         >
                             <PictureInPicture className="w-5 h-5" />
                         </Button>
 
-                        <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center">
+                        <Button variant="ghost" size="icon" onClick={(e) => toggleFullscreen(e)} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center">
                             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
                         </Button>
                     </div>

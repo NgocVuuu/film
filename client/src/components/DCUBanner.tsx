@@ -32,10 +32,10 @@ export function DCUBanner() {
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 flex items-center gap-6 px-6 md:px-10 py-6">
+                <div className="relative z-10 flex items-center gap-3 lg:gap-6 px-4 lg:px-10 py-6">
                     {/* DC logo pill */}
                     <div className="shrink-0">
-                        <div className="bg-[#005b96] border border-white/20 px-5 py-1.5 rounded-full font-black text-white tracking-wider text-xl md:text-2xl shadow-lg shadow-blue-900/50 flex items-center justify-center w-16 h-16 md:w-20 md:h-20"
+                        <div className="bg-[#005b96] border border-white/20 px-3 lg:px-5 py-1.5 rounded-full font-black text-white tracking-wider text-base lg:text-2xl shadow-lg shadow-blue-900/50 flex items-center justify-center w-12 h-12 md:w-14 md:h-14 lg:w-20 lg:h-20"
                             style={{ fontFamily: 'Impact, "Arial Black", sans-serif' }}>
                             DC
                         </div>
@@ -43,7 +43,7 @@ export function DCUBanner() {
 
                     {/* Text */}
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-white font-bold text-base md:text-xl leading-tight group-hover:text-blue-300 transition-colors">
+                        <h2 className="text-white font-bold text-sm lg:text-xl leading-tight group-hover:text-blue-300 transition-colors">
                             Vũ Trụ Điện Ảnh DC
                         </h2>
                         <p className="text-gray-400 text-xs md:text-sm mt-0.5">
@@ -53,7 +53,7 @@ export function DCUBanner() {
 
                     {/* Arrow */}
                     <div className="shrink-0 flex items-center gap-2 text-blue-400 group-hover:text-blue-300 transition-colors text-sm font-medium">
-                        <span className="hidden sm:block">Xem tất cả</span>
+                        <span className="hidden lg:block text-xs md:text-sm">Xem tất cả</span>
                         <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>

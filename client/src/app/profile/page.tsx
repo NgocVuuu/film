@@ -270,7 +270,7 @@ function ProfileContent() {
 
                 <div className={`flex flex-col md:flex-row gap-4 md:gap-8 flex-1 overflow-hidden min-h-0 ${activeTab === 'chat' ? 'pb-0 md:pb-8' : 'pb-6 md:pb-8'} ${isMobileSubView ? 'flex' : 'hidden md:flex'}`}>
                     {/* Sidebar / Tabs */}
-                    <div className={`w-full md:w-72 shrink-0 px-4 md:px-0 ...`}>
+                    <div className={`w-full md:w-72 shrink-0 px-4 md:px-0 ${activeTab === 'chat' ? 'hidden md:block' : ''}`}>
                         <div className="bg-surface-900 border border-white/10 rounded-xl overflow-hidden">
                             <div className={`hidden md:block p-3 border-b border-white/10 ${user.isPremium ? 'bg-surface-900 relative' : 'bg-surface-800'}`}>
                                 {user.isPremium && (

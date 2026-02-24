@@ -20,9 +20,10 @@ export default function ChatWidget() {
     const dragStart = useRef({ x: 0, y: 0 });
     const initialPos = useRef({ x: 0, y: 0 });
 
-    // Removed sessionStorage check to allow widget to reappear on reload
+    const [mounted, setMounted] = useState(false);
+
     useEffect(() => {
-        // Initial setup if needed
+        setMounted(true);
     }, []);
 
     const fetchConversation = useCallback(async () => {
@@ -103,7 +104,8 @@ export default function ChatWidget() {
     const isChatOpen = pathname === '/profile' && searchParams.get('tab') === 'chat';
 
     // Only show for logged-in non-admin users, and hide if chat tab is already open or dismissed
-    if (!user || user.role === 'admin' || isChatOpen || isHidden) return null;
+    // Also wait for mount to prevent hydration mismatch
+    if (!mounted || !user || user.role === 'admin' || isChatOpen || isHidden) return null;
 
     return (
         <div

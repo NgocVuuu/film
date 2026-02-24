@@ -32,10 +32,10 @@ export function MarvelBanner() {
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 flex items-center gap-6 px-6 md:px-10 py-6">
+                <div className="relative z-10 flex items-center gap-3 lg:gap-6 px-4 lg:px-10 py-6">
                     {/* Marvel logo pill */}
                     <div className="shrink-0">
-                        <div className="bg-[#ED1D24] px-5 py-1.5 rounded font-black text-white tracking-widest text-lg md:text-2xl shadow-lg shadow-red-900/50"
+                        <div className="bg-[#ED1D24] px-4 lg:px-5 py-1.5 rounded font-black text-white tracking-widest text-base lg:text-2xl shadow-lg shadow-red-900/50"
                             style={{ fontFamily: 'Impact, "Arial Black", sans-serif' }}>
                             MARVEL
                         </div>
@@ -43,7 +43,7 @@ export function MarvelBanner() {
 
                     {/* Text */}
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-white font-bold text-base md:text-xl leading-tight group-hover:text-red-300 transition-colors">
+                        <h2 className="text-white font-bold text-sm lg:text-xl leading-tight group-hover:text-red-300 transition-colors">
                             Vũ Trụ Điện Ảnh Marvel
                         </h2>
                         <p className="text-gray-400 text-xs md:text-sm mt-0.5">
@@ -53,7 +53,7 @@ export function MarvelBanner() {
 
                     {/* Arrow */}
                     <div className="shrink-0 flex items-center gap-2 text-red-400 group-hover:text-red-300 transition-colors text-sm font-medium">
-                        <span className="hidden sm:block">Xem tất cả</span>
+                        <span className="hidden lg:block text-xs md:text-sm">Xem tất cả</span>
                         <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
