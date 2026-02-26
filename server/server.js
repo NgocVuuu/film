@@ -18,6 +18,8 @@ const progressRoutes = require('./routes/progressRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const adminNodeRoutes = require('./routes/adminNodeRoutes');
+const adminUpgradeRoutes = require('./routes/adminUpgradeRoutes');
 const movieRoutes = require('./routes/movieRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
@@ -123,6 +125,8 @@ app.use('/api/subscriptions', subscriptionRoutes);
 
 // Admin Routes
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/nodes', adminNodeRoutes);
+app.use('/api/admin/upgrades', adminUpgradeRoutes);
 
 // Health Check
 app.get('/', (req, res) => {

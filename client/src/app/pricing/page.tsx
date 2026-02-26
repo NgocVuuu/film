@@ -44,64 +44,6 @@ export default function PricingPage() {
     const [processingPlan, setProcessingPlan] = useState<string | null>(null);
     const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
     const [showModal, setShowModal] = useState(false);
-    const pollingRef = useRef<NodeJS.Timeout | null>(null);
-
-    useEffect(() => {
-        fetchPlans();
-        return () => stopPolling();
-    }, []);
-
-    // Prevent body scroll when modal is open
-    useEffect(() => {
-        if (showModal) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-        }
-        return () => {
-            document.body.style.overflow = '';
-        };
-    }, [showModal]);
-
-    // Polling for payment status
-    useEffect(() => {
-        if (showModal && paymentData) {
-            startPolling();
-        } else {
-            stopPolling();
-        }
-    }, [showModal, paymentData]);
-
-    const startPolling = () => {
-        if (pollingRef.current) return;
-
-        pollingRef.current = setInterval(async () => {
-            try {
-                const res = await customFetch(`/api/subscriptions/status`);
-                const data = await res.json();
-
-                if (data.success && data.data.status === 'active' && data.data.tier === 'premium') {
-                    // Payment successful
-                    toast.success('Thanh toán thành công! Gói Premium đã được kích hoạt.');
-                    stopPolling();
-                    setShowModal(false);
-                    setPaymentData(null);
-                    await refresh(); // Refresh layout/user data
-                    router.push('/profile'); // Redirect to profile to see updated subscription
-                }
-            } catch (e) {
-                console.error('Polling error', e);
-            }
-        }, 3000); // Check every 3s
-    };
-
-    const stopPolling = () => {
-        if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-        }
-    };
-
     const fetchPlans = async () => {
         try {
             const response = await fetch(`${API_URL}/api/subscriptions/plans`);
@@ -136,10 +78,12 @@ export default function PricingPage() {
             setProcessingPlan(plan.id);
 
             // Get token for auth header if using manual fetch wrapper or rely on cookies if setup
-            const response = await customFetch(`/api/subscriptions/create-payment`, {
+            // [KỊCH BẢN MỚI] Gọi API tạo phiếu nâng cấp thủ công
+            const response = await customFetch(`/api/subscriptions/create-upgrade`, {
                 method: 'POST',
                 body: JSON.stringify({
                     planId: plan.id,
+                    planName: plan.name,
                     duration: plan.duration,
                     amount: plan.price
                 })
@@ -173,7 +117,7 @@ export default function PricingPage() {
         toast.success('Đã sao chép');
     };
 
-    const IS_HIDDEN = true;
+    const IS_HIDDEN = false; // GỠ BỎ MẶT NẠ BẢO TRÌ
 
     if (IS_HIDDEN) {
         return (
@@ -212,7 +156,7 @@ export default function PricingPage() {
                         Trải nghiệm <span className="text-gold-gradient">không giới hạn</span>
                     </h1>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-2">
-                        Thanh toán qua mã QR - Kích hoạt tự động sau 30 giây.
+                        Hỗ trợ thanh toán ẩn danh qua WeScan và BuyMeACoffee.
                     </p>
                     <p className="text-gray-500 text-sm max-w-xl mx-auto italic">
                         Ủng hộ ad chút để duy trì web nhé, quả thật server đắt lắm 😭
@@ -325,43 +269,75 @@ export default function PricingPage() {
                             <p className="text-gray-600 text-xs mb-2">
                                 Sử dụng App Ngân hàng hoặc Ví MoMo/ZaloPay
                             </p>
-                            <div className="flex items-center gap-2 text-green-600 font-semibold bg-green-50 px-3 py-1.5 rounded-full animate-pulse text-xs">
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                                Đang chờ thanh toán...
+                            <div className="flex items-center gap-2 text-gold-gradient font-semibold bg-primary/5 px-3 py-1.5 rounded-full text-xs">
+                                < Crown className="w-3 h-3" />
+                                Đang chờ Admin xác nhận...
                             </div>
                         </div>
 
                         {/* Right: Info */}
                         <div className="w-full md:w-2/3 p-6 bg-surface-800 text-white flex flex-col gap-4 overflow-y-auto">
                             <div>
-                                <h3 className="text-lg font-bold mb-1">Thông tin chuyển khoản</h3>
-                                <p className="text-gray-400 text-xs">Nếu không quét được mã, bạn có thể chuyển khoản thủ công.</p>
+                                <h3 className="text-lg font-bold mb-1">Hướng dẫn thanh toán ẩn danh</h3>
+                                <p className="text-gray-400 text-xs">Sếp có thể chọn 1 trong 2 hình thức bên dưới.</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 mb-2">
+                                <div className="p-3 border border-primary/20 bg-primary/5 rounded-xl text-center">
+                                    <p className="text-xs text-primary font-bold mb-1 uppercase">Phương án 1</p>
+                                    <p className="text-sm font-bold text-white">WeScan (Nội địa)</p>
+                                </div>
+                                <a
+                                    href="https://www.buymeacoffee.com/pchill"
+                                    target="_blank"
+                                    className="p-3 border border-white/10 bg-white/5 rounded-xl text-center hover:bg-white/10 transition-colors"
+                                >
+                                    <p className="text-xs text-gray-400 font-bold mb-1 uppercase">Phương án 2</p>
+                                    <p className="text-sm font-bold text-white flex items-center justify-center gap-1">
+                                        Buy Me A Coffee <ArrowRight className="w-3 h-3" />
+                                    </p>
+                                </a>
                             </div>
 
                             <div className="space-y-3">
                                 <div className="bg-black/30 p-4 rounded-lg border border-white/5">
-                                    <p className="text-gray-400 text-xs uppercase mb-1">Ngân hàng</p>
-                                    <p className="font-mono font-bold text-lg">{paymentData.bankInfo.bankCode}</p>
-                                </div>
-                                <div className="bg-black/30 p-4 rounded-lg border border-white/5 relative group cursor-pointer" onClick={() => copyToClipboard(paymentData.bankInfo.accountNumber)}>
-                                    <p className="text-gray-400 text-xs uppercase mb-1">Số tài khoản</p>
-                                    <p className="font-mono font-bold text-lg text-primary">{paymentData.bankInfo.accountNumber}</p>
-                                    <Copy className="w-4 h-4 absolute top-4 right-4 text-gray-500 group-hover:text-white transition-colors" />
+                                    <p className="text-gray-400 text-xs uppercase mb-1">Tài khoản WeScan (Nội địa)</p>
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-mono font-bold text-lg">{paymentData.bankInfo.bankCode} - {paymentData.bankInfo.accountNumber}</p>
+                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.bankInfo.accountNumber)}>
+                                            <Copy className="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                                 <div className="bg-black/30 p-4 rounded-lg border border-white/5">
                                     <p className="text-gray-400 text-xs uppercase mb-1">Chủ tài khoản</p>
                                     <p className="font-mono font-bold text-lg">{paymentData.bankInfo.accountName}</p>
                                 </div>
-                                <div className="bg-black/30 p-4 rounded-lg border border-primary/30 relative group cursor-pointer" onClick={() => copyToClipboard(paymentData.content)}>
-                                    <p className="text-gray-400 text-xs uppercase mb-1">Nội dung chuyển khoản (Bắt buộc)</p>
-                                    <p className="font-mono font-bold text-lg text-yellow-400">{paymentData.content}</p>
-                                    <p className="text-xs text-red-400 mt-1">* Nhập chính xác nội dung này</p>
-                                    <Copy className="w-4 h-4 absolute top-4 right-4 text-gray-500 group-hover:text-white transition-colors" />
+                                <div className="bg-black/30 p-4 rounded-lg border border-primary/30 relative group">
+                                    <p className="text-gray-400 text-xs uppercase mb-1">Nội dung chuyển khoản (BẮT BUỘC)</p>
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-mono font-bold text-xl text-yellow-400">{paymentData.content}</p>
+                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.content)} className="text-gray-400 hover:text-white">
+                                            <Copy className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-red-500 mt-2 font-medium">
+                                        * Phải ghi đúng nội dung để Admin xác nhận nâng cấp Premium.
+                                    </p>
                                 </div>
                                 <div className="bg-black/30 p-4 rounded-lg border border-white/5">
                                     <p className="text-gray-400 text-xs uppercase mb-1">Số tiền</p>
                                     <p className="font-mono font-bold text-lg">{formatPrice(paymentData.amount)}</p>
                                 </div>
+                                <Button
+                                    onClick={() => setShowModal(false)}
+                                    className="w-full bg-primary hover:bg-primary/90 text-black font-bold py-6"
+                                >
+                                    Tôi đã hoàn tất chuyển khoản
+                                </Button>
+                                <p className="text-[10px] text-gray-500 text-center">
+                                    Phiếu của bạn sẽ được Admin duyệt trong vòng 5-30 phút.
+                                </p>
                             </div>
                         </div>
                     </div>

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import VideoPlayer from '@/components/VideoPlayer';
+import HybridVideoPlayer from '@/components/HybridVideoPlayer';
 import LegacyVideoPlayer from '@/components/LegacyVideoPlayer';
 import { Play, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -287,29 +287,9 @@ export default function WatchPage() {
 
     const handleEpisodeClick = async (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string }) => {
         const isSameEpisode = currentEpisode?.slug === episode.slug;
-        let finalEpisode = { ...episode };
+        const finalEpisode = { ...episode };
 
-        if (serverName.includes('PREMIUM') && episode.link_m3u8.startsWith('magnet:')) {
-            const loadingToast = toast.loading('Đang khởi tạo luồng Torrent Premium (4K)...');
-            try {
-                const res = await fetch(`${API_URL}/api/torrent/stream?magnet=${encodeURIComponent(episode.link_m3u8)}`, {
-                    credentials: 'include'
-                });
-                const data = await res.json();
-
-                if (data.success && data.streamLink) {
-                    finalEpisode.link_m3u8 = data.streamLink;
-                    toast.success('Đã sẵn sàng luồng chất lượng cao!', { id: loadingToast });
-                } else {
-                    toast.error(data.message || data.error || 'Lỗi khi khởi tạo luồng Torrent', { id: loadingToast });
-                    return;
-                }
-            } catch (err) {
-                console.error('Torrent fetch error:', err);
-                toast.error('Không thể kết nối với server Torrent', { id: loadingToast });
-                return;
-            }
-        }
+        // We no longer need to fetch here, HybridVideoPlayer will handle it if link_m3u8 starts with 'magnet:'
 
         setCurrentServerName(serverName);
         setCurrentEpisode(finalEpisode);
@@ -388,9 +368,10 @@ export default function WatchPage() {
                     <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (
                             isPremium ? (
-                                <VideoPlayer
+                                <HybridVideoPlayer
                                     key={currentEpisode.link_m3u8}
-                                    src={currentEpisode.link_m3u8}
+                                    src={currentEpisode.link_m3u8.startsWith('magnet:') ? '' : currentEpisode.link_m3u8}
+                                    magnet={currentEpisode.link_m3u8.startsWith('magnet:') ? currentEpisode.link_m3u8 : undefined}
                                     poster={movie.poster_url}
                                     autoPlay={shouldAutoPlay}
                                     movieSlug={movie.slug}

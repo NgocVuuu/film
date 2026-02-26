@@ -1,5 +1,6 @@
 const Payment = require('../models/Payment');
 const User = require('../models/User');
+const UpgradeRequest = require('../models/UpgradeRequest');
 const moment = require('moment');
 
 // Get subscription plans
@@ -8,57 +9,57 @@ exports.getPlans = async (req, res) => {
         const plans = [
             {
                 id: 'premium-1m',
-                name: 'Premium - 1 Tháng',
+                name: 'Gói 1 Tháng',
                 tier: 'premium',
                 duration: 1,
-                price: 19000,
+                price: 50000,
                 features: [
                     'Xem phim không quảng cáo',
                     'Lưu tiến độ xem không giới hạn',
-                    'Chất lượng HD/FullHD',
-                    'Hỗ trợ ưu tiên'
+                    'Chất lượng HD/FullHD/4K',
+                    'Ưu tiên luồng tải tốc độ cao'
                 ]
             },
             {
                 id: 'premium-3m',
-                name: 'Premium - 3 Tháng',
+                name: 'Gói 3 Tháng',
                 tier: 'premium',
                 duration: 3,
-                price: 39000,
-                originalPrice: 57000,
+                price: 130000,
+                originalPrice: 150000,
+                badge: 'Tiết kiệm 20k',
                 features: [
                     'Tất cả tính năng Premium',
-                    'Tiết kiệm 31% so với gói tháng',
-                    'Cộng dồn thời gian premium'
+                    'Dành cho người mới bắt đầu',
+                    'Kích hoạt nhanh qua WeScan'
                 ]
             },
             {
                 id: 'premium-6m',
-                name: 'Premium - 6 Tháng',
+                name: 'Gói 6 Tháng',
                 tier: 'premium',
                 duration: 6,
-                price: 69000,
-                originalPrice: 114000,
-                badge: 'Phổ biến',
+                price: 250000,
+                originalPrice: 300000,
+                badge: 'Phổ biến nhất (Tiết kiệm 50k)',
                 features: [
                     'Tất cả tính năng Premium',
-                    'Tiết kiệm 39% so với gói tháng',
-                    'Cộng dồn thời gian premium'
+                    'Bảo hành trọn đời gói cước',
+                    'Hỗ trợ cài đặt PWA ưu tiên'
                 ]
             },
             {
                 id: 'premium-12m',
-                name: 'Premium - 1 Năm',
+                name: 'Gói 1 Năm',
                 tier: 'premium',
                 duration: 12,
-                price: 129000,
-                originalPrice: 228000,
-                badge: 'Tốt nhất',
+                price: 450000,
+                originalPrice: 600000,
+                badge: 'Siêu Tiết kiệm (Giảm 150k)',
                 features: [
                     'Tất cả tính năng Premium',
-                    'Tiết kiệm 43% so với gói tháng',
-                    'Cộng dồn thời gian premium',
-                    'Ưu đãi dành cho fan cứng'
+                    'Huy hiệu "Fan Cứng" tại Profile',
+                    'Không bao giờ lo bị gián đoạn'
                 ]
             }
         ];
@@ -76,183 +77,83 @@ exports.getPlans = async (req, res) => {
     }
 };
 
-// Create payment URL (VietQR)
-exports.createPayment = async (req, res) => {
+// Khởi tạo Phiếu Nâng Cấp Manual (Thay thế SePay)
+exports.createManualUpgrade = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { planId, duration, amount } = req.body;
+        const { planId, duration, amount, planName } = req.body;
 
-        if (!planId || !duration || !amount) {
+        if (!planId || !duration || !amount || !planName) {
             return res.status(400).json({
                 success: false,
-                message: 'Thiếu thông tin thanh toán'
+                message: 'Thiếu thông tin gói cước'
             });
         }
 
-        // Create pending payment record
-        const payment = await Payment.create({
+        // Tạo chuỗi Random VIP-XXXXXX (6 chữ số)
+        const generateCode = () => {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = 'VIP-';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        };
+
+        // Đảm bảo không trùng code
+        let paymentCode = generateCode();
+        let isExist = await UpgradeRequest.findOne({ paymentCode, status: 'pending' });
+        while (isExist) {
+            paymentCode = generateCode();
+            isExist = await UpgradeRequest.findOne({ paymentCode, status: 'pending' });
+        }
+
+        // Create pending request
+        const request = await UpgradeRequest.create({
             userId,
+            planId,
+            planName,
+            durationDays: duration * 30, // Quy đổi tháng ra ngày (Tạm tính 1 tháng 30 ngày)
             amount,
-            provider: 'sepay', // Changed from vnpay
-            subscriptionTier: 'premium',
-            subscriptionDuration: duration,
-            status: 'pending',
-            metadata: { planId }
+            paymentCode,
+            status: 'pending'
         });
 
-        // Bank Info from Env
+        // Config thông tin QR Code WeScan
         const bankCode = process.env.BANK_CODE || 'MB';
         const accNum = process.env.BANK_ACC_NUM || '0000000000';
-        const accName = process.env.BANK_ACC_NAME || 'ADMIN';
+        const accName = process.env.BANK_ACC_NAME || 'ADMIN PCHILL';
 
-        // Content: PCHILL <PaymentID>
-        // Shortened to fit bank limits
-        const content = `PCHILL ${payment._id.toString().slice(-6).toUpperCase()}`;
-
-        // Save content to payment for matching later (or just match by partial ID)
-        payment.code = content;
-        await payment.save();
-
-        // Generate VietQR URL
-        // https://qr.sepay.vn/img?bank=BANK&acc=ACC&template=compact&amount=AMOUNT&des=CONTENT
-        const qrUrl = `https://qr.sepay.vn/img?bank=${bankCode}&acc=${accNum}&template=compact&amount=${amount}&des=${content}`;
+        // Link VietQR Động để in ra trên Modal (nếu xài WeScan MBBank)
+        const qrUrl = `https://qr.sepay.vn/img?bank=${bankCode}&acc=${accNum}&template=compact&amount=${amount}&des=${paymentCode}`;
 
         res.json({
             success: true,
             data: {
-                paymentId: payment._id,
+                requestId: request._id,
                 qrUrl,
-                content,
+                content: paymentCode,
                 amount,
                 bankInfo: {
                     bankCode,
                     accountNumber: accNum,
                     accountName: accName
-                }
+                },
+                bmcUrl: `https://www.buymeacoffee.com/your-username` // URL BMC (Demo)
             },
-            message: 'Đã tạo mã thanh toán QR'
+            message: 'Đã tạo phiếu đăng ký. Đang chờ thanh toán.'
         });
     } catch (error) {
-        console.error('Create payment error:', error);
+        console.error('Create upgrade request error:', error);
         res.status(500).json({
             success: false,
-            message: 'Lỗi khi tạo thanh toán'
+            message: 'Lỗi khi khởi tạo giao dịch'
         });
     }
 };
 
-// Handle SePay Webhook
-// Handle SePay Webhook
-exports.handleSepayWebhook = async (req, res) => {
-    try {
-        const data = req.body;
-        console.log('SePay Webhook:', JSON.stringify(data));
+// ...XÓA BỎ SEPAY WEBHOOK VÌ ADMIN DUYỆT THỦ CÔNG...
 
-        // 1. Security Check: Verify API Key (Simple Token Authentication)
-        // SePay doesn't have partial signature verification yet, so we use a shared secret in the query or body or header.
-        // Assuming we configure SePay to send ?api_key=... or we check a specific header if supported.
-        // OR: We enforce that the "content" MUST contain our specific code pattern which is hard to guess? No, that's weak.
-        // BEST PRACTICE for now: Check if `api_key` param matches env variable (if SePay supports custom params)
-        // OR better: Since SePay webhook setup allows adding params to the URL, we assume the webhook URL is configured as:
-        // https://api.pchill.com/api/subscriptions/webhook/sepay?api_key=YOUR_SECRET_KEY
-
-        const apiKey = req.query.api_key;
-        if (!process.env.SEPAY_API_KEY || apiKey !== process.env.SEPAY_API_KEY) {
-            console.warn('[SePay Security] Invalid or missing API Key.');
-            return res.status(401).json({ success: false, message: 'Unauthorized' });
-        }
-
-        const content = data.content;
-        const amount = data.transferAmount;
-        const transactionId = data.id || data.referenceCode; // SePay Transaction ID
-
-        if (!content || !amount || !transactionId) {
-            return res.status(200).json({ success: true, message: 'Ignored: Missing required fields' });
-        }
-
-        // 2. Idempotency Check (Prevent Double Payment)
-        // Check if this incoming transaction ID has already been processed
-        const existingTransaction = await Payment.findOne({
-            $or: [
-                { transactionId: transactionId.toString() },
-                { 'metadata.sepayData.id': transactionId }
-            ],
-            status: 'completed'
-        });
-
-        if (existingTransaction) {
-            console.log(`[SePay Idempotency] Transaction ${transactionId} already processed.`);
-            return res.status(200).json({ success: true, message: 'Ignored: Transaction already processed' });
-        }
-
-        // Parse ID from content: PCHILL <CODE>
-        // We use the `code` field in Payment to match EXACTLY
-        // data.content might contain extra text like "MBVCB PCHILL ABC...", so we regex or partial match
-        const match = content.match(/PCHILL\s*([A-Z0-9]{6})/i);
-        if (!match) {
-            return res.status(200).json({ success: true, message: 'Ignored: Content format mismatch' });
-        }
-
-        const paymentCodeSuffix = match[1].toUpperCase();
-        const infoToMatch = `PCHILL ${paymentCodeSuffix}`;
-
-        // Find pending payment
-        const payment = await Payment.findOne({
-            code: infoToMatch,
-            status: 'pending'
-        });
-
-        if (!payment) {
-            console.log('Payment not found for code:', infoToMatch);
-            return res.status(200).json({ success: true, message: 'Ignored: Payment not found' });
-        }
-
-        // Verify amount
-        if (amount < payment.amount) {
-            console.log('Amount mismatch:', amount, '<', payment.amount);
-            return res.status(200).json({ success: true, message: 'Ignored: Amount too low' });
-        }
-
-        // Activate Subscription
-        const user = await User.findById(payment.userId);
-        if (!user) {
-            return res.status(200).json({ success: true, message: 'User not found' });
-        }
-
-        const now = new Date();
-        const endDate = user.subscription.status === 'active' && user.subscription.endDate > now
-            ? new Date(user.subscription.endDate)
-            : new Date();
-
-        endDate.setMonth(endDate.getMonth() + payment.subscriptionDuration);
-
-        user.subscription = {
-            tier: payment.subscriptionTier,
-            status: 'active',
-            startDate: user.subscription.startDate || now,
-            endDate: endDate,
-            autoRenew: false
-        };
-        await user.save();
-
-        // Update payment status
-        payment.status = 'completed';
-        payment.transactionId = transactionId.toString(); // Save SePay ID to prevent reuse
-        payment.metadata = { ...payment.metadata, sepayData: data };
-        await payment.save();
-
-        console.log(`[SePay Success] User ${user.email} activated via ${paymentCodeSuffix}`);
-
-        res.json({
-            success: true,
-            message: 'Thanh toán thành công'
-        });
-
-    } catch (error) {
-        console.error('Webhook error:', error);
-        res.status(200).json({ success: false, message: 'Error processing webhook' });
-    }
-};
 
 // Get current subscription status
 exports.getSubscriptionStatus = async (req, res) => {

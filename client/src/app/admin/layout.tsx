@@ -15,7 +15,9 @@ import {
     MessageSquare,
     Flag,
     Video,
-    Bell
+    Bell,
+    Server,
+    CheckSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
@@ -31,6 +33,8 @@ const navigation = [
     { name: 'Notifications', href: '/admin/notifications', icon: Bell },
     { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
     { name: 'Crawler', href: '/admin/crawler', icon: RefreshCw },
+    { name: 'Server Nodes', href: '/admin/nodes', icon: Server },
+    { name: 'Upgrade Requests', href: '/admin/upgrades', icon: CheckSquare },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

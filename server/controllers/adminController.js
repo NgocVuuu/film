@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const WatchProgress = require('../models/WatchProgress');
+const ServerNode = require('../models/ServerNode');
+const axios = require('axios');
 
 // Get all users with pagination and filters
 exports.getAllUsers = async (req, res) => {
@@ -122,6 +124,22 @@ exports.toggleBanUser = async (req, res) => {
             user.banReason = undefined;
         }
         await user.save();
+
+        // [KỊCH BẢN BẢO MẬT] JWT Kill-Switch: Bắn Webhook sang toàn bộ Nginx Nodes
+        if (isBanned) {
+            try {
+                const activeNodes = await ServerNode.find({ status: 'active' });
+                const banPromises = activeNodes.map(node => {
+                    return axios.get(`${node.domain}/admin/ban_user?user_id=${user._id}`).catch(err => {
+                        console.warn(`[Kill-Switch] Lỗi khi báo Ban Token trên Node ${node.domain}:`, err.message);
+                    });
+                });
+                await Promise.allSettled(banPromises);
+                console.log(`[Kill-Switch] Đã gửi lệnh CẤM người dùng ${user._id} tới ${activeNodes.length} Nginx Nodes.`);
+            } catch (err) {
+                console.error('[Kill-Switch] Lỗi đồng bộ Ban Server:', err);
+            }
+        }
 
         res.json({
             success: true,
