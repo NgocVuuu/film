@@ -1,4 +1,6 @@
+'use client';
 import Link from 'next/link';
+import { DonateButton } from './DonateButton';
 
 
 export default function Footer() {
@@ -31,14 +33,9 @@ export default function Footer() {
                 </div>
 
                 {/* Donate Button - Desktop only */}
-                <a
-                    href="https://buymeacoffee.com/pchill_admin"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hidden md:flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-black bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 rounded-full hover:opacity-90 transition-all shadow-lg"
-                >
-                    Mời ad mỳ tôm 🍜
-                </a>
+                <div className="hidden md:block">
+                    <DonateButton />
+                </div>
 
                 {/* Copyright */}
                 <div className="text-[10px] text-gray-600">

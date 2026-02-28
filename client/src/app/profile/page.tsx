@@ -17,6 +17,7 @@ import { customFetch } from '@/lib/api';
 import { PWASettings } from '@/components/PWASettings';
 import { PremiumUpsellCard } from '@/components/PremiumUpsellCard';
 import { PWAAds } from '@/components/PWAAds';
+import { DonateButton } from '@/components/DonateButton';
 
 function ProfileContent() {
     const { user, loading: authLoading, refresh, logout } = useAuth(); // Changed checkAuth to refresh
@@ -203,14 +204,7 @@ function ProfileContent() {
                             )}
                         </div>
 
-                        <a
-                            href="https://buymeacoffee.com/pchill_admin"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-3 flex w-full items-center justify-center gap-3 px-4 py-3.5 text-sm font-bold rounded-xl bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 text-black shadow-lg shadow-yellow-500/20 active:scale-[0.98] transition-all"
-                        >
-                            <span>Mời ad mỳ tôm 🍜</span>
-                        </a>
+                        <DonateButton className="mt-3 w-full justify-center" />
                     </div>
 
                     {/* PWA Features Section */}
@@ -319,14 +313,7 @@ function ProfileContent() {
                                     </div>
                                 </div>
 
-                                <a
-                                    href="https://buymeacoffee.com/pchill_admin"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hidden md:flex shrink-0 w-full items-center justify-center px-3 py-2.5 mb-1.5 text-xs font-bold rounded-lg bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 text-black shadow-lg shadow-yellow-500/20 hover:scale-[1.02] transition-all group/donate"
-                                >
-                                    <span className="whitespace-nowrap">Mời ad mỳ tôm 🍜</span>
-                                </a>
+                                <DonateButton className="hidden md:inline-flex w-full justify-center mb-1.5" />
 
                                 <button
                                     onClick={() => setActiveTab('profile')}

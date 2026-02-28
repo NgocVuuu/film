@@ -4,6 +4,8 @@ import { useParams, useSearchParams } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
 import { Play, ArrowLeft } from 'lucide-react';
 import { ReportModal } from '@/components/ReportModal';
+import { CommentSection } from '@/components/CommentSection';
+import { DonateButton } from '@/components/DonateButton';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
 
@@ -63,6 +65,7 @@ export default function WatchPage() {
     const [availableSources, setAvailableSources] = useState<string[]>([]);
     const [currentSource, setCurrentSource] = useState<string>('');
     const [filteredServers, setFilteredServers] = useState<Episode[]>([]);
+    const [viewingServerName, setViewingServerName] = useState<string>('');
 
     // Next/Prev Episode State
     const [prevEpisode, setPrevEpisode] = useState<{ server: string; episode: { name: string; slug: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] } } | null>(null);
@@ -149,10 +152,21 @@ export default function WatchPage() {
                 }
                 return ep.server_name.startsWith(prefix);
             });
-            setFilteredServers(filtered);
+
+            // Deduplicate servers by clean name
+            const uniqueServersMap = new Map<string, Episode>();
+            filtered.forEach(ep => {
+                const cleanName = getCleanServerName(ep.server_name);
+                if (!uniqueServersMap.has(cleanName)) {
+                    uniqueServersMap.set(cleanName, ep);
+                }
+            });
+            const deduplicatedFiltered = Array.from(uniqueServersMap.values());
+
+            setFilteredServers(deduplicatedFiltered);
 
             // 4. Auto-select episode from URL or first episode
-            if (!currentEpisode && filtered.length > 0) {
+            if (!currentEpisode && deduplicatedFiltered.length > 0) {
                 let selectedEpisode = null;
                 let selectedServer = null;
 
@@ -172,7 +186,7 @@ export default function WatchPage() {
 
                     // Fallback to searching all filtered servers if no exact serverParam match
                     if (!selectedEpisode) {
-                        for (const server of filtered) {
+                        for (const server of deduplicatedFiltered) {
                             const found = server.server_data.find((ep: { slug: string }) => ep.slug === episodeParam);
                             if (found) {
                                 selectedEpisode = found;
@@ -194,14 +208,15 @@ export default function WatchPage() {
                 }
 
                 // If not found or no param, use first episode
-                if (!selectedEpisode && filtered[0].server_data.length > 0) {
-                    selectedEpisode = filtered[0].server_data[0];
-                    selectedServer = filtered[0].server_name;
+                if (!selectedEpisode && deduplicatedFiltered[0].server_data.length > 0) {
+                    selectedEpisode = deduplicatedFiltered[0].server_data[0];
+                    selectedServer = deduplicatedFiltered[0].server_name;
                 }
 
                 if (selectedEpisode && selectedServer) {
                     setCurrentEpisode(selectedEpisode);
                     setCurrentServerName(selectedServer);
+                    setViewingServerName(selectedServer);
                     setShouldAutoPlay(true);
 
                     // Set start time from URL param
@@ -288,6 +303,7 @@ export default function WatchPage() {
         const isSameEpisode = currentEpisode?.slug === episode.slug;
 
         setCurrentServerName(serverName);
+        setViewingServerName(serverName);
         setCurrentEpisode(episode);
         setShouldAutoPlay(true);
 
@@ -399,14 +415,7 @@ export default function WatchPage() {
                         </p>
                     </div>
                     <div className="hidden md:flex items-center gap-4">
-                        <a
-                            href="https://buymeacoffee.com/pchill_admin"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-black bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 rounded-full hover:opacity-90 transition-all shadow-lg"
-                        >
-                            Mời ad mỳ tôm 🍜
-                        </a>
+                        <DonateButton />
                         <div className="hidden md:flex items-center gap-2">
                             {movie && (
                                 <ReportModal
@@ -461,6 +470,19 @@ export default function WatchPage() {
                                 } : undefined}
                                 onNextEpisode={handleNextEpisode}
                                 onPrevEpisode={handlePrevEpisode}
+                                episodeServers={filteredServers.map(s => ({
+                                    server_name: s.server_name,
+                                    cleanName: getCleanServerName(s.server_name),
+                                    episodes: s.server_data.map((ep: { slug: string; name: string }) => ({
+                                        slug: ep.slug,
+                                        name: ep.name
+                                    }))
+                                }))}
+                                onEpisodeSelect={(serverName, episodeSlug) => {
+                                    const server = filteredServers.find(s => s.server_name === serverName);
+                                    const ep = server?.server_data.find((e: { slug: string }) => e.slug === episodeSlug);
+                                    if (ep) handleEpisodeClick(serverName, ep);
+                                }}
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-surface-900">
@@ -495,14 +517,7 @@ export default function WatchPage() {
 
                             {/* Report & Donate Buttons - Mobile and Tablet */}
                             <div className="flex md:hidden items-center gap-2 shrink-0 mt-3 sm:mt-0">
-                                <a
-                                    href="https://buymeacoffee.com/pchill_admin"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-black bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 rounded-full hover:opacity-90 transition-all shadow-md"
-                                >
-                                    Mời ad mỳ tôm 🍜
-                                </a>
+                                <DonateButton />
                                 {movie && (
                                     <ReportModal
                                         movieSlug={movie.slug}
@@ -515,16 +530,16 @@ export default function WatchPage() {
                             </div>
                         </div>
 
-                        {/* Source Tabs */}
+                        {/* Source Tabs - Hidden on desktop (moved to sidebar) */}
                         {availableSources.length > 1 && (
-                            <div className="flex items-center gap-3 overflow-x-auto pb-2">
-                                <span className="text-sm font-bold text-gray-500 uppercase">Đổi nguồn:</span>
+                            <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto">
+                                <span className="text-xs font-bold text-gray-500 uppercase shrink-0">Nguồn:</span>
                                 {availableSources.map((source, index) => (
                                     <button
                                         key={source}
                                         onClick={() => handleSourceChange(source)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${currentSource === source
-                                            ? 'bg-primary text-black shadow-lg shadow-primary/20'
+                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${currentSource === source
+                                            ? 'bg-primary text-black shadow-md shadow-primary/20'
                                             : 'bg-surface-800 text-gray-400 hover:bg-surface-700 hover:text-white border border-white/5'
                                             }`}
                                     >
@@ -538,47 +553,98 @@ export default function WatchPage() {
 
                 {/* 2. EPISODE SIDEBAR (Right/Bottom) */}
                 <div className="w-full lg:w-96 px-4 md:px-0 space-y-4 shrink-0">
-                    <div className="bg-surface-900/30 rounded-xl border border-white/5 overflow-hidden flex flex-col h-full lg:max-h-[calc(100vh-100px)] lg:sticky lg:top-24">
-                        <div className="p-4 border-b border-white/5 bg-surface-900/80 backdrop-blur-sm">
+                    <div className="bg-surface-900/30 rounded-xl border border-white/5 overflow-hidden flex flex-col h-full lg:sticky lg:top-24">
+                        <div className="p-4 border-b border-white/5 bg-surface-900/80 backdrop-blur-sm space-y-3">
                             <h3 className="font-bold text-white flex items-center gap-2">
                                 <Play className="w-4 h-4 text-primary fill-current" />
                                 Danh Sách Tập
                             </h3>
+                            {/* Source Tabs - Desktop only (inside sidebar) */}
+                            {availableSources.length > 1 && (
+                                <div className="hidden lg:flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-bold text-gray-500 uppercase shrink-0">Nguồn:</span>
+                                    {availableSources.map((source, index) => (
+                                        <button
+                                            key={source}
+                                            onClick={() => handleSourceChange(source)}
+                                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${currentSource === source
+                                                ? 'bg-primary text-black shadow-md shadow-primary/20'
+                                                : 'bg-surface-700 text-gray-400 hover:bg-surface-600 hover:text-white border border-white/5'
+                                                }`}
+                                        >
+                                            Server {index + 1}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
-                        <div className="p-4 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-                            {filteredServers.map((server: { server_name: string; server_data: { slug: string; name: string; link_m3u8: string; link_embed: string }[] }) => (
-                                <div key={server.server_name}>
-                                    <h4 className="inline-block px-3 py-1 rounded bg-primary/20 text-primary text-xs font-bold mb-3 uppercase tracking-wider border border-primary/20">
-                                        {getCleanServerName(server.server_name)}
-                                    </h4>
-                                    <div className="grid grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                                        {server.server_data.map((ep: { slug: string; name: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] }) => {
-                                            const isActive = currentEpisode === ep;
-                                            return (
-                                                <button
-                                                    key={ep.slug}
-                                                    onClick={() => handleEpisodeClick(server.server_name, ep)}
-                                                    className={`px-2 py-3 text-xs font-medium rounded-lg transition-all border relative ${isActive
-                                                        ? 'bg-primary text-black border-primary font-bold shadow-md'
-                                                        : 'bg-surface-800 text-gray-300 border-transparent hover:bg-surface-700 hover:text-white hover:border-white/10'
-                                                        }`}
-                                                >
-                                                    {ep.name}
-                                                    {isActive && (
-                                                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-black/20 rounded-full animate-pulse"></span>
-                                                    )}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                        <div className="p-4 flex-1 space-y-4 flex flex-col">
+                            {/* Server/Category Horizontal Tabs */}
+                            {filteredServers.length > 0 && (
+                                <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar border-b border-white/10 shrink-0">
+                                    {filteredServers.map((server) => {
+                                        const cleanName = getCleanServerName(server.server_name);
+                                        const isActiveTab = viewingServerName === server.server_name;
+                                        return (
+                                            <button
+                                                key={`tab-${server.server_name}`}
+                                                onClick={() => setViewingServerName(server.server_name)}
+                                                className={`px-4 py-2 text-sm font-bold whitespace-nowrap rounded-t-lg transition-all border-b-2 ${isActiveTab
+                                                    ? 'text-primary border-primary bg-primary/10'
+                                                    : 'text-gray-400 hover:text-white border-transparent hover:bg-white/5'
+                                                    }`}
+                                            >
+                                                {cleanName}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-                            ))}
+                            )}
+
+                            {/* Episodes Grid for the active tab */}
+                            {filteredServers.map((server) => {
+                                if (server.server_name !== viewingServerName) return null;
+                                return (
+                                    <div key={server.server_name} className="flex-1">
+                                        <div className="grid grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                                            {server.server_data.map((ep: { slug: string; name: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] }) => {
+                                                const isPlaying = currentEpisode?.slug === ep.slug && currentServerName === server.server_name;
+                                                return (
+                                                    <button
+                                                        key={ep.slug}
+                                                        onClick={() => handleEpisodeClick(server.server_name, ep)}
+                                                        className={`px-2 py-3 text-xs font-medium rounded-lg transition-all border relative flex items-center justify-center ${isPlaying
+                                                            ? 'bg-primary text-black border-primary font-bold shadow-md'
+                                                            : 'bg-surface-800 text-gray-300 border-transparent hover:bg-surface-700 hover:text-white hover:border-white/10'
+                                                            }`}
+                                                    >
+                                                        {ep.name}
+                                                        {isPlaying && (
+                                                            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-black/20 rounded-full animate-pulse"></span>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
 
             </div>
+
+            {/* Comments Section */}
+            {movie && (
+                <div className="max-w-screen-xl mx-auto w-full px-4 md:px-6 pb-12">
+                    <CommentSection
+                        movieSlug={movie.slug}
+                        episodeName={currentEpisode?.name}
+                    />
+                </div>
+            )}
         </div>
     );
 }

@@ -178,9 +178,8 @@
 
   body {
     background-color: var(--background-hex);
-    @apply text-foreground min-h-screen overflow-x-hidden;
+    @apply text-foreground min-h-screen;
     width: 100%;
-    position: relative;
   }
 
   body.premium-theme {

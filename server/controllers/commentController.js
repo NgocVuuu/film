@@ -57,7 +57,7 @@ const getComments = async (req, res) => {
 // 2. Add Comment (or Reply)
 const addComment = async (req, res) => {
     try {
-        const { movieSlug, content, rating, parentId } = req.body;
+        const { movieSlug, content, rating, parentId, episodeName } = req.body;
         const userId = req.user._id;
 
         if (!content) {
@@ -89,7 +89,8 @@ const addComment = async (req, res) => {
             movieSlug,
             content,
             rating: rating || undefined,
-            parentId: parentId || null
+            parentId: parentId || null,
+            episodeName: episodeName || null
         });
         await newComment.save();
 

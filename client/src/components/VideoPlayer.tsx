@@ -4,7 +4,7 @@ import Hls from 'hls.js';
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize,
     Settings, Loader2, FastForward, Rewind, PictureInPicture,
-    SkipBack, SkipForward
+    SkipBack, SkipForward, ListVideo
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
@@ -42,6 +42,13 @@ interface VideoPlayerProps {
     onNextEpisode?: () => void;
     onPrevEpisode?: () => void;
     onTimeUpdate?: (time: number) => void;
+    // In-player episode panel
+    episodeServers?: {
+        server_name: string;
+        cleanName: string;
+        episodes: { slug: string; name: string }[];
+    }[];
+    onEpisodeSelect?: (serverName: string, episodeSlug: string) => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -75,7 +82,9 @@ export default function VideoPlayer({
     prevEpisodeInfo,
     onNextEpisode,
     onPrevEpisode,
-    onTimeUpdate
+    onTimeUpdate,
+    episodeServers,
+    onEpisodeSelect,
 }: VideoPlayerProps) {
     const { user } = useAuth();
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -110,6 +119,10 @@ export default function VideoPlayer({
     const [qualityLevels, setQualityLevels] = useState<{ height: number; bitrate: number; index: number }[]>([]);
     const [currentQuality, setCurrentQuality] = useState(-1); // -1 is Auto
     const [showSettings, setShowSettings] = useState(false);
+
+    // Episode panel state
+    const [showEpisodePanel, setShowEpisodePanel] = useState(false);
+    const [panelServerName, setPanelServerName] = useState<string | null>(null);
 
     // Timer for hiding controls
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -147,7 +160,9 @@ export default function VideoPlayer({
         if (!videoRef.current.paused) {
             videoRef.current.pause();
         } else {
-            videoRef.current.play();
+            videoRef.current.play().catch(e => {
+                if (e.name !== 'AbortError') console.error('Play error:', e);
+            });
         }
         setShowControls(true);
     };
@@ -627,10 +642,16 @@ export default function VideoPlayer({
                 setQualityLevels(levels);
                 setIsLoading(false);
                 if (autoPlay) {
-                    video.play().catch(() => {
-                        setIsMuted(true);
-                        video.muted = true;
-                        video.play();
+                    video.play().catch((e) => {
+                        if (e.name === 'NotAllowedError') {
+                            setIsMuted(true);
+                            video.muted = true;
+                            video.play().catch(err => {
+                                if (err.name !== 'AbortError') console.error('Muted play error:', err);
+                            });
+                        } else if (e.name !== 'AbortError') {
+                            console.error('AutoPlay error:', e);
+                        }
                     });
                 }
             });
@@ -656,10 +677,16 @@ export default function VideoPlayer({
             video.src = src;
             if (autoPlay) {
                 video.addEventListener('loadedmetadata', () => {
-                    video.play().catch(() => {
-                        setIsMuted(true);
-                        video.muted = true;
-                        video.play();
+                    video.play().catch((e) => {
+                        if (e.name === 'NotAllowedError') {
+                            setIsMuted(true);
+                            video.muted = true;
+                            video.play().catch(err => {
+                                if (err.name !== 'AbortError') console.error('Muted play error:', err);
+                            });
+                        } else if (e.name !== 'AbortError') {
+                            console.error('AutoPlay Safari error:', e);
+                        }
                     });
                 });
             }
@@ -880,32 +907,97 @@ export default function VideoPlayer({
                 </div>
             )}
 
+            {/* In-Player Episode Panel - only visible on landscape/wide screens */}
+            {episodeServers && episodeServers.length > 0 && (
+                <div className="absolute inset-0 overflow-hidden pointer-events-none hidden landscape:block md:block z-50">
+                    <div
+                        className={`absolute inset-y-0 right-0 w-72 bg-black/90 backdrop-blur-md flex flex-col pointer-events-auto transition-transform duration-300 ease-in-out will-change-transform ${showEpisodePanel ? 'translate-x-0' : 'translate-x-full'}`}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Panel Header */}
+                        <div className="flex items-center justify-between p-3 border-b border-white/10 shrink-0">
+                            <span className="text-white font-bold text-sm flex items-center gap-2">
+                                <ListVideo className="w-4 h-4 text-primary" /> Danh sách tập
+                            </span>
+                            <button
+                                onClick={() => setShowEpisodePanel(false)}
+                                className="text-gray-400 hover:text-white text-lg leading-none px-1"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {/* Category Tabs */}
+                        {episodeServers.length > 1 && (
+                            <div className="flex gap-1 p-2 border-b border-white/10 overflow-x-auto custom-scrollbar shrink-0">
+                                {episodeServers.map(s => (
+                                    <button
+                                        key={s.server_name}
+                                        onClick={() => setPanelServerName(s.server_name)}
+                                        className={`px-3 py-1 rounded text-xs font-bold whitespace-nowrap transition-all ${(panelServerName ?? episodeServers[0].server_name) === s.server_name ? 'bg-primary text-black' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
+                                    >
+                                        {s.cleanName}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Episode Grid */}
+                        <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+                            <div className="grid grid-cols-4 gap-1.5">
+                                {(episodeServers.find(s => s.server_name === (panelServerName ?? episodeServers[0].server_name)) ?? episodeServers[0]).episodes.map(ep => {
+                                    const isActive = ep.slug === episodeSlug;
+                                    return (
+                                        <button
+                                            key={ep.slug}
+                                            onClick={() => {
+                                                onEpisodeSelect?.(panelServerName ?? episodeServers[0].server_name, ep.slug);
+                                                setShowEpisodePanel(false);
+                                            }}
+                                            className={`px-1 py-2 text-[10px] font-medium rounded transition-all border relative flex items-center justify-center ${isActive ? 'bg-primary text-black border-primary font-bold' : 'bg-white/10 text-gray-300 border-transparent hover:bg-white/20'}`}
+                                        >
+                                            {ep.name}
+                                            {isActive && (
+                                                <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-black/30 rounded-full animate-pulse" />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Loading Spinner */}
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 pointer-events-none">
                     <Loader2 className="w-10 h-10 text-primary animate-spin" />
                 </div>
-            )}
+            )
+            }
 
             {/* Skip Intro Button */}
-            {showSkipIntro && intro && (
-                <div className="absolute bottom-24 right-4 z-30 animate-in fade-in slide-in-from-bottom-4">
-                    <Button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (videoRef.current && intro) {
-                                videoRef.current.currentTime = intro[1];
-                                setCurrentTime(intro[1]);
-                                setShowSkipIntro(false);
-                            }
-                        }}
-                        className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/10 gap-2 pl-3 pr-4 h-10 rounded-full font-medium shadow-lg transition-all"
-                    >
-                        <SkipForward className="w-4 h-4 fill-current" />
-                        Bỏ qua giới thiệu
-                    </Button>
-                </div>
-            )}
+            {
+                showSkipIntro && intro && (
+                    <div className="absolute bottom-24 right-4 z-30 animate-in fade-in slide-in-from-bottom-4">
+                        <Button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (videoRef.current && intro) {
+                                    videoRef.current.currentTime = intro[1];
+                                    setCurrentTime(intro[1]);
+                                    setShowSkipIntro(false);
+                                }
+                            }}
+                            className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/10 gap-2 pl-3 pr-4 h-10 rounded-full font-medium shadow-lg transition-all"
+                        >
+                            <SkipForward className="w-4 h-4 fill-current" />
+                            Bỏ qua giới thiệu
+                        </Button>
+                    </div>
+                )
+            }
 
             {/* Controls Overlay */}
             <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end px-3 py-3 md:p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
@@ -1063,6 +1155,28 @@ export default function VideoPlayer({
                             )}
                         </div>
 
+                        {/* Episode List Button - hidden on portrait mobile */}
+                        {episodeServers && episodeServers.length > 0 && (
+                            <div className="hidden landscape:block md:block">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!panelServerName && episodeServers.length > 0) {
+                                            setPanelServerName(episodeServers[0].server_name);
+                                        }
+                                        setShowEpisodePanel(v => !v);
+                                        setShowSettings(false);
+                                    }}
+                                    className={`text-white hover:text-primary hover:bg-transparent ${showEpisodePanel ? 'text-primary' : ''}`}
+                                    title="Danh sách tập"
+                                >
+                                    <ListVideo className="w-5 h-5" />
+                                </Button>
+                            </div>
+                        )}
+
                         {/* Mobile Rotate Button (Force Landscape) - Removed per request */}
                         {/* <Button
                             variant="ghost"
@@ -1092,6 +1206,6 @@ export default function VideoPlayer({
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

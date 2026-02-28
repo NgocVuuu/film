@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, Bell, User, LogOut, Check, Filter, Crown, Film, List, MessageSquare, Heart, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from './ui/button';
+import { DonateButton } from './DonateButton';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/contexts/notification-context';
@@ -373,15 +374,7 @@ export function Navbar() {
                                             </Link>
                                         )}
 
-                                        <a
-                                            href="https://buymeacoffee.com/pchill_admin"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            onClick={() => setShowUserMenu(false)}
-                                            className="flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-black bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 hover:opacity-90 transition-all border-b border-white/5"
-                                        >
-                                            Mời ad mỳ tôm 🍜
-                                        </a>
+                                        <DonateButton />
 
                                         <Link href="/feedback" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
                                             <MessageSquare className="w-4 h-4" /> Góp ý & Báo lỗi

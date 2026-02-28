@@ -11,6 +11,11 @@ const commentSchema = new mongoose.Schema({
         required: true,
         index: true
     },
+    episodeName: {
+        type: String,
+        required: false,
+        default: null
+    },
     content: {
         type: String,
         required: true,

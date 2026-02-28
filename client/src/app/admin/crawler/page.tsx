@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react';
 import { Play, Loader2, RefreshCw, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
-
+import SearchAutocomplete from './SearchAutocomplete';
 interface CrawlerStatus {
     isRunning: boolean;
     blacklistSize: number;
@@ -253,16 +254,41 @@ export default function AdminCrawlerPage() {
                 {/* Fetch Specific Movie */}
                 <div className="bg-surface-900 border border-white/10 rounded-xl p-6">
                     <h2 className="text-xl font-bold text-white mb-4">Tải phim lẻ</h2>
-                    <div className="flex gap-2">
-                        <input
-                            value={movieSlug}
-                            onChange={(e) => setMovieSlug(e.target.value)}
-                            placeholder="Slug phim (vd: mai-2024)"
-                            className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-white"
-                        />
-                        <Button onClick={handleFetchMovie} disabled={fetching}>
-                            {fetching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                        </Button>
+                    <div className="flex flex-col gap-4">
+                        {/* Search Input & Source Selection */}
+                        <div className="flex gap-2 relative z-10">
+                            {/* Source Selection Combo */}
+                            <Select value={movieSource} onValueChange={setMovieSource}>
+                                <SelectTrigger className="w-36 bg-surface-800 border-white/10 text-white focus:ring-primary focus:ring-offset-0">
+                                    <SelectValue placeholder="Tất cả nguồn" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-surface-800 border-white/10 text-white">
+                                    <SelectItem value="ALL">Tất cả nguồn</SelectItem>
+                                    <SelectItem value="OPHIM">Ổ Phim</SelectItem>
+                                    <SelectItem value="NGUONC">Nguồn C</SelectItem>
+                                    <SelectItem value="KKPHIM">KKPhim</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {/* Search Setup */}
+                            <div className="flex-1 relative">
+                                <SearchAutocomplete
+                                    onSelect={(movie, source) => {
+                                        setMovieSlug(movie.slug);
+                                        // Auto select source if searching "All" and returning a specific result
+                                        setMovieSource(source);
+                                    }}
+                                    source={movieSource}
+                                    slug={movieSlug}
+                                    setSlug={setMovieSlug}
+                                />
+                            </div>
+
+                            <Button onClick={handleFetchMovie} disabled={fetching} className="shrink-0 bg-primary text-black hover:bg-primary/90">
+                                {fetching ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+                                Tải Phim
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>

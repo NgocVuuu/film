@@ -303,7 +303,7 @@ const getHomeData = async (req, res) => {
                 const allProgress = await WatchProgress.find({
                     userId,
                     movieSlug: { $in: allSlugs }
-                }).lean();
+                }).sort({ lastWatched: 1 }).lean();
 
                 const progressMap = {};
                 allProgress.forEach(p => {
@@ -829,11 +829,81 @@ const getStephenChowMovies = async (req, res) => {
     }
 };
 
+const getKoreanDrama2016Movies = async (req, res) => {
+    try {
+        const dramas = [
+            { vi: 'Reply 1988', en: ['Reply 1988', 'Hồi đáp 1988', 'Lời Hồi Đáp 1988'], year: 2015 },
+            { vi: 'Hậu Duệ Mặt Trời', en: ['Descendants of the Sun', 'Descendants Of The Sun'], year: 2016 },
+            { vi: 'Lại Là Oh Hae Young', en: ['Another Oh Hae-young', 'Another Miss Oh', 'Oh Hae Young Again'], year: 2016 },
+            { vi: 'Chuyện Tình Bác Sĩ', en: ['Doctors'], year: 2016, slug: 'chuyen-tinh-bac-si' },
+            { vi: 'Yêu Không Kiểm Soát', en: ['Uncontrollably Fond', 'Uncontrollable Fond', 'Lightly, Mascara'], year: 2016 },
+            { vi: 'Mây Họa Ánh Trăng', en: ['Love in the Moonlight', 'Moonlight Drawn by Clouds', 'Gureumi Geurin Dalbit'], year: 2016 },
+            { vi: 'Người Tình Ánh Trăng', en: ['Moon Lovers: Scarlet Heart Ryeo', 'Moon Lovers', 'Scarlet Heart Ryeo', 'Scarlet Heart'], year: 2016 },
+            { vi: 'Mật Danh K2', en: ['The K2'], year: 2016, slug: 'mat-danh-k2' },
+            { vi: 'Người Thầy Y Đức', en: ['Romantic Doctor Teacher Kim', 'Romantic Doctor', 'Teacher Kim'], year: 2016, slug: 'nguoi-thay-y-duc-phan-1' },
+            { vi: 'Huyền Thoại Biển Xanh', en: ['The Legend of the Blue Sea', 'Legend of the Blue Sea'], year: 2016, slug: 'huyen-thoai-bien-xanh' },
+            { vi: 'Cô Nàng Cử Tạ Kim Bok Joo', en: ['Weightlifting Fairy Kim Bok-joo', 'Weightlifting Fairy'], year: 2016 },
+            { vi: 'Yêu Tinh', en: ['Guardian: The Lonely and Great God', 'Goblin', 'Dokkaebi'], year: 2016, slug: 'yeu-tinh-goblin' },
+        ];
+
+        const results = [];
+        for (const drama of dramas) {
+            let movie;
+
+            if (drama.slug) {
+                movie = await Movie.findOne({ slug: drama.slug, isActive: { $ne: false } })
+                    .select('name slug thumb_url poster_url origin_name year type quality episode_current view')
+                    .lean();
+
+                // If slug provided but not found, we still allow regex fallback as a safety measure
+                // but we will prioritize this slug search.
+            }
+
+            if (!movie) {
+                const escape = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const enNames = Array.isArray(drama.en) ? drama.en : [drama.en];
+
+                const orClauses = [
+                    { name: { $regex: escape(drama.vi), $options: 'i' } },
+                    ...enNames.map(e => ({ origin_name: { $regex: escape(e), $options: 'i' } })),
+                ];
+
+                const candidates = await Movie.find({
+                    isActive: { $ne: false },
+                    $or: orClauses,
+                })
+                    .select('name slug thumb_url poster_url origin_name year type quality episode_current view')
+                    .lean();
+
+                if (candidates.length > 0) {
+                    movie = candidates.reduce((a, b) =>
+                        Math.abs((a.year || 0) - drama.year) <= Math.abs((b.year || 0) - drama.year) ? a : b
+                    );
+                }
+            }
+
+            if (movie) {
+                movie._vi = drama.vi;
+                movie._order = dramas.indexOf(drama);
+                results.push(movie);
+            }
+        }
+
+        results.sort((a, b) => a._order - b._order);
+        results.forEach(m => delete m._order);
+
+        res.json({ success: true, data: results, total: results.length });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getHomeData,
     getMovies,
     getMovieDetail,
     getMarvelMovies,
     getDCUMovies,
-    getStephenChowMovies
+    getStephenChowMovies,
+    getKoreanDrama2016Movies,
 };

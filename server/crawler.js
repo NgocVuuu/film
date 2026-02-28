@@ -47,9 +47,31 @@ const ADAPTERS = {
                 const res = await axios.get(`${OPHIM_API_DETAIL}/${slug}`);
                 if (!res.data.status) return null;
                 const movie = res.data.data.item;
-                const episodes = res.data.data.item.episodes || [];
+                const rawEpisodes = res.data.data.item.episodes || [];
+                const episodes = rawEpisodes.map(epGroup => ({
+                    ...epGroup,
+                    server_name: epGroup.server_name || 'Vietsub'
+                }));
                 return { movie, episodes };
             } catch (e) { return null; }
+        },
+        search: async (query) => {
+            try {
+                const res = await axios.get(`https://ophim1.com/v1/api/tim-kiem?keyword=${encodeURIComponent(query)}`);
+                if (!res.data.status || !res.data.data?.items) return [];
+                const domainImages = res.data.data.APP_DOMAIN_CDN_IMAGE || 'https://img.ophim.live/uploads/movies/';
+                return res.data.data.items.map(m => ({
+                    name: m.name,
+                    origin_name: m.origin_name,
+                    slug: m.slug,
+                    year: m.year,
+                    thumb_url: m.thumb_url.startsWith('http') ? m.thumb_url : `${domainImages}${m.thumb_url}`,
+                    source: 'OPHIM'
+                }));
+            } catch (e) {
+                console.error('Error searching OPHIM:', e.message);
+                return [];
+            }
         },
         processImage: (path, domain) => {
             if (!path) return '';
@@ -72,9 +94,33 @@ const ADAPTERS = {
                 const res = await axios.get(`${KKPHIM_API_DETAIL}/${slug}`);
                 if (!res.data.status) return null;
                 const movie = res.data.movie;
-                const episodes = res.data.episodes || [];
+                const rawEpisodes = res.data.episodes || [];
+
+                const episodes = rawEpisodes.map(epGroup => ({
+                    ...epGroup,
+                    server_name: epGroup.server_name || 'Vietsub'
+                }));
+
                 return { movie, episodes };
             } catch (e) { return null; }
+        },
+        search: async (query) => {
+            try {
+                const res = await axios.get(`https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(query)}`);
+                if (!res.data.status || !res.data.data?.items) return [];
+                const domainImages = res.data.data.APP_DOMAIN_CDN_IMAGE || 'https://phimimg.com/';
+                return res.data.data.items.map(m => ({
+                    name: m.name,
+                    origin_name: m.origin_name,
+                    slug: m.slug,
+                    year: m.year,
+                    thumb_url: m.thumb_url.startsWith('http') ? m.thumb_url : `${domainImages}${m.thumb_url}`,
+                    source: 'KKPHIM'
+                }));
+            } catch (e) {
+                console.error('Error searching KKPHIM:', e.message);
+                return [];
+            }
         },
         processImage: (path) => {
             if (!path) return '';
@@ -99,7 +145,7 @@ const ADAPTERS = {
                 const movie = res.data.movie;
                 const rawEpisodes = movie.episodes || [];
                 const episodes = rawEpisodes.map(server => ({
-                    server_name: server.server_name,
+                    server_name: server.server_name || 'Vietsub',
                     server_data: server.items.map(item => ({
                         name: item.name,
                         slug: item.slug,
@@ -130,6 +176,23 @@ const ADAPTERS = {
                 return { movie: normalizedMovie, episodes };
             } catch (e) {
                 return null;
+            }
+        },
+        search: async (query) => {
+            try {
+                const res = await axios.get(`https://phim.nguonc.com/api/films/search?keyword=${encodeURIComponent(query)}`);
+                if (res.data.status === 'error' || !res.data.items) return [];
+                return res.data.items.map(m => ({
+                    name: m.name,
+                    origin_name: m.original_name,
+                    slug: m.slug,
+                    year: m.year, // Nguonc year logic might be better here but we take standard
+                    thumb_url: m.thumb_url.startsWith('http') ? m.thumb_url : `https://phim.nguonc.com${m.thumb_url.startsWith('/') ? m.thumb_url : `/${m.thumb_url}`}`,
+                    source: 'NGUONC'
+                }));
+            } catch (e) {
+                console.error('Error searching NGUONC:', e.message);
+                return [];
             }
         },
         processImage: (path) => {
@@ -227,12 +290,25 @@ async function processMovie(adapter, slug, retryCount = 0) {
         // Sort episodes by priority: KK > NC > OP
         finalEpisodes.sort((a, b) => {
             const getScore = (name) => {
-                if (name.startsWith('KK -')) return 3;
-                if (name.startsWith('NC -')) return 2;
-                if (name.startsWith('OP -')) return 1;
-                return 0;
+                if (!name) return 0;
+                const upperName = name.toUpperCase();
+                if (upperName.includes('KK -')) return 30;
+                if (upperName.includes('NC -')) return 20;
+                if (upperName.includes('OP -')) return 10;
+                return 0; // Fallback
             };
-            return getScore(b.server_name) - getScore(a.server_name);
+
+            // Primary sort by priority source score
+            const scoreDiff = getScore(b.server_name) - getScore(a.server_name);
+            if (scoreDiff !== 0) return scoreDiff;
+
+            // Secondary sort: Vietsub > Thuyết Minh if sources are the same
+            const aIsVietSub = a.server_name && a.server_name.toLowerCase().includes('vietsub');
+            const bIsVietSub = b.server_name && b.server_name.toLowerCase().includes('vietsub');
+            if (aIsVietSub && !bIsVietSub) return -1;
+            if (!aIsVietSub && bIsVietSub) return 1;
+
+            return 0;
         });
 
         // Check for new episodes to notify
@@ -502,38 +578,48 @@ async function syncSpecificMovie(slug, sourceName = null) {
 }
 
 // Search for movies by name from all sources
-async function searchMovieByName(searchQuery, source = 'OPHIM') {
+async function searchMovieByName(searchQuery, source = 'ALL') {
     try {
-        console.log(`[SEARCH] Searching for: ${searchQuery} in ${source}`);
+        console.log(`[SEARCH] Searching for: ${searchQuery} in ${source || 'ALL'}`);
 
-        const adapter = ADAPTERS[source.toUpperCase()];
-        if (!adapter) {
-            return { success: false, error: 'Nguồn không hợp lệ' };
+        if (!source || source.toUpperCase() === 'ALL') {
+            // Search all sources
+            const promises = Object.values(ADAPTERS)
+                .filter(adapter => adapter.search)
+                .map(adapter => adapter.search(searchQuery));
+
+            const results = await Promise.allSettled(promises);
+            let combined = [];
+
+            results.forEach(result => {
+                if (result.status === 'fulfilled' && result.value) {
+                    combined = combined.concat(result.value);
+                }
+            });
+
+            if (combined.length === 0) {
+                return { success: false, error: 'Không tìm thấy phim phù hợp ở bất kỳ nguồn nào' };
+            }
+
+            // Optional: Remove exact duplicates by slug if same slug exists across sources
+            return { success: true, results: combined };
         }
 
-        // Get first page and filter by name
-        const movies = await adapter.getPage(1);
+        // Search specific source
+        const adapter = ADAPTERS[source.toUpperCase()];
+        if (!adapter || !adapter.search) {
+            return { success: false, error: 'Nguồn không hợp lệ hoặc không hỗ trợ tìm kiếm' };
+        }
 
-        const matches = movies.filter(movie => {
-            const name = (movie.name || '').toLowerCase();
-            const originName = (movie.origin_name || '').toLowerCase();
-            const query = searchQuery.toLowerCase();
-            return name.includes(query) || originName.includes(query);
-        });
+        const matches = await adapter.search(searchQuery);
 
-        if (matches.length === 0) {
+        if (!matches || matches.length === 0) {
             return { success: false, error: 'Không tìm thấy phim phù hợp' };
         }
 
         return {
             success: true,
-            results: matches.map(m => ({
-                name: m.name,
-                origin_name: m.origin_name,
-                slug: m.slug,
-                year: m.year,
-                thumb_url: m.thumb_url
-            }))
+            results: matches
         };
 
     } catch (error) {

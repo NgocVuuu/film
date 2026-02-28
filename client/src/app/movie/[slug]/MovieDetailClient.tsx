@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Play, Calendar, Star, Clock, Info, ListPlus } from 'lucide-react';
+import { Play, Calendar, Star, Clock, Info, ListPlus, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommentSection } from '@/components/CommentSection';
 import { AddToListModal } from '@/components/AddToListModal';
@@ -208,6 +208,27 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
         }
     };
 
+    const handleShare = async () => {
+        if (!movie) return;
+        const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/movie/${movie.slug}`;
+
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: `Xem phim ${movie.name} - ${movie.origin_name}`,
+                    text: `Cùng xem phim ${movie.name} (${movie.year}) siêu hay trên PhimChill nhé!`,
+                    url: url
+                });
+            } else {
+                await navigator.clipboard.writeText(url);
+                // Ideally trigger a toast notification here
+                alert('Đã copy link phim vào clipboard!');
+            }
+        } catch (error) {
+            console.error('Error sharing:', error);
+        }
+    };
+
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-deep-black text-primary animate-pulse">Đang tải dữ liệu phim...</div>;
     if (!movie && !loading) return <div className="min-h-screen flex items-center justify-center bg-deep-black text-red-500">Khong tim thay phim/Not Found</div>;
     if (!movie) return null;
@@ -330,6 +351,16 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                             <ListPlus className="w-5 h-5 md:w-6 md:h-6" />
                                         </Button>
                                     )}
+
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleShare}
+                                        className="h-10 md:h-12 px-6 border-2 border-white/20 hover:bg-white/10 text-white text-base md:text-lg font-bold rounded-full backdrop-blur-sm transition-all"
+                                        title="Chia sẻ phim"
+                                    >
+                                        <Share2 className="mr-2 w-5 h-5 md:w-6 md:h-6" />
+                                        Chia Sẻ
+                                    </Button>
                                 </div>
 
                                 {/* Cast Preview (Mobile/Tablet only maybe? Keeping simple) */}
@@ -437,13 +468,15 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                 </div>
             </div>
 
-            {movie && (
-                <AddToListModal
-                    isOpen={showListModal}
-                    onClose={() => setShowListModal(false)}
-                    movieId={movie._id}
-                />
-            )}
-        </div>
+            {
+                movie && (
+                    <AddToListModal
+                        isOpen={showListModal}
+                        onClose={() => setShowListModal(false)}
+                        movieId={movie._id}
+                    />
+                )
+            }
+        </div >
     );
 }

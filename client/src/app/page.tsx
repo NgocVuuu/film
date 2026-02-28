@@ -11,6 +11,7 @@ import { customFetch } from '@/lib/api';
 import { MarvelBanner } from '@/components/MarvelBanner';
 import { DCUBanner } from '@/components/DCUBanner';
 import { StephenChowBanner } from '@/components/StephenChowBanner';
+import { KoreanDrama2016Banner } from '@/components/KoreanDrama2016Banner';
 
 interface Movie {
   _id: string;
@@ -171,6 +172,9 @@ export default function Home() {
           </div>
           <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
             <StephenChowBanner />
+          </div>
+          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
+            <KoreanDrama2016Banner />
           </div>
         </div>
       </div>
