@@ -247,97 +247,82 @@ export default function PricingPage() {
 
             {/* Payment Modal */}
             {showModal && paymentData && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-                    <div className="bg-surface-900 border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col md:flex-row my-8">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-surface-900 border border-white/10 rounded-2xl w-full max-w-md max-h-[calc(100vh-2rem)] overflow-hidden shadow-2xl relative flex flex-col">
                         <button
                             onClick={() => setShowModal(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-white p-2 z-10"
+                            className="absolute top-3 right-3 text-gray-400 hover:text-white p-1.5 z-10 bg-black/20 rounded-full backdrop-blur-md transition-colors"
                         >
-                            <X className="w-6 h-6" />
+                            <X className="w-5 h-5" />
                         </button>
 
-                        {/* Left: QR Code */}
-                        <div className="w-full md:w-1/3 bg-white p-4 flex flex-col items-center justify-center text-center shrink-0">
-                            <h3 className="text-black font-bold text-base mb-2">Quét mã để thanh toán</h3>
-                            <div className="border-4 border-black p-2 rounded-xl mb-2">
-                                <img
-                                    src={paymentData.qrUrl}
-                                    alt="VietQR Payment"
-                                    className="w-full max-w-44 aspect-square object-contain"
-                                />
-                            </div>
-                            <p className="text-gray-600 text-xs mb-2">
-                                Sử dụng App Ngân hàng hoặc Ví MoMo/ZaloPay
-                            </p>
-                            <div className="flex items-center gap-2 text-gold-gradient font-semibold bg-primary/5 px-3 py-1.5 rounded-full text-xs">
-                                < Crown className="w-3 h-3" />
-                                Đang chờ Admin xác nhận...
-                            </div>
-                        </div>
-
-                        {/* Right: Info */}
-                        <div className="w-full md:w-2/3 p-6 bg-surface-800 text-white flex flex-col gap-4 overflow-y-auto">
-                            <div>
-                                <h3 className="text-lg font-bold mb-1">Hướng dẫn thanh toán ẩn danh</h3>
-                                <p className="text-gray-400 text-xs">Sếp có thể chọn 1 trong 2 hình thức bên dưới.</p>
+                        <div className="p-5 md:p-6 bg-surface-800 text-white flex flex-col gap-4 overflow-y-auto">
+                            <div className="text-center mb-2">
+                                <h3 className="text-xl font-bold mb-1">Thanh toán ẩn danh</h3>
+                                <p className="text-gray-400 text-xs">Sếp vui lòng chọn cổng thanh toán để được chuyển hướng.</p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3 mb-2">
-                                <div className="p-3 border border-primary/20 bg-primary/5 rounded-xl text-center">
-                                    <p className="text-xs text-primary font-bold mb-1 uppercase">Phương án 1</p>
-                                    <p className="text-sm font-bold text-white">WeScan (Nội địa)</p>
-                                </div>
                                 <a
-                                    href="https://www.buymeacoffee.com/pchill"
+                                    href="https://wescan.vn/dngocvu14"
                                     target="_blank"
-                                    className="p-3 border border-white/10 bg-white/5 rounded-xl text-center hover:bg-white/10 transition-colors"
+                                    className="p-4 border border-primary/20 bg-primary/5 rounded-xl text-center hover:bg-primary/10 hover:scale-105 transition-all"
                                 >
-                                    <p className="text-xs text-gray-400 font-bold mb-1 uppercase">Phương án 2</p>
-                                    <p className="text-sm font-bold text-white flex items-center justify-center gap-1">
-                                        Buy Me A Coffee <ArrowRight className="w-3 h-3" />
+                                    <p className="text-xs text-primary font-bold mb-1 uppercase">Lựa chọn 1</p>
+                                    <p className="text-sm font-bold text-white flex items-center justify-center gap-2">
+                                        WeScan <ArrowRight className="w-3 h-3" />
+                                    </p>
+                                </a>
+                                <a
+                                    href="https://buymeacoffee.com/pchill_admin"
+                                    target="_blank"
+                                    className="p-3 border border-white/10 bg-white/5 rounded-xl text-center hover:bg-white/10 hover:scale-105 transition-all"
+                                >
+                                    <p className="text-[10px] text-gray-400 font-bold mb-1 uppercase">Lựa chọn 2</p>
+                                    <p className="text-sm font-bold text-white flex items-center justify-center gap-2">
+                                        BMC <ArrowRight className="w-3 h-3" />
                                     </p>
                                 </a>
                             </div>
 
                             <div className="space-y-3">
-                                <div className="bg-black/30 p-4 rounded-lg border border-white/5">
-                                    <p className="text-gray-400 text-xs uppercase mb-1">Tài khoản WeScan (Nội địa)</p>
-                                    <div className="flex justify-between items-center">
-                                        <p className="font-mono font-bold text-lg">{paymentData.bankInfo.bankCode} - {paymentData.bankInfo.accountNumber}</p>
-                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.bankInfo.accountNumber)}>
-                                            <Copy className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="bg-black/30 p-4 rounded-lg border border-white/5">
-                                    <p className="text-gray-400 text-xs uppercase mb-1">Chủ tài khoản</p>
-                                    <p className="font-mono font-bold text-lg">{paymentData.bankInfo.accountName}</p>
-                                </div>
-                                <div className="bg-black/30 p-4 rounded-lg border border-primary/30 relative group">
+                                <div className="bg-black/30 p-4 rounded-lg border border-primary/30 relative group shadow-inner">
                                     <p className="text-gray-400 text-xs uppercase mb-1">Nội dung chuyển khoản (BẮT BUỘC)</p>
                                     <div className="flex justify-between items-center">
                                         <p className="font-mono font-bold text-xl text-yellow-400">{paymentData.content}</p>
-                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.content)} className="text-gray-400 hover:text-white">
+                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.content)} className="text-gray-400 hover:text-white h-8 w-8 p-0">
                                             <Copy className="w-4 h-4" />
                                         </Button>
                                     </div>
-                                    <p className="text-xs text-red-500 mt-2 font-medium">
-                                        * Phải ghi đúng nội dung để Admin xác nhận nâng cấp Premium.
+                                    <p className="text-[11px] text-red-500 mt-2 font-medium">
+                                        * Sếp <strong>PHẢI</strong> copy chính xác mã này vào lời nhắn khi donate qua WeScan hoặc BMC.
                                     </p>
                                 </div>
-                                <div className="bg-black/30 p-4 rounded-lg border border-white/5">
-                                    <p className="text-gray-400 text-xs uppercase mb-1">Số tiền</p>
-                                    <p className="font-mono font-bold text-lg">{formatPrice(paymentData.amount)}</p>
+
+                                <div className="bg-black/30 p-4 rounded-lg border border-white/5 shadow-inner">
+                                    <p className="text-gray-400 text-xs uppercase mb-1">Số tiền cần thanh toán</p>
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-mono font-bold text-xl">{formatPrice(paymentData.amount)}</p>
+                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.amount.toString())} className="text-gray-400 hover:text-white h-8 w-8 p-0">
+                                            <Copy className="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                 </div>
+
+                                <div className="flex items-center justify-center gap-1.5 text-amber-600 font-medium bg-amber-50 px-3 py-1.5 mt-1 rounded-full text-[11px] w-fit mx-auto border border-amber-200">
+                                    <Crown className="w-3 h-3" />
+                                    Phiếu nâng cấp xử lý thủ công (5-30p)
+                                </div>
+
                                 <Button
-                                    onClick={() => setShowModal(false)}
-                                    className="w-full bg-primary hover:bg-primary/90 text-black font-bold py-6"
+                                    onClick={() => {
+                                        toast.success('Ghi nhận thành công! Yêu cầu của bạn sẽ được duyệt sớm.', { duration: 5000 });
+                                        setShowModal(false);
+                                    }}
+                                    className="w-full bg-primary hover:bg-primary/90 text-black font-bold py-5 text-base mt-2 shadow-lg"
                                 >
                                     Tôi đã hoàn tất chuyển khoản
                                 </Button>
-                                <p className="text-[10px] text-gray-500 text-center">
-                                    Phiếu của bạn sẽ được Admin duyệt trong vòng 5-30 phút.
-                                </p>
                             </div>
                         </div>
                     </div>
