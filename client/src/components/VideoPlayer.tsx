@@ -12,8 +12,8 @@ import { useWatchProgress } from '@/hooks/useWatchProgress';
 
 interface WebKitVideoElement extends HTMLVideoElement {
     webkitSupportsPresentationMode?: (mode: string) => boolean;
-    webkitPresentationMode?: string;
-    webkitSetPresentationMode?: (mode: string) => void;
+    webkitPresentationMode?: any;
+    webkitSetPresentationMode?: (mode: any) => Promise<void>;
 }
 
 interface VideoPlayerProps {
