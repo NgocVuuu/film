@@ -55,6 +55,10 @@ export default function PricingPage() {
         }
     };
 
+    useEffect(() => {
+        fetchPlans();
+    }, []);
+
     const handleSubscribe = async (plan: Plan) => {
         if (!user) {
             toast.error('Vui lòng đăng nhập để đăng ký');
