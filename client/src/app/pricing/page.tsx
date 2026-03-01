@@ -152,10 +152,10 @@ export default function PricingPage() {
                         Trải nghiệm <span className="text-gold-gradient">không giới hạn</span>
                     </h1>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-2">
-                        Hỗ trợ thanh toán ẩn danh qua WeScan và BuyMeACoffee.
+                        Hỗ trợ thanh toán nhanh chóng qua các Ngân hàng và Ví điện tử (VietQR).
                     </p>
                     <p className="text-gray-500 text-sm max-w-xl mx-auto italic">
-                        Ủng hộ ad chút để duy trì web nhé, quả thật server đắt lắm 😭
+                        Thanh toán an toàn, tự động nâng cấp nhanh chóng! 🚀
                     </p>
                 </div>
 
@@ -274,30 +274,20 @@ export default function PricingPage() {
                         {/* Right: Info */}
                         <div className="w-full md:w-2/3 p-6 bg-surface-800 text-white flex flex-col gap-4 overflow-y-auto">
                             <div>
-                                <h3 className="text-lg font-bold mb-1">Hướng dẫn thanh toán ẩn danh</h3>
-                                <p className="text-gray-400 text-xs">Sếp có thể chọn 1 trong 2 hình thức bên dưới.</p>
+                                <h3 className="text-lg font-bold mb-1">Hướng dẫn thanh toán</h3>
+                                <p className="text-gray-400 text-xs">Mở ứng dụng Ngân hàng hoặc Ví điện tử (Momo, ZaloPay...) để quét mã.</p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 mb-2">
+                            <div className="grid grid-cols-1 gap-3 mb-2">
                                 <div className="p-3 border border-primary/20 bg-primary/5 rounded-xl text-center">
-                                    <p className="text-xs text-primary font-bold mb-1 uppercase">Phương án 1</p>
-                                    <p className="text-sm font-bold text-white">WeScan (Nội địa)</p>
+                                    <p className="text-xs text-primary font-bold mb-1 uppercase">Phương thức</p>
+                                    <p className="text-sm font-bold text-white">Chuyển khoản VietQR</p>
                                 </div>
-                                <a
-                                    href="https://www.buymeacoffee.com/pchill"
-                                    target="_blank"
-                                    className="p-3 border border-white/10 bg-white/5 rounded-xl text-center hover:bg-white/10 transition-colors"
-                                >
-                                    <p className="text-xs text-gray-400 font-bold mb-1 uppercase">Phương án 2</p>
-                                    <p className="text-sm font-bold text-white flex items-center justify-center gap-1">
-                                        Buy Me A Coffee <ArrowRight className="w-3 h-3" />
-                                    </p>
-                                </a>
                             </div>
 
                             <div className="space-y-3">
                                 <div className="bg-black/30 p-4 rounded-lg border border-white/5">
-                                    <p className="text-gray-400 text-xs uppercase mb-1">Tài khoản WeScan (Nội địa)</p>
+                                    <p className="text-gray-400 text-xs uppercase mb-1">Tài khoản nhận (VietQR)</p>
                                     <div className="flex justify-between items-center">
                                         <p className="font-mono font-bold text-lg">{paymentData.bankInfo.bankCode} - {paymentData.bankInfo.accountNumber}</p>
                                         <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.bankInfo.accountNumber)}>
