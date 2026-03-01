@@ -13,7 +13,7 @@ type Props = {
 
 async function getMovie(slug: string) {
     try {
-        const res = await fetch(`${API_URL}/api/movie/${slug}`, { next: { revalidate: 3600 } });
+        const res = await fetch(`${API_URL}/api/movie/${slug}`, { next: { revalidate: 600 } });
         const data = await res.json();
         return data.success ? data.data : null;
     } catch (e) {

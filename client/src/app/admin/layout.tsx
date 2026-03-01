@@ -17,7 +17,8 @@ import {
     Video,
     Bell,
     Server,
-    CheckSquare
+    CheckSquare,
+    MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
@@ -31,6 +32,7 @@ const navigation = [
     { name: 'Subscriptions', href: '/admin/subscriptions', icon: CreditCard },
     { name: 'Movie Requests', href: '/admin/requests', icon: Film },
     { name: 'Notifications', href: '/admin/notifications', icon: Bell },
+    { name: 'Chat', href: '/admin/chat', icon: MessageCircle },
     { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
     { name: 'Crawler', href: '/admin/crawler', icon: RefreshCw },
     { name: 'Server Nodes', href: '/admin/nodes', icon: Server },

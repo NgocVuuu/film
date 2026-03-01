@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { BottomNav } from '@/components/BottomNav';
 import { usePWA } from '@/hooks/usePWA';
 import { useAuth } from '@/contexts/auth-context';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { NotificationProvider } from '@/contexts/notification-context';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -31,19 +31,26 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     // Hide top navbar on PWA if not on home page, and also hide it on watch page (it has its own header)
     const showNavbar = !isAdmin && !isWatchPage && (!isPWA || pathname === '/');
-    // Hide footer on PWA entirely
-    const showFooter = !isAdmin && !isPWA;
+    const isProfile = pathname?.startsWith('/profile');
+    // Hide footer on PWA entirely, and on Profile page to allow fullscreen layout
+    const showFooter = !isAdmin && !isPWA && !isProfile;
 
 
     return (
         <NotificationProvider>
-            {showNavbar && <Navbar />}
-            <main className={`flex-1 ${!isAdmin ? `${showNavbar ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-16' : 'pt-[env(safe-area-inset-top)]'} ${showFooter ? 'pb-32' : 'pb-24'} lg:pb-8` : ''}`}>
+            {showNavbar && (
+                <Suspense fallback={null}>
+                    <Navbar />
+                </Suspense>
+            )}
+            <main className={`flex-1 ${!isAdmin ? `${showNavbar ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-16' : 'pt-[env(safe-area-inset-top)]'} ${showFooter ? 'pb-32' : 'pb-24'} ${isProfile ? 'lg:pb-0' : 'lg:pb-8'}` : ''}`}>
                 {children}
             </main>
             {!isAdmin && (
                 <>
-                    <BottomNav />
+                    <Suspense fallback={null}>
+                        <BottomNav />
+                    </Suspense>
                     {showFooter && <Footer />}
                 </>
             )}

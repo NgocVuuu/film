@@ -44,7 +44,8 @@ const CATEGORY_NAMES: Record<string, string> = {
     'gia-dinh': 'Gia Đình',
     'chinh-kich': 'Chính Kịch',
     'bi-an': 'Bí Ẩn',
-    'hoc-duong': 'Học Đường'
+    'hoc-duong': 'Học Đường',
+    'short-drama': 'Short Drama'
 };
 
 function CategoryPageContent() {
@@ -65,7 +66,7 @@ function CategoryPageContent() {
         setLoading(true);
         try {
             const res = await fetch(
-                `${API_URL}/api/movies?category=${categorySlug}&page=${page}&limit=24`,
+                `${API_URL}/api/movies?category=${categorySlug}&page=${page}&limit=30`,
                 { credentials: 'include' }
             );
             const data = await res.json();

@@ -17,6 +17,7 @@ interface WatchProgressResponse {
     duration: number;
     episodeSlug?: string;
     episodeName?: string;
+    serverName?: string;
 }
 
 interface Movie {
@@ -33,6 +34,7 @@ interface Movie {
         percentage: number;
         episodeSlug: string;
         episodeName: string;
+        serverName?: string;
     };
 }
 
@@ -81,7 +83,8 @@ export default function HistoryPage() {
                                 duration: item.duration || 0,
                                 percentage: item.duration > 0 ? Math.round((item.currentTime / item.duration) * 100) : 0,
                                 episodeSlug: item.episodeSlug || '1',
-                                episodeName: item.episodeName || 'Tập 1'
+                                episodeName: item.episodeName || 'Tập 1',
+                                serverName: item.serverName
                             }
                         }));
                     setMovies(moviesWithProgress);

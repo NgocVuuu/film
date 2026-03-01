@@ -14,4 +14,16 @@ router.get('/movies', cacheMiddleware(120), optionalAuthMiddleware, movieControl
 // Movie Detail (Existing: /api/movie/:slug) - Cache for 10 minutes
 router.get('/movie/:slug', cacheMiddleware(600), optionalAuthMiddleware, movieController.getMovieDetail);
 
+// Marvel Universe Collection
+router.get('/movies/marvel', cacheMiddleware(600), movieController.getMarvelMovies);
+
+// DC Universe Collection
+router.get('/movies/dcu', cacheMiddleware(600), movieController.getDCUMovies);
+
+// Stephen Chow Collection
+router.get('/movies/stephenchow', cacheMiddleware(600), movieController.getStephenChowMovies);
+
+// Korean Drama 2016 Collection
+router.get('/movies/korean-drama-2016', cacheMiddleware(600), movieController.getKoreanDrama2016Movies);
+
 module.exports = router;

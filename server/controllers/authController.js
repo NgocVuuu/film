@@ -27,7 +27,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const generateToken = (userId) => {
     return jwt.sign(
         { userId },
-        process.env.JWT_SECRET || 'your-secret-key',
+        process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 };
@@ -89,6 +89,9 @@ exports.googleLogin = async (req, res) => {
             }
 
             // Create new user
+            const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
+            const isAdmin = adminEmails.includes(email);
+
             user = await User.create({
                 googleId,
                 email,
@@ -96,11 +99,12 @@ exports.googleLogin = async (req, res) => {
                 avatar: picture,
                 isVerified: true, // Google already verified the email
                 lastLogin: new Date(),
-                role: email === 'vupaul2001@gmail.com' ? 'admin' : 'user'
+                role: isAdmin ? 'admin' : 'user'
             });
         } else {
             // Update last login & Admin role if needed
-            if (user.email === 'vupaul2001@gmail.com' && user.role !== 'admin') {
+            const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
+            if (adminEmails.includes(user.email) && user.role !== 'admin') {
                 user.role = 'admin';
             }
             user.lastLogin = new Date();
@@ -167,13 +171,6 @@ exports.getCurrentUser = async (req, res) => {
             user.subscription.status === 'active'
         );
 
-        if (user.email === 'ngocvu14.3.2001@gmail.com') {
-            console.log(`[DEBUG] getCurrentUser for ngocvu:`);
-            console.log(`- Role: ${user.role}`);
-            console.log(`- Sub: ${JSON.stringify(user.subscription)}`);
-            console.log(`- Result: ${isPremium}`);
-        }
-
         res.json({
             success: true,
             data: {
@@ -200,7 +197,17 @@ exports.getCurrentUser = async (req, res) => {
 // Logout (mainly for client-side token removal)
 exports.logout = async (req, res) => {
     try {
-        res.clearCookie('token');
+        const origin = req.headers.origin || '';
+        const isProduction = process.env.NODE_ENV === 'production' ||
+            (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) ||
+            (origin && !origin.includes('localhost') && origin.startsWith('http'));
+
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? 'none' : 'lax'
+        });
+
         res.json({
             success: true,
             message: 'Đăng xuất thành công'
@@ -285,10 +292,10 @@ exports.register = async (req, res) => {
             console.error('Email send error:', emailError);
 
             // Even if email fails, user account is created
-            // They can resend verification email later
+            // They need to resend verification email manually
             res.status(201).json({
                 success: true,
-                message: 'Đăng ký thành công! Email xác thực sẽ được gửi sau. Bạn có thể yêu cầu gửi lại từ trang đăng nhập.',
+                message: 'Đăng ký thành công! Tuy nhiên gửi email xác thực gặp lỗi. Vui lòng chọn "Gửi lại email xác thực" để kích hoạt tài khoản.',
                 emailSent: false
             });
         }
@@ -463,9 +470,13 @@ exports.login = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        if (user.email === 'vupaul2001@gmail.com' && user.role !== 'admin') {
-            user.role = 'admin';
+        if (user.isVerified) {
+            const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
+            if (adminEmails.includes(user.email) && user.role !== 'admin') {
+                user.role = 'admin';
+            }
         }
+
         user.lastLogin = new Date();
         await user.save();
 
@@ -487,8 +498,9 @@ exports.login = async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: err.message });
+        console.error('Login Error Stack:', err); // Log full error object
+        console.error('Login Error Message:', err.message);
+        res.status(500).json({ success: false, message: `Login failed: ${err.message}` });
     }
 };
 

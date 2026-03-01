@@ -131,7 +131,7 @@ export default function ListDetailPage() {
                     <div className="flex-1">
                         {isEditingName ? (
                             <div className="flex items-center gap-2 max-w-md">
-                                <Input 
+                                <Input
                                     value={newName}
                                     onChange={(e) => setNewName(e.target.value)}
                                     className="bg-black/20 text-white border-white/20"
@@ -147,7 +147,7 @@ export default function ListDetailPage() {
                         ) : (
                             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
                                 {list.name}
-                                <button 
+                                <button
                                     onClick={() => setIsEditingName(true)}
                                     className="text-gray-500 hover:text-primary transition-colors"
                                 >

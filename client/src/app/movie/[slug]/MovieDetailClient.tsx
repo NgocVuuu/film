@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Play, Calendar, Star, Clock, Info, ListPlus } from 'lucide-react';
+import { Play, Calendar, Star, Clock, Info, ListPlus, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommentSection } from '@/components/CommentSection';
 import { AddToListModal } from '@/components/AddToListModal';
@@ -49,6 +49,7 @@ interface MovieDetail {
         percentage: number;
         episodeSlug: string;
         episodeName: string;
+        serverName?: string;
     };
 }
 
@@ -198,13 +199,33 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
 
     const handleWatchNow = () => {
         if (movie) {
-            // If has progress, maybe we want to direct to specific episode?
-            // For now, let's just go to watch page, it should handle resume or default to first ep
-            // But if we have valid episodeSlug in progress, we can append it? 
-            // The current routing seems to be /movie/:slug/watch. 
-            // If the watch page supports query param or segments like /watch?ep=slug, that would be better.
-            // Assuming default behavior for now.
-            router.push(`/movie/${movie.slug}/watch`);
+            if (movie.progress && movie.progress.episodeSlug) {
+                const serverQuery = movie.progress.serverName ? `&server=${encodeURIComponent(movie.progress.serverName)}` : '';
+                router.push(`/movie/${movie.slug}/watch?episode=${movie.progress.episodeSlug}${serverQuery}`);
+            } else {
+                router.push(`/movie/${movie.slug}/watch`);
+            }
+        }
+    };
+
+    const handleShare = async () => {
+        if (!movie) return;
+        const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/movie/${movie.slug}`;
+
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: `Xem phim ${movie.name} - ${movie.origin_name}`,
+                    text: `Cùng xem phim ${movie.name} (${movie.year}) siêu hay trên PhimChill nhé!`,
+                    url: url
+                });
+            } else {
+                await navigator.clipboard.writeText(url);
+                // Ideally trigger a toast notification here
+                alert('Đã copy link phim vào clipboard!');
+            }
+        } catch (error) {
+            console.error('Error sharing:', error);
         }
     };
 
@@ -262,9 +283,11 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                     <span className="px-3 py-1 bg-white/20 text-white font-bold text-xs rounded uppercase tracking-wider backdrop-blur-sm border border-white/10">
                                         {movie.lang || 'Vietsub'}
                                     </span>
-                                    <span className="px-3 py-1 bg-red-600 text-white font-bold text-xs rounded uppercase tracking-wider shadow-lg">
-                                        18+
-                                    </span>
+                                    {movie.category?.some(c => c.id === 'phim-18' || c.name.includes('18')) && (
+                                        <span className="px-3 py-1 bg-red-600 text-white font-bold text-xs rounded uppercase tracking-wider shadow-lg">
+                                            18+
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Title */}
@@ -328,6 +351,16 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                             <ListPlus className="w-5 h-5 md:w-6 md:h-6" />
                                         </Button>
                                     )}
+
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleShare}
+                                        className="h-10 md:h-12 px-6 border-2 border-white/20 hover:bg-white/10 text-white text-base md:text-lg font-bold rounded-full backdrop-blur-sm transition-all"
+                                        title="Chia sẻ phim"
+                                    >
+                                        <Share2 className="mr-2 w-5 h-5 md:w-6 md:h-6" />
+                                        Chia Sẻ
+                                    </Button>
                                 </div>
 
                                 {/* Cast Preview (Mobile/Tablet only maybe? Keeping simple) */}
@@ -435,13 +468,15 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                 </div>
             </div>
 
-            {movie && (
-                <AddToListModal
-                    isOpen={showListModal}
-                    onClose={() => setShowListModal(false)}
-                    movieId={movie._id}
-                />
-            )}
-        </div>
+            {
+                movie && (
+                    <AddToListModal
+                        isOpen={showListModal}
+                        onClose={() => setShowListModal(false)}
+                        movieId={movie._id}
+                    />
+                )
+            }
+        </div >
     );
 }

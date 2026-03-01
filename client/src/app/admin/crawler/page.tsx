@@ -1,10 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Play, Loader2, RefreshCw, Trash2, ShieldAlert, Download } from 'lucide-react';
+import { Play, Loader2, RefreshCw, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
-
+import SearchAutocomplete from './SearchAutocomplete';
 interface CrawlerStatus {
     isRunning: boolean;
     blacklistSize: number;
@@ -23,10 +24,15 @@ export default function AdminCrawlerPage() {
     const [movieSource, setMovieSource] = useState('');
     const [fetching, setFetching] = useState(false);
 
+    const [logs, setLogs] = useState<{ time: string, message: string, type: string }[]>([]);
+
     useEffect(() => {
         fetchStatus();
         fetchBlacklist();
-        const interval = setInterval(fetchStatus, 3000); // Poll status every 3s
+        const interval = setInterval(() => {
+            fetchStatus();
+            fetchLogs();
+        }, 3000); // Poll every 3s
         return () => clearInterval(interval);
     }, []);
 
@@ -60,55 +66,64 @@ export default function AdminCrawlerPage() {
         }
     };
 
-    const handleStopSync = async () => {
-        if (!status?.isRunning) return;
+    const fetchLogs = async () => {
         try {
-            const response = await customFetch(`/api/admin/crawler/stop-sync`, {
-                method: 'POST',
+            const response = await customFetch(`/api/admin/crawler/logs`, {
                 credentials: 'include'
             });
             const data = await response.json();
             if (data.success) {
-                toast.success(data.message);
-                fetchStatus();
-            } else {
-                toast.error(data.message);
+                setLogs(data.data);
             }
         } catch (error) {
-            console.error('Stop sync error:', error);
-            toast.error('Lỗi khi gửi lệnh dừng');
+            console.error('Fetch logs error:', error);
         }
     };
 
-    const handleSync = async (full: boolean = false) => {
+    const handleStartCrawl = async (full: boolean = false) => {
         if (status?.isRunning) return;
 
-        if (full && !confirm(`Cảnh báo: Crawl tất cả sẽ mất RẤT NHIỀU THỜI GIAN.\nBạn có chắc muốn crawl ${totalPages} trang không?`)) {
-            return;
-        }
+        const confirmMsg = full
+            ? `Cảnh báo: Full Crawl sẽ quét TOÀN BỘ ${totalPages} trang. Tiếp tục?`
+            : `Bắt đầu Quick Update (Trang 1-${totalPages})?`;
+
+        if (!confirm(confirmMsg)) return;
 
         try {
-            const response = await customFetch(`/api/admin/crawler/sync`, {
+            const response = await customFetch(`/api/admin/crawler/start`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     full,
-                    pages: full ? parseInt(totalPages) : 1
+                    fromPage: 1,
+                    toPage: parseInt(totalPages) || 1
                 })
             });
             const data = await response.json();
             if (data.success) {
                 toast.success(data.message);
                 fetchStatus();
+                fetchLogs();
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
-            console.error('Sync error:', error);
-            toast.error('Lỗi khi kích hoạt sync');
+        } catch {
+            toast.error('Lỗi khởi động crawler');
+        }
+    };
+
+    const handleStopCrawl = async () => {
+        try {
+            const response = await customFetch(`/api/admin/crawler/stop`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            if (data.success) {
+                toast.success(data.message);
+                fetchStatus();
+            }
+        } catch {
+            toast.error('Lỗi dừng crawler');
         }
     };
 
@@ -117,9 +132,7 @@ export default function AdminCrawlerPage() {
         try {
             const response = await customFetch(`/api/admin/crawler/blacklist`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({ slug: newItem.trim() })
             });
@@ -131,8 +144,7 @@ export default function AdminCrawlerPage() {
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
-            console.error('Add blacklist error:', error);
+        } catch {
             toast.error('Lỗi thêm blacklist');
         }
     };
@@ -141,9 +153,7 @@ export default function AdminCrawlerPage() {
         try {
             const response = await customFetch(`/api/admin/crawler/blacklist`, {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({ slug })
             });
@@ -154,8 +164,7 @@ export default function AdminCrawlerPage() {
             } else {
                 toast.error(data.message);
             }
-        } catch (error) {
-            console.error('Remove blacklist error:', error);
+        } catch {
             toast.error('Lỗi xóa blacklist');
         }
     };
@@ -172,9 +181,7 @@ export default function AdminCrawlerPage() {
 
             const response = await customFetch(`/api/admin/crawler/fetch-movie`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({
                     slug: movieSlug.trim(),
@@ -190,212 +197,134 @@ export default function AdminCrawlerPage() {
             } else {
                 toast.error(data.message, { id: 'fetch-movie' });
             }
-        } catch (error) {
-            console.error('Fetch movie error:', error);
+        } catch {
             toast.error('Lỗi khi tải phim', { id: 'fetch-movie' });
         } finally {
             setFetching(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex justify-center py-20">
-                <Loader2 className="w-10 h-10 text-primary animate-spin" />
-            </div>
-        );
-    }
+    if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin" /></div>;
 
     return (
-        <div>
-            <h1 className="text-3xl font-bold text-white mb-8">Crawler Management</h1>
+        <div className="p-6 max-w-7xl mx-auto">
+            <h1 className="text-3xl font-bold text-white mb-8">Crawler Manager</h1>
 
-            {/* Fetch Specific Movie Section */}
-            <div className="bg-linear-to-br from-primary/10 to-primary/5 border-2 border-primary/30 rounded-xl p-6 mb-8">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <Download className="w-5 h-5 text-primary" />
-                    Tải phim cụ thể
-                </h2>
-
-                <div className="space-y-4">
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <input
-                            type="text"
-                            placeholder="Nhập slug của phim (vd: avatar-2024)"
-                            value={movieSlug}
-                            onChange={(e) => setMovieSlug(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleFetchMovie()}
-                            className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-                            disabled={fetching}
-                        />
-
-                        <select
-                            value={movieSource}
-                            onChange={(e) => setMovieSource(e.target.value)}
-                            className="px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary"
-                            disabled={fetching}
-                        >
-                            <option value="">Tự động (Tất cả nguồn)</option>
-                            <option value="OPHIM">OPHIM</option>
-                            <option value="KKPHIM">KKPHIM</option>
-                            <option value="NGUONC">NGUONC</option>
-                        </select>
-
-                        <Button
-                            onClick={handleFetchMovie}
-                            disabled={fetching || !movieSlug.trim()}
-                            className="bg-primary text-black hover:bg-primary/90 min-w-30"
-                        >
-                            {fetching ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Đang tải...
-                                </>
-                            ) : (
-                                <>
-                                    <Download className="w-4 h-4 mr-2" />
-                                    Tải phim
-                                </>
-                            )}
-                        </Button>
-                    </div>
-
-                    <div className="p-4 bg-white/5 rounded-lg border border-white/10">
-                        <p className="text-sm text-gray-400">
-                            <span className="text-white font-bold">Hướng dẫn:</span>
-                            <br />1. Nhập <b>slug</b> của phim từ nguồn (OPHIM, KKPHIM, NGUONC)
-                            <br />2. Chọn nguồn cụ thể hoặc để <b>Tự động</b> để hệ thống thử tất cả nguồn
-                            <br />3. Hệ thống sẽ tự động tải phim và lưu vào database
-                            <br />
-                            <br /><span className="text-primary">💡 Mẹo:</span> Truy cập ophim1.com, phimapi.com hoặc phim.nguonc.com để tìm slug phim bạn muốn thêm
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Status Card */}
-            <div className="bg-surface-900 border border-white/10 rounded-xl p-6 mb-8">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
-                    <div>
-                        <h2 className="text-xl font-bold text-white mb-2">Sync Status</h2>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${status?.isRunning ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
-                            <span className="text-gray-400">
-                                {status?.isRunning
-                                    ? `Running (Page ${status.currentPage})...`
-                                    : 'Idle'}
-                            </span>
+            {/* Control Panel */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {/* Status & Controls */}
+                <div className="bg-surface-900 border border-white/10 rounded-xl p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-white">Trạng thái</h2>
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${status?.isRunning ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                            {status?.isRunning ? 'Đang chạy' : 'Đang nghỉ'}
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <Button
-                            onClick={() => handleSync(false)}
-                            disabled={status?.isRunning}
-                            className={`flex-1 ${status?.isRunning
-                                ? 'bg-gray-600 cursor-not-allowed'
-                                : 'bg-primary text-black hover:bg-primary/90'
-                                }`}
-                        >
-                            {status?.isRunning ? (
-                                <>
-                                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                                    Syncing...
-                                </>
-                            ) : (
-                                <>
-                                    <Play className="w-4 h-4 mr-2" />
-                                    Quick Update
-                                </>
-                            )}
-                        </Button>
-
-                        <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10 flex-1">
+                    <div className="flex gap-4 items-end">
+                        <div className="flex-1">
+                            <label className="text-xs text-gray-400 mb-1 block">Số trang quét</label>
                             <input
                                 type="number"
                                 value={totalPages}
                                 onChange={(e) => setTotalPages(e.target.value)}
-                                className="w-12 bg-transparent text-white text-center text-sm focus:outline-none"
-                                placeholder="Pages"
-                                min="1"
-                                max="1000"
-                                disabled={status?.isRunning}
+                                className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-white"
                             />
-                            <Button
-                                onClick={() => handleSync(true)}
-                                disabled={status?.isRunning}
-                                variant="destructive"
-                                size="sm"
-                                className="flex-1"
-                            >
-                                <RefreshCw className={`w-4 h-4 mr-1 ${status?.isRunning ? 'animate-spin' : ''}`} />
-                                <span className="text-xs">Full Crawl</span>
-                            </Button>
                         </div>
-
+                        <Button
+                            onClick={() => handleStartCrawl(false)}
+                            disabled={status?.isRunning}
+                            className="bg-primary text-black hover:bg-primary/90"
+                        >
+                            <Play className="w-4 h-4 mr-2" /> Start Update
+                        </Button>
+                        <Button
+                            onClick={() => handleStartCrawl(true)}
+                            disabled={status?.isRunning}
+                            variant="destructive"
+                        >
+                            <RefreshCw className="w-4 h-4 mr-2" /> Full Crawl
+                        </Button>
                         {status?.isRunning && (
-                            <Button
-                                onClick={handleStopSync}
-                                variant="destructive"
-                                className="bg-red-600 hover:bg-red-700 text-white flex-1"
-                            >
-                                <ShieldAlert className="w-4 h-4 mr-2" />
-                                Stop
-                            </Button>
+                            <Button onClick={handleStopCrawl} variant="secondary">Stop</Button>
                         )}
                     </div>
                 </div>
-                <div className="p-4 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-sm text-gray-400">
-                        <span className="text-white font-bold text-xs uppercase tracking-wider">Lưu ý:</span>
-                        <br />- <b>Quick Update:</b> Chỉ quét trang 1 (Nhanh).
-                        <br />- <b>Full Crawl:</b> Quét sâu nhiều trang (Lâu).
-                    </p>
+
+                {/* Fetch Specific Movie */}
+                <div className="bg-surface-900 border border-white/10 rounded-xl p-6">
+                    <h2 className="text-xl font-bold text-white mb-4">Tải phim lẻ</h2>
+                    <div className="flex flex-col gap-4">
+                        {/* Search Input & Source Selection */}
+                        <div className="flex gap-2 relative z-10">
+                            {/* Source Selection Combo */}
+                            <Select value={movieSource} onValueChange={setMovieSource}>
+                                <SelectTrigger className="w-36 bg-surface-800 border-white/10 text-white focus:ring-primary focus:ring-offset-0">
+                                    <SelectValue placeholder="Tất cả nguồn" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-surface-800 border-white/10 text-white">
+                                    <SelectItem value="ALL">Tất cả nguồn</SelectItem>
+                                    <SelectItem value="OPHIM">Ổ Phim</SelectItem>
+                                    <SelectItem value="NGUONC">Nguồn C</SelectItem>
+                                    <SelectItem value="KKPHIM">KKPhim</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {/* Search Setup */}
+                            <div className="flex-1 relative">
+                                <SearchAutocomplete
+                                    onSelect={(movie, source) => {
+                                        setMovieSlug(movie.slug);
+                                        // Auto select source if searching "All" and returning a specific result
+                                        setMovieSource(source);
+                                    }}
+                                    source={movieSource}
+                                    slug={movieSlug}
+                                    setSlug={setMovieSlug}
+                                />
+                            </div>
+
+                            <Button onClick={handleFetchMovie} disabled={fetching} className="shrink-0 bg-primary text-black hover:bg-primary/90">
+                                {fetching ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+                                Tải Phim
+                            </Button>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            {/* Logs Terminal */}
+            <div className="bg-black/80 border border-white/10 rounded-xl p-4 font-mono text-sm h-[400px] overflow-y-auto mb-8 shadow-inner">
+                <div className="text-gray-500 mb-2 border-b border-white/10 pb-2">System Logs...</div>
+                {logs.map((log, i) => (
+                    <div key={i} className={`mb-1 ${log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-green-400' : log.type === 'warning' ? 'text-yellow-400' : 'text-gray-300'}`}>
+                        <span className="text-gray-600 mr-2">[{new Date(log.time).toLocaleTimeString()}]</span>
+                        {log.message}
+                    </div>
+                ))}
+                {logs.length === 0 && <div className="text-gray-600 italic">Chưa có log nào...</div>}
             </div>
 
             {/* Blacklist Section */}
             <div className="bg-surface-900 border border-white/10 rounded-xl p-6">
-                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <ShieldAlert className="w-5 h-5 text-red-500" />
-                    Blacklist Management
-                </h2>
-
-                <div className="flex gap-4 mb-6">
+                <h2 className="text-xl font-bold text-white mb-4">Blacklist ({blacklist.length})</h2>
+                <div className="flex gap-2 mb-4">
                     <input
-                        type="text"
-                        placeholder="Enter movie slug to block..."
                         value={newItem}
                         onChange={(e) => setNewItem(e.target.value)}
-                        className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                        placeholder="Slug to block..."
+                        className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-white"
                     />
-                    <Button
-                        onClick={handleAddToBlacklist}
-                        className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50"
-                    >
-                        Block Slug
-                    </Button>
+                    <Button onClick={handleAddToBlacklist} variant="destructive">Block</Button>
                 </div>
-
-                {blacklist.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">Blacklist is empty</p>
-                ) : (
-                    <div className="space-y-2">
-                        {blacklist.map((slug) => (
-                            <div key={slug} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
-                                <span className="text-gray-300 font-mono">{slug}</span>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleRemoveFromBlacklist(slug)}
-                                    className="text-gray-400 hover:text-white hover:bg-white/10"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                <div className="flex flex-wrap gap-2">
+                    {blacklist.map(slug => (
+                        <div key={slug} className="bg-white/5 px-3 py-1 rounded-full flex items-center gap-2 text-sm text-gray-300">
+                            {slug}
+                            <button onClick={() => handleRemoveFromBlacklist(slug)} className="hover:text-red-400">×</button>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );

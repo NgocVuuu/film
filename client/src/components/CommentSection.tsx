@@ -19,6 +19,7 @@ interface Comment {
     _id: string;
     content: string;
     rating?: number;
+    episodeName?: string;
     user: User;
     createdAt: string;
     parentId?: string;
@@ -28,9 +29,10 @@ interface Comment {
 
 interface CommentSectionProps {
     movieSlug: string;
+    episodeName?: string;
 }
 
-export function CommentSection({ movieSlug }: CommentSectionProps) {
+export function CommentSection({ movieSlug, episodeName }: CommentSectionProps) {
     const { user } = useAuth();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
@@ -85,16 +87,11 @@ export function CommentSection({ movieSlug }: CommentSectionProps) {
         }
 
         const contentToSubmit = parentId ? replyContent : newComment;
-        const ratingToSubmit = parentId ? undefined : rating; // Replies don't have ratings
+        const ratingToSubmit = parentId ? undefined : (rating > 0 ? rating : undefined);
 
-        if (!contentToSubmit.trim() || (!parentId && ratingToSubmit === 0 && !parentId)) {
-            // Allow comments without rating? No, top level usually needs rating unless we changed that requirement.
-            // Backend allows optional rating. Let's make rating mandatory for top-level reviews, optional for others if needed.
-            // For now, let's keep rating mandatory for top-level reviews as it updates movie rating.
-            if (!parentId && rating === 0) {
-                toast.error('Vui lòng chọn đánh giá');
-                return;
-            }
+        if (!contentToSubmit.trim()) {
+            toast.error('Vui lòng nhập nội dung bình luận');
+            return;
         }
 
         setSubmitting(true);
@@ -112,7 +109,8 @@ export function CommentSection({ movieSlug }: CommentSectionProps) {
                     movieSlug,
                     content: contentToSubmit,
                     rating: ratingToSubmit,
-                    parentId
+                    parentId,
+                    episodeName: parentId ? undefined : episodeName
                 })
             });
             const data = await res.json();
@@ -231,6 +229,11 @@ export function CommentSection({ movieSlug }: CommentSectionProps) {
                             <span className="text-xs text-gray-500">
                                 • {new Date(comment.createdAt).toLocaleDateString('vi-VN')}
                             </span>
+                            {comment.episodeName && (
+                                <span className="text-xs bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-medium">
+                                    {comment.episodeName}
+                                </span>
+                            )}
                         </div>
                         {comment.rating && (
                             <div className="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
@@ -361,7 +364,7 @@ export function CommentSection({ movieSlug }: CommentSectionProps) {
                         <div className="flex justify-end">
                             <Button
                                 type="submit"
-                                disabled={submitting || !contentValid() || rating === 0}
+                                disabled={submitting || !contentValid()}
                                 className="bg-primary hover:bg-gold-600 text-black font-bold"
                             >
                                 {submitting ? 'Đang gửi...' : (

@@ -3,7 +3,7 @@ const Report = require('../models/Report');
 // 1. Create Report
 const createReport = async (req, res) => {
     try {
-        const { movieSlug, movieName, episodeSlug, episodeName, content } = req.body;
+        const { movieSlug, movieName, episodeSlug, episodeName, serverName, content } = req.body;
         const userId = req.user._id;
 
         const report = new Report({
@@ -12,6 +12,7 @@ const createReport = async (req, res) => {
             movieName,
             episodeSlug,
             episodeName,
+            serverName, // Save server name
             content
         });
 

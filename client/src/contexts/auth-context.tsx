@@ -1,8 +1,8 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { API_URL } from '@/lib/config';
-import { setAuthToken, getAuthToken, removeAuthToken } from '@/lib/api';
+import { setAuthToken, removeAuthToken, customFetch } from '@/lib/api';
 
 interface User {
     id: string;
@@ -34,6 +34,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+    const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -43,22 +44,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const fetchCurrentUser = async () => {
         try {
-            const token = getAuthToken();
-            const headers: Record<string, string> = {};
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
-            const response = await fetch(`${API_URL}/api/auth/me`, {
-                headers,
-                credentials: 'include'
-            });
+            // This API call sends the cookie implicitly if credentials: 'include' is set
+            const response = await customFetch('/api/auth/me');
 
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
                     setUser(data.data);
+                    // In PWA, localStorage might be cleared by the OS. 
+                    // If the backend returned success via Cookie, but localStorage token is missing, 
+                    // we still consider the user logged in. We can optionally get a fresh token from backend here 
+                    // if the backend provided it, but since backend uses cookie too, it's fine.
                 }
+            } else if (response.status === 401) {
+                // Token really invalid or expired
+                removeAuthToken();
+                setUser(null);
             }
         } catch (error) {
             console.error('Error fetching user:', error);
@@ -75,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const logout = async () => {
         try {
-            await fetch(`${API_URL}/api/auth/logout`, { method: 'POST' });
+            await customFetch('/api/auth/logout', { method: 'POST' });
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
@@ -83,7 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             toast.success('Đã đăng xuất thành công');
             // Force a hard reload to login to clear all route history/cache
-            window.location.href = '/login';
+            // In PWA, redirecting might be smoother than href reload if state is cleared
+            router.push('/login');
         }
     };
 

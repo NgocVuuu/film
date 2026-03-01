@@ -76,6 +76,7 @@ export function useWatchProgress({
                         percentage,
                         episodeSlug,
                         episodeName: episodeName || '',
+                        serverName: serverName || '',
                     },
                     viewedAt: new Date().toISOString()
                 };
@@ -105,6 +106,7 @@ export function useWatchProgress({
                             percentage,
                             episodeSlug,
                             episodeName: episodeName || '',
+                            serverName: serverName || '',
                         }
                     };
                     history.unshift(newItem);
@@ -134,7 +136,6 @@ export function useWatchProgress({
                 });
 
                 const data = await response.json();
-                console.log('[saveProgress] API Response:', { status: response.status, data });
 
                 if (!response.ok) {
                     console.error('[saveProgress] API Error:', data);
@@ -145,14 +146,14 @@ export function useWatchProgress({
         }
     };
 
-    // Debounced save - saves after user stops seeking for 2 seconds
+    // Debounced save - saves after user stops seeking for 5 seconds (increased from 2s to reduce API load)
     const debouncedSave = (currentTime: number, duration: number) => {
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
         }
         saveTimeoutRef.current = setTimeout(() => {
             saveProgress(currentTime, duration);
-        }, 2000);
+        }, 5000);
     };
 
     return {

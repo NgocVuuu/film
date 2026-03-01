@@ -1,0 +1,254 @@
+{
+  "found": [
+    {
+      "en": "Iron Man",
+      "year": 2008,
+      "dbName": "Người Sắt Vô Địch",
+      "dbYear": 2007,
+      "slug": "nguoi-sat-vo-dich"
+    },
+    {
+      "en": "Iron Man 2",
+      "year": 2010,
+      "dbName": "Người Sắt 2",
+      "dbYear": 2010,
+      "slug": "nguoi-sat-2"
+    },
+    {
+      "en": "Thor",
+      "year": 2011,
+      "dbName": "Tay Súng Viễn Tây",
+      "dbYear": 2011,
+      "slug": "tay-sung-vien-tay"
+    },
+    {
+      "en": "Captain America: The First Avenger",
+      "year": 2011,
+      "dbName": "Captain America: Kẻ Báo Thù Đầu Tiên",
+      "dbYear": 2011,
+      "slug": "captain-america-ke-bao-thu-dau-tien"
+    },
+    {
+      "en": "The Avengers",
+      "year": 2012,
+      "dbName": "Biệt Đội Siêu Anh Hùng",
+      "dbYear": 2012,
+      "slug": "biet-doi-sieu-anh-hung"
+    },
+    {
+      "en": "Iron Man 3",
+      "year": 2013,
+      "dbName": "Người Sắt 3",
+      "dbYear": 2013,
+      "slug": "nguoi-sat-3"
+    },
+    {
+      "en": "Thor: The Dark World",
+      "year": 2013,
+      "dbName": "Thần Sấm II: Thế Giới Bóng Tối",
+      "dbYear": 2013,
+      "slug": "than-sam-ii-the-gioi-bong-toi"
+    },
+    {
+      "en": "Captain America: The Winter Soldier",
+      "year": 2014,
+      "dbName": "Captain America: Chiến Binh Mùa Đông",
+      "dbYear": 2014,
+      "slug": "captain-america-chien-binh-mua-dong"
+    },
+    {
+      "en": "Guardians of the Galaxy",
+      "year": 2014,
+      "dbName": "Kỳ Nghỉ Đặc Biệt Của Vệ Binh Dải Ngân Hà",
+      "dbYear": 2022,
+      "slug": "ky-nghi-dac-biet-cua-ve-binh-dai-ngan-ha"
+    },
+    {
+      "en": "Avengers: Age of Ultron",
+      "year": 2015,
+      "dbName": "Biệt Đội Siêu Anh Hùng 2: Đế Chế Ultron",
+      "dbYear": 2015,
+      "slug": "biet-doi-sieu-anh-hung-2-de-che-ultron"
+    },
+    {
+      "en": "Ant-Man",
+      "year": 2015,
+      "dbName": "Người Kiến Và Chiến Binh Ong",
+      "dbYear": 2018,
+      "slug": "nguoi-kien-va-chien-binh-ong"
+    },
+    {
+      "en": "Captain America: Civil War",
+      "year": 2016,
+      "dbName": "Captain America: Nội Chiến Siêu Anh Hùng",
+      "dbYear": 2016,
+      "slug": "captain-america-noi-chien-sieu-anh-hung"
+    },
+    {
+      "en": "Doctor Strange",
+      "year": 2016,
+      "dbName": "Phù Thủy Tối Thượng: Đa Vũ Trụ Hỗn Loạn",
+      "dbYear": 2022,
+      "slug": "phu-thuy-toi-thuong-da-vu-tru-hon-loan"
+    },
+    {
+      "en": "Guardians of the Galaxy Vol. 2",
+      "year": 2017,
+      "dbName": "Vệ Binh Dải Ngân Hà 2",
+      "dbYear": 2017,
+      "slug": "ve-binh-dai-ngan-ha-2"
+    },
+    {
+      "en": "Spider-Man: Homecoming",
+      "year": 2017,
+      "dbName": "Người Nhện: Trở Về Nhà",
+      "dbYear": 2017,
+      "slug": "nguoi-nhen-tro-ve-nha"
+    },
+    {
+      "en": "Thor: Ragnarok",
+      "year": 2017,
+      "dbName": "Thần Sấm III: Tận Thế Ragnarok",
+      "dbYear": 2017,
+      "slug": "than-sam-iii-tan-the-ragnarok"
+    },
+    {
+      "en": "Black Panther",
+      "year": 2018,
+      "dbName": "Chiến Binh Báo Đen: Wakanda Bất Diệt",
+      "dbYear": 2022,
+      "slug": "chien-binh-bao-den-wakanda-bat-diet"
+    },
+    {
+      "en": "Avengers: Infinity War",
+      "year": 2018,
+      "dbName": "Biệt Đội Siêu Anh Hùng 3: Cuộc Chiến Vô Cực",
+      "dbYear": 2018,
+      "slug": "biet-doi-sieu-anh-hung-3-cuoc-chien-vo-cuc"
+    },
+    {
+      "en": "Ant-Man and the Wasp",
+      "year": 2018,
+      "dbName": "Người Kiến Và Chiến Binh Ong",
+      "dbYear": 2018,
+      "slug": "nguoi-kien-va-chien-binh-ong"
+    },
+    {
+      "en": "Captain Marvel",
+      "year": 2019,
+      "dbName": "Đại Úy Marvel",
+      "dbYear": 2019,
+      "slug": "dai-uy-marvel"
+    },
+    {
+      "en": "Avengers: Endgame",
+      "year": 2019,
+      "dbName": "Biệt Đội Siêu Anh Hùng 4: Hồi Kết",
+      "dbYear": 2019,
+      "slug": "biet-doi-sieu-anh-hung-4-hoi-ket"
+    },
+    {
+      "en": "Spider-Man: Far From Home",
+      "year": 2019,
+      "dbName": "Người Nhện: Xa Nhà",
+      "dbYear": 2019,
+      "slug": "nguoi-nhen-xa-nha"
+    },
+    {
+      "en": "Black Widow",
+      "year": 2021,
+      "dbName": "Biệt Đội Siêu Anh Hùng Bí Mật: Black Widow và Punisher",
+      "dbYear": 2014,
+      "slug": "biet-doi-sieu-anh-hung-bi-mat-black-widow-va-punisher"
+    },
+    {
+      "en": "Spider-Man: No Way Home",
+      "year": 2021,
+      "dbName": "Người Nhện: Không Còn Nhà",
+      "dbYear": 2021,
+      "slug": "nguoi-nhen-khong-con-nha"
+    },
+    {
+      "en": "Doctor Strange in the Multiverse of Madness",
+      "year": 2022,
+      "dbName": "Phù Thủy Tối Thượng: Đa Vũ Trụ Hỗn Loạn",
+      "dbYear": 2022,
+      "slug": "phu-thuy-toi-thuong-da-vu-tru-hon-loan"
+    },
+    {
+      "en": "Thor: Love and Thunder",
+      "year": 2022,
+      "dbName": "Thần Sấm IV:  Tình Yêu Và Sấm Sét",
+      "dbYear": 2022,
+      "slug": "than-sam-iv-tinh-yeu-va-sam-set"
+    },
+    {
+      "en": "Black Panther: Wakanda Forever",
+      "year": 2022,
+      "dbName": "Chiến Binh Báo Đen: Wakanda Bất Diệt",
+      "dbYear": 2022,
+      "slug": "chien-binh-bao-den-wakanda-bat-diet"
+    },
+    {
+      "en": "Ant-Man and the Wasp: Quantumania",
+      "year": 2023,
+      "dbName": "Người Kiến Và Chiến Binh Ong: Thế Giới Lượng Tử",
+      "dbYear": 2023,
+      "slug": "nguoi-kien-va-chien-binh-ong-the-gioi-luong-tu"
+    },
+    {
+      "en": "Guardians of the Galaxy Vol. 3",
+      "year": 2023,
+      "dbName": "Vệ Binh Dải Ngân Hà 3",
+      "dbYear": 2023,
+      "slug": "ve-binh-dai-ngan-ha-3"
+    },
+    {
+      "en": "The Marvels",
+      "year": 2023,
+      "dbName": "Biệt Đội Marvel",
+      "dbYear": 2023,
+      "slug": "biet-doi-marvel"
+    },
+    {
+      "en": "Deadpool & Wolverine",
+      "year": 2024,
+      "dbName": "Deadpool Và Wolverine",
+      "dbYear": 2024,
+      "slug": "deadpool-va-wolverine"
+    },
+    {
+      "en": "Captain America: Brave New World",
+      "year": 2025,
+      "dbName": "Captain America: Thế Giới Mới",
+      "dbYear": 2025,
+      "slug": "captain-america-the-gioi-moi"
+    },
+    {
+      "en": "Thunderbolts",
+      "year": 2025,
+      "dbName": "Biệt Đội Sấm Sét*",
+      "dbYear": 2025,
+      "slug": "biet-doi-sam-set"
+    }
+  ],
+  "missing": [
+    {
+      "en": "The Incredible Hulk",
+      "year": 2008
+    },
+    {
+      "en": "Shang-Chi and the Legend of the Ten Rings",
+      "year": 2021
+    },
+    {
+      "en": "Eternals",
+      "year": 2021
+    },
+    {
+      "en": "The Fantastic Four: First Steps",
+      "year": 2025
+    }
+  ],
+  "summary": "33/37 found, 4 missing"
+}

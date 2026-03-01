@@ -125,7 +125,7 @@ exports.searchMovie = async (req, res) => {
             });
         }
 
-        const result = await searchMovieByName(query, source || 'OPHIM');
+        const result = await searchMovieByName(query, source || 'ALL');
 
         if (result.success) {
             res.json({

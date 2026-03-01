@@ -77,6 +77,41 @@ exports.saveProgress = async (req, res) => {
             });
         }
 
+        // VIEW LOGGING LOGIC
+        // Check if user has viewed this episode in the last 24 hours
+        // If not, create a ViewLog entry
+        const ViewLog = require('../models/ViewLog');
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        const existingLog = await ViewLog.findOne({
+            userId,
+            movieSlug,
+            episodeSlug,
+            createdAt: { $gte: twentyFourHoursAgo }
+        });
+
+        if (!existingLog) {
+            await ViewLog.create({
+                userId,
+                movieSlug,
+                episodeSlug
+            });
+            // Update total view count in Movie model if needed (optional optimization)
+            const Movie = require('../models/Movie');
+            await Movie.updateOne({ slug: movieSlug }, { $inc: { view: 1 } });
+        }
+
+        // ACTIVE USER LOGIC
+        // Update lastLogin if user hasn't been active today
+        // This ensures the "Active Users" chart includes people watching movies, not just logging in
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (req.user.lastLogin < today) {
+            const User = require('../models/User');
+            await User.findByIdAndUpdate(userId, { lastLogin: new Date() });
+        }
+
         res.json({
             success: true,
             data: progress,
@@ -239,3 +274,39 @@ exports.clearAllProgress = async (req, res) => {
         });
     }
 };
+
+// Track view (public/anonymous)
+exports.trackView = async (req, res) => {
+    try {
+        const { movieSlug, episodeSlug } = req.body;
+        // Check if user is logged in (optional)
+        const userId = req.user ? req.user._id : null;
+
+        if (!movieSlug || !episodeSlug) {
+            return res.status(400).json({ success: false, message: 'Missing info' });
+        }
+
+        const ViewLog = require('../models/ViewLog');
+        const Movie = require('../models/Movie');
+
+        // Rate limiting logic could go here (e.g., redis or memory cache)
+        // For now, relies on frontend to not spam
+
+        // Log view
+        await ViewLog.create({
+            userId,
+            movieSlug,
+            episodeSlug
+        });
+
+        // Update total view count
+        await Movie.updateOne({ slug: movieSlug }, { $inc: { view: 1 } });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Track view error:', error);
+        // Fail silently to client
+        res.json({ success: false });
+    }
+};
+

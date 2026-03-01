@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 
 export function PWAAds() {
+    return null; // Banner removed as per request
     const { user } = useAuth();
     const [isVisible, setIsVisible] = useState(true);
 

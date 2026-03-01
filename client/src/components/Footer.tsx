@@ -1,4 +1,7 @@
+'use client';
 import Link from 'next/link';
+import { DonateButton } from './DonateButton';
+
 
 export default function Footer() {
     return (
@@ -27,6 +30,11 @@ export default function Footer() {
                     <Link href="/privacy" className="hover:text-primary transition-colors">Chính sách</Link>
                     <Link href="/feedback" className="hover:text-primary transition-colors">Góp ý</Link>
                     <Link href="/dmca" className="hover:text-primary transition-colors">DMCA</Link>
+                </div>
+
+                {/* Donate Button - Desktop only */}
+                <div className="hidden md:block">
+                    <DonateButton />
                 </div>
 
                 {/* Copyright */}

@@ -17,6 +17,7 @@ interface ContinueWatchingCardProps {
             percentage: number;
             episodeSlug: string;
             episodeName: string;
+            serverName?: string;
         };
     };
     onRemove?: (slug: string, episodeSlug: string) => void;
@@ -30,7 +31,8 @@ export function ContinueWatchingCard({ movie, onRemove }: ContinueWatchingCardPr
     }
 
     // Build watch URL with episode and timestamp
-    const watchUrl = `/movie/${movie.slug}/watch?episode=${movie.progress.episodeSlug}&t=${Math.floor(movie.progress.currentTime)}`;
+    const serverQuery = movie.progress.serverName ? `&server=${encodeURIComponent(movie.progress.serverName)}` : '';
+    const watchUrl = `/movie/${movie.slug}/watch?episode=${movie.progress.episodeSlug}&t=${Math.floor(movie.progress.currentTime)}${serverQuery}`;
 
     // DEBUG: Log to console
     console.log('[ContinueWatchingCard]', {

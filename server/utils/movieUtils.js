@@ -19,7 +19,7 @@ const attachProgressToMovies = async (movies, userId) => {
         const progresses = await WatchProgress.find({
             userId,
             movieSlug: { $in: movieSlugs }
-        });
+        }).sort({ lastWatched: 1 });
 
         const progressMap = {};
         progresses.forEach(p => {
@@ -30,7 +30,8 @@ const attachProgressToMovies = async (movies, userId) => {
                 duration: p.duration,
                 percentage,
                 episodeSlug: p.episodeSlug,
-                episodeName: p.episodeName
+                episodeName: p.episodeName,
+                serverName: p.serverName
             };
         });
 

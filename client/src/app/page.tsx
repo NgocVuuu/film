@@ -8,6 +8,10 @@ import { TrendingCarousel } from '@/components/TrendingCarousel';
 import { PWAAds } from '@/components/PWAAds';
 import LoadingScreen from '@/components/LoadingScreen';
 import { customFetch } from '@/lib/api';
+import { MarvelBanner } from '@/components/MarvelBanner';
+import { DCUBanner } from '@/components/DCUBanner';
+import { StephenChowBanner } from '@/components/StephenChowBanner';
+import { KoreanDrama2016Banner } from '@/components/KoreanDrama2016Banner';
 
 interface Movie {
   _id: string;
@@ -31,6 +35,7 @@ export default function Home() {
 
   const [loading, setLoading] = useState(true);
   const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]); // Array for Hero
+  const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]); // New Upcoming Movies
   const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]); // New Trending
   const [continueWatchingMovies, setContinueWatchingMovies] = useState<Movie[]>([]); // New Continue Watching
 
@@ -60,6 +65,8 @@ export default function Home() {
   const [fantasyMovies, setFantasyMovies] = useState<Movie[]>([]);
   const [hkMovies, setHkMovies] = useState<Movie[]>([]);
   const [vnMovies, setVnMovies] = useState<Movie[]>([]);
+  const [hotAnimeMovies, setHotAnimeMovies] = useState<Movie[]>([]);
+  const [legendaryAnimeMovies, setLegendaryAnimeMovies] = useState<Movie[]>([]);
 
   useEffect(() => {
     // Fetch data from our Node.js server
@@ -70,6 +77,7 @@ export default function Home() {
           const {
             trendingMovies,
             featuredMovies,
+            upcomingMovies,
             latestMovies,
             continueWatching,
             chinaMovies,
@@ -95,11 +103,14 @@ export default function Home() {
             documentaryMovies,
             fantasyMovies,
             hkMovies,
-            vnMovies
+            vnMovies,
+            hotAnimeMovies,
+            legendaryAnimeMovies
           } = data.data;
 
           setTrendingMovies(trendingMovies || []);
           setFeaturedMovies(featuredMovies || []);
+          setUpcomingMovies(upcomingMovies || []);
           setContinueWatchingMovies(continueWatching || []);
 
           setLatestMovies(latestMovies || []);
@@ -127,6 +138,8 @@ export default function Home() {
           setFantasyMovies(fantasyMovies || []);
           setHkMovies(hkMovies || []);
           setVnMovies(vnMovies || []);
+          setHotAnimeMovies(hotAnimeMovies || []);
+          setLegendaryAnimeMovies(legendaryAnimeMovies || []);
         }
         setLoading(false);
       })
@@ -148,14 +161,41 @@ export default function Home() {
         <HeroSlider movies={featuredMovies} />
       )}
 
+      {/* UNIVERSE BANNERS */}
+      <div className="container mx-auto px-4 -mt-4 relative z-20 mb-2">
+        <div className="flex overflow-x-auto gap-4 scrollbar-hide snap-x snap-mandatory pb-2">
+          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
+            <MarvelBanner />
+          </div>
+          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
+            <DCUBanner />
+          </div>
+          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
+            <StephenChowBanner />
+          </div>
+          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
+            <KoreanDrama2016Banner />
+          </div>
+        </div>
+      </div>
+
       {/* Carousel Sections */}
-      <div className="container mx-auto px-4 space-y-12 -mt-10 relative z-20">
+      <div className="container mx-auto px-4 space-y-12 mt-4 relative z-20">
 
         {/* 1. Cinema / Featured */}
         {featuredMovies.length > 0 && (
           <MovieCarousel
             title="Phim lẻ chiếu rạp đẳng cấp nhất"
             movies={featuredMovies}
+            viewAllLink="/danh-sach/phim-chieu-rap"
+          />
+        )}
+
+        {/* 1.5 Upcoming Movies (Chiếu rạp nhưng chỉ mới có trailer) */}
+        {upcomingMovies.length > 0 && (
+          <MovieCarousel
+            title="Phim rạp sắp chiếu"
+            movies={upcomingMovies}
             viewAllLink="/danh-sach/phim-chieu-rap"
           />
         )}
@@ -190,11 +230,25 @@ export default function Home() {
           </div>
         )}
 
-        {/* 4. Animation */}
+        {/* 4. Hot Anime */}
+        <LazyMovieSection
+          title="Top Anime & Hoạt hình Hot nhất"
+          movies={hotAnimeMovies}
+          viewAllLink="/hoat-hinh"
+        />
+
+        {/* 4.1 Legendary Anime */}
+        <LazyMovieSection
+          title="Anime Huyền thoại vượt thời gian"
+          movies={legendaryAnimeMovies}
+          viewAllLink="/hoat-hinh?sort=view&maxYear=2015"
+        />
+
+        {/* 4.2 Animation */}
         <LazyMovieSection
           title="Thế giới hoạt hình đa sắc màu"
           movies={cartoonMovies}
-          viewAllLink="/hoat-hinh"
+          viewAllLink="/hoat-hinh?category=gia-dinh&sort=newest"
         />
 
         {/* 5. China */}
@@ -262,7 +316,7 @@ export default function Home() {
 
         {/* 14. Family / Animation for kids */}
         <LazyMovieSection
-          title="Phim hoạt hình cho trẻ em và gia đình"
+          title="Phim Gia Đình Gắn Kết Yêu Thương"
           movies={familyMovies}
           viewAllLink="/the-loai/gia-dinh"
         />

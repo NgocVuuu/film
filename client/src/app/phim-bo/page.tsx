@@ -39,7 +39,7 @@ function PhimBoContent() {
         setLoading(true);
         try {
             const res = await fetch(
-                `${API_URL}/api/movies?type=series&page=${page}&limit=24`,
+                `${API_URL}/api/movies?type=series&page=${page}&limit=30`,
                 { credentials: 'include' }
             );
             const data = await res.json();

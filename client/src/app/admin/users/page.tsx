@@ -102,6 +102,30 @@ export default function AdminUsersPage() {
         }
     };
 
+    const handleUpgradePremium = async (userId: string) => {
+        if (!confirm('Bạn có chắc muốn nâng cấp Premium (30 ngày) cho người dùng này?')) return;
+
+        try {
+            const response = await customFetch(`/api/admin/users/${userId}/premium`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ durationDays: 30 })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                toast.success(data.message);
+                fetchUsers();
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            console.error('Upgrade premium error:', error);
+            toast.error('Lỗi khi nâng cấp');
+        }
+    };
+
     return (
         <div className="p-4 md:p-6">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
@@ -205,6 +229,15 @@ export default function AdminUsersPage() {
                                             <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                                                 {user.role !== 'admin' && (
                                                     <>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => handleUpgradePremium(user._id)}
+                                                            className="h-9 w-9 p-0 hover:bg-primary/20 text-primary"
+                                                            title="Nâng cấp Premium (30 ngày)"
+                                                        >
+                                                            <CheckCircle className="w-4 h-4" />
+                                                        </Button>
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"

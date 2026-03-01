@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, Bell, User, LogOut, Check, Filter, Crown, Film, List, MessageSquare, Heart, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from './ui/button';
-import { useRouter, usePathname } from 'next/navigation';
+import { DonateButton } from './DonateButton';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/contexts/notification-context';
 import { usePWA } from '@/hooks/usePWA';
@@ -53,6 +54,8 @@ export function Navbar() {
     const pathname = usePathname();
     const { user, loading, logout } = useAuth();
     const { isPWA } = usePWA();
+    const searchParams = useSearchParams();
+    const isChatOpen = pathname === '/profile' && searchParams.get('tab') === 'chat';
 
     const {
         notifications,
@@ -142,7 +145,7 @@ export function Navbar() {
     return (
         <>
             <header
-                className={`fixed top-0 z-[100] w-full transition-all duration-300 pt-[env(safe-area-inset-top)] ${isScrolled ? 'bg-deep-black/95 backdrop-blur-sm shadow-md shadow-primary/10' : 'bg-transparent'
+                className={`fixed top-0 z-[100] w-full transition-all duration-300 pt-[env(safe-area-inset-top)] ${isChatOpen ? 'hidden md:block' : ''} ${isScrolled ? 'bg-deep-black/95 backdrop-blur-sm shadow-md shadow-primary/10' : 'bg-transparent'
                     }`}
             >
                 <div className="container mx-auto flex h-14 md:h-16 items-center justify-between px-4 gap-4">
@@ -336,9 +339,19 @@ export function Navbar() {
 
                                 {showUserMenu && (
                                     <div className="absolute right-0 top-full mt-2 w-48 bg-black/95 backdrop-blur-md border border-white/10 rounded-lg overflow-hidden shadow-2xl z-50">
-                                        <div className="p-3 border-b border-white/10 bg-white/5">
-                                            <p className="text-sm font-bold text-white truncate">{user.displayName || user.email}</p>
-                                            <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                                        <div className={`p-3 border-b border-white/10 ${user.isPremium ? 'bg-surface-900 relative overflow-hidden' : 'bg-white/5'}`}>
+                                            {user.isPremium && (
+                                                <div className="absolute inset-0 bg-yellow-500/5 pointer-events-none" />
+                                            )}
+                                            <div className="relative z-10">
+                                                <div className="flex items-center gap-2">
+                                                    <p className={`text-sm font-bold truncate ${user.isPremium ? 'text-yellow-400' : 'text-white'}`}>
+                                                        {user.displayName || user.email}
+                                                    </p>
+                                                    {user.isPremium && <Crown className="w-4 h-4 text-yellow-500 shrink-0 animate-pulse" />}
+                                                </div>
+                                                <p className="text-xs truncate text-gray-400">{user.email}</p>
+                                            </div>
                                         </div>
 
                                         <Link href="/profile" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
@@ -354,20 +367,14 @@ export function Navbar() {
                                             <List className="w-4 h-4" /> Danh sách của tôi
                                         </Link>
 
-                                        {user.isPremium && (
-                                            <div className="px-3 py-2.5 border-b border-white/5 bg-yellow-500/10">
-                                                <div className="flex items-center gap-2 text-yellow-500">
-                                                    <Crown className="w-4 h-4" />
-                                                    <span className="text-xs font-semibold">Premium</span>
-                                                </div>
-                                            </div>
-                                        )}
 
                                         {user.role === 'admin' && (
                                             <Link href="/admin" onClick={() => setShowUserMenu(false)} className="block px-3 py-2.5 text-sm font-semibold text-primary hover:bg-white/10 transition-colors border-b border-white/5">
                                                 Trang quản trị (Admin)
                                             </Link>
                                         )}
+
+                                        <DonateButton />
 
                                         <Link href="/feedback" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
                                             <MessageSquare className="w-4 h-4" /> Góp ý & Báo lỗi

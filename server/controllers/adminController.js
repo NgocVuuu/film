@@ -155,6 +155,57 @@ exports.toggleBanUser = async (req, res) => {
     }
 };
 
+// Manual upgrade user to premium
+exports.manualUpgradePremium = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const { durationDays = 30 } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy người dùng'
+            });
+        }
+
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + durationDays);
+
+        user.subscription = {
+            tier: 'premium',
+            status: 'active',
+            startDate,
+            endDate,
+            autoRenew: false
+        };
+
+        await user.save();
+
+        // Create notification for user
+        const { sendNotification } = require('../utils/notificationService');
+        await sendNotification(user._id, {
+            title: '🏅 Nâng cấp Premium',
+            content: `Chúc mừng! Tài khoản của bạn đã được nâng cấp lên Premium (${durationDays} ngày) bởi Admin.`,
+            type: 'system',
+            link: '/profile'
+        });
+
+        res.json({
+            success: true,
+            message: `Đã nâng cấp Premium cho ${user.displayName} đến ngày ${endDate.toLocaleDateString('vi-VN')}`,
+            data: user
+        });
+    } catch (error) {
+        console.error('Manual upgrade premium error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi nâng cấp Premium'
+        });
+    }
+};
+
 // Delete user
 exports.deleteUser = async (req, res) => {
     try {
@@ -248,16 +299,17 @@ exports.getDashboardStats = async (req, res) => {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const viewTrends = await WatchProgress.aggregate([
+        const ViewLog = require('../models/ViewLog');
+        const viewTrends = await ViewLog.aggregate([
             {
                 $match: {
-                    updatedAt: { $gte: thirtyDaysAgo }
+                    createdAt: { $gte: thirtyDaysAgo }
                 }
             },
             {
                 $group: {
                     _id: {
-                        $dateToString: { format: '%Y-%m-%d', date: '$updatedAt' }
+                        $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
                     },
                     count: { $sum: 1 }
                 }
@@ -316,4 +368,32 @@ exports.getDashboardStats = async (req, res) => {
             message: 'Lỗi khi lấy thống kê'
         });
     }
+};
+
+// Crawler Control
+const crawler = require('../crawler');
+
+exports.getCrawlerStatus = (req, res) => {
+    const status = crawler.getStatus();
+    res.json({ success: true, data: status });
+};
+
+exports.getCrawlerLogs = (req, res) => {
+    const logs = crawler.getLogs();
+    res.json({ success: true, data: logs });
+};
+
+exports.startCrawler = async (req, res) => {
+    const options = req.body; // { full: boolean, fromPage, toPage }
+    const result = await crawler.startCrawl(options);
+    if (result.success) {
+        res.json(result);
+    } else {
+        res.status(400).json(result);
+    }
+};
+
+exports.stopCrawler = (req, res) => {
+    const result = crawler.stopCrawl();
+    res.json(result);
 };
