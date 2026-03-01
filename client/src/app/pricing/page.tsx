@@ -34,10 +34,6 @@ interface PaymentData {
 export default function PricingPage() {
     const router = useRouter();
 
-    useEffect(() => {
-        router.push('/');
-    }, [router]);
-
     const { user, refresh } = useAuth(); // refresh to refresh user data
     const [plans, setPlans] = useState<Plan[]>([]);
     const [loading, setLoading] = useState(true);

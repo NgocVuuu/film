@@ -10,7 +10,6 @@ interface PremiumUpsellCardProps {
 }
 
 export function PremiumUpsellCard({ feature, compact = false }: PremiumUpsellCardProps) {
-  return null; // Upsell card removed as per request
   if (compact) {
     return (
       <div className="p-4 rounded-xl bg-linear-to-br from-yellow-500/10 to-orange-500/5 border border-yellow-500/30">
@@ -23,14 +22,12 @@ export function PremiumUpsellCard({ feature, compact = false }: PremiumUpsellCar
             <p className="text-xs text-gray-400">Nâng cấp để mở khóa tính năng này sếp ơi!</p>
           </div>
         </div>
-        {/* Hidden: Nâng cấp button */}
-        {false && (
-          <Link href="/pricing">
-            <Button className="w-full bg-linear-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black text-xs h-9 font-bold shadow-lg">
-              Nâng cấp Premium
-            </Button>
-          </Link>
-        )}
+        {/* Nâng cấp button */}
+        <Link href="/pricing">
+          <Button className="w-full bg-linear-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black text-xs h-9 font-bold shadow-lg">
+            Nâng cấp Premium
+          </Button>
+        </Link>
       </div>
     );
   }
@@ -74,15 +71,13 @@ export function PremiumUpsellCard({ feature, compact = false }: PremiumUpsellCar
           </ul>
         </div>
 
-        {/* Hidden: Nâng cấp button */}
-        {false && (
-          <Link href="/pricing">
-            <Button className="w-full bg-linear-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-bold h-11 shadow-lg group/btn transition-all">
-              <span>Nâng cấp Premium ngay</span>
-              <ChevronRight className="w-5 h-5 ml-1 group-hover/btn:translate-x-1 transition-transform" />
-            </Button>
-          </Link>
-        )}
+        {/* Nâng cấp button */}
+        <Link href="/pricing">
+          <Button className="w-full bg-linear-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-bold h-11 shadow-lg group/btn transition-all">
+            <span>Nâng cấp Premium ngay</span>
+            <ChevronRight className="w-5 h-5 ml-1 group-hover/btn:translate-x-1 transition-transform" />
+          </Button>
+        </Link>
 
         <p className="text-center text-xs text-gray-500 mt-3">
           Chỉ từ 30.000đ/tháng
