@@ -124,8 +124,8 @@ exports.createManualUpgrade = async (req, res) => {
         const accNum = process.env.BANK_ACC_NUM || '0000000000';
         const accName = process.env.BANK_ACC_NAME || 'ADMIN PCHILL';
 
-        // Link VietQR Động để in ra trên Modal (nếu xài WeScan MBBank)
-        const qrUrl = `https://qr.sepay.vn/img?bank=${bankCode}&acc=${accNum}&template=compact&amount=${amount}&des=${paymentCode}`;
+        // Link VietQR Động để in ra trên Modal (Dùng api miễn phí img.vietqr.io)
+        const qrUrl = `https://img.vietqr.io/image/${bankCode}-${accNum}-compact2.jpg?amount=${amount}&addInfo=${paymentCode}&accountName=${encodeURIComponent(accName)}`;
 
         res.json({
             success: true,

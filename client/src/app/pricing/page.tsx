@@ -179,8 +179,8 @@ export default function PricingPage() {
                                     }`}
                             >
                                 {plan.badge && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                                        <span className="px-4 py-1 bg-primary text-black text-xs font-bold rounded-full">
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-max">
+                                        <span className="px-4 py-1 bg-primary text-black text-xs font-bold rounded-full shadow-sm whitespace-nowrap">
                                             {plan.badge}
                                         </span>
                                     </div>
