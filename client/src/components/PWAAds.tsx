@@ -33,22 +33,23 @@ export function PWAAds() {
 
                     <div className="flex-1 min-w-0 font-vietnamese">
                         <h4 className="text-sm font-bold text-white flex items-center gap-1.5 leading-tight mb-0.5 font-vietnamese">
-                            Lên đời Premium, &apos;Buff&apos; App cực đỉnh! <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                            Trở thành VIP - Trải nghiệm điện ảnh đỉnh cao! <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
                         </h4>
                         <p className="text-[11px] text-gray-400 leading-tight font-vietnamese">
-                            Nâng cấp ngay để &apos;thay áo&apos; ánh kim sang trọng, xóa mọi quảng cáo và nhận tin phim hot tức thì sếp ơi!
+                            Đặc quyền không quảng cáo, tốc độ tải trang cực mượt và vô vàn lợi ích chờ sếp khám phá. Nâng cấp ngay!
                         </p>
                     </div>
 
                     {/* Nâng cấp button */}
-                    <Link href="/pricing" className="shrink-0">
-                        <Button
-                            size="sm"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-black text-xs font-bold h-8 px-3 rounded-lg shadow-lg shadow-yellow-500/20"
-                        >
+                    <Button
+                        size="sm"
+                        asChild
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black text-xs font-bold h-8 px-3 rounded-lg shadow-lg shadow-yellow-500/20 shrink-0 cursor-pointer mr-2 md:mr-4"
+                    >
+                        <Link href="/pricing">
                             Nâng cấp
-                        </Button>
-                    </Link>
+                        </Link>
+                    </Button>
 
                 </div>
             </div>

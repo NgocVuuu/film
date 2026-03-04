@@ -18,7 +18,8 @@ import {
     Bell,
     Server,
     CheckSquare,
-    MessageCircle
+    MessageCircle,
+    Bug
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
@@ -35,6 +36,7 @@ const navigation = [
     { name: 'Chat', href: '/admin/chat', icon: MessageCircle },
     { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
     { name: 'Crawler', href: '/admin/crawler', icon: RefreshCw },
+    { name: 'Phim Nháp (Spider)', href: '/admin/crawler/drafts', icon: Bug },
     { name: 'Server Nodes', href: '/admin/nodes', icon: Server },
     { name: 'Upgrade Requests', href: '/admin/upgrades', icon: CheckSquare },
 ];

@@ -92,6 +92,10 @@ export default function RootLayout({
             gtag('config', 'G-RNRM206SY8');
           `}
         </Script>
+        <Script
+          src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"
+          strategy="beforeInteractive"
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-deep-black text-foreground overflow-x-hidden`}

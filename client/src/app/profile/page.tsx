@@ -18,6 +18,7 @@ import { PWASettings } from '@/components/PWASettings';
 import { PremiumUpsellCard } from '@/components/PremiumUpsellCard';
 import { PWAAds } from '@/components/PWAAds';
 import { DonateButton } from '@/components/DonateButton';
+import { RequestMovieModal } from '@/components/RequestMovieModal';
 
 function ProfileContent() {
     const { user, loading: authLoading, refresh, logout } = useAuth(); // Changed checkAuth to refresh
@@ -28,6 +29,7 @@ function ProfileContent() {
     const initTab = searchParams.get('tab') as 'profile' | 'security' | 'pwa' | 'chat';
     const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'pwa' | 'chat'>(initTab || 'profile');
     const isMobileSubView = isEditMode || activeTab === 'chat';
+    const [showRequestModal, setShowRequestModal] = useState(false);
 
     // ... (rest of state)
 
@@ -195,11 +197,11 @@ function ProfileContent() {
                                 </p>
                             </div>
                             {/* Nâng cấp / Gia hạn button */}
-                            <Link href="/pricing">
-                                <Button className="w-full bg-[#fbbf24] hover:bg-[#f59e0b] text-black text-xs h-8 font-bold mt-auto relative z-10 shadow-lg shadow-yellow-500/10">
+                            <Button asChild className="w-full bg-[#fbbf24] hover:bg-[#f59e0b] text-black text-xs h-8 font-bold mt-auto relative z-10 shadow-lg shadow-yellow-500/10 cursor-pointer">
+                                <Link href="/pricing">
                                     {user?.isPremium ? 'Gia hạn' : 'Nâng cấp'} <span className="ml-1 text-[10px]">▲</span>
-                                </Button>
-                            </Link>
+                                </Link>
+                            </Button>
                         </div>
 
                         <DonateButton className="mt-3 w-full justify-center" />
@@ -231,6 +233,17 @@ function ProfileContent() {
 
                     <div className="space-y-1">
                         <MobileMenuLink href="/my-lists" icon={Plus} label="Danh sách phim của tôi" />
+                        {user.isPremium && (
+                            <button onClick={() => setShowRequestModal(true)} className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors group border-b border-white/5">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-9 h-9 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 group-hover:bg-yellow-500/20 group-hover:border-yellow-500/50 transition-colors">
+                                        <Crown className="w-4 h-4 text-yellow-500 group-hover:text-yellow-400 transition-colors" />
+                                    </div>
+                                    <span className="font-medium text-yellow-500/90 group-hover:text-yellow-400 transition-colors text-sm">Yêu cầu phim 4K</span>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-yellow-500/50" />
+                            </button>
+                        )}
                         <div className="h-px bg-white/5 my-2 mx-4" />
                         <button
                             onClick={() => {
@@ -309,6 +322,11 @@ function ProfileContent() {
                                                 : 'Sếp ơi, nâng cấp Premium để ad có thêm bát phở, còn sếp được hưởng đặc quyền thượng lưu nhé! 🥺🍜👑'}
                                         </p>
                                     </div>
+                                    <Button asChild className="w-full bg-yellow-500 hover:bg-yellow-600 text-black text-xs h-8 font-bold shadow-lg shadow-yellow-500/10 mt-3 relative z-10 cursor-pointer">
+                                        <Link href="/pricing">
+                                            {user?.isPremium ? 'Gia hạn' : 'Nâng cấp ngay'} <span className="ml-1 text-[10px]">▲</span>
+                                        </Link>
+                                    </Button>
                                 </div>
 
                                 <DonateButton className="hidden md:inline-flex w-full justify-center mb-1.5" />
@@ -495,6 +513,7 @@ function ProfileContent() {
                     </div>
                 </div>
             </div>
+            <RequestMovieModal isOpen={showRequestModal} onClose={() => setShowRequestModal(false)} />
         </div>
     );
 }

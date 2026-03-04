@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { sendTelegramAlert } = require('./telegramAlert');
 
 class RealDebridService {
     constructor() {
@@ -10,31 +11,40 @@ class RealDebridService {
         this.deadKeys = new Map(); // Lưu trữ Key ID bị báo lỗi (Dead Letter)
     }
 
-    // Lấy API Key ép cứng 1:1 theo phiên bản Proxy Index (Chống Trùng IP RD ToS)
+    // Luân chuyển API Key tự động (Auto-Rotator)
     getKeyForProxy(proxyIndex) {
         if (this.apiKeys.length === 0) return null;
 
-        // Map cứng Proxy 0 -> Key 0, Proxy 1 -> Key 1
-        // Nếu số Proxy > số Key, sẽ lặp lại Key, user cần cấu hình đủ Key
-        const keyIndex = proxyIndex % this.apiKeys.length;
-        const keyId = `rd_key_${keyIndex}`;
+        // Bắt đầu tìm kiếm từ Key được gán mặc định cho Proxy này
+        let startIndex = proxyIndex % this.apiKeys.length;
 
-        // Kiểm tra xem Key này có đang bị đánh dấu là "Chết" không
-        const deadUntil = this.deadKeys.get(keyId);
-        if (deadUntil && Date.now() < deadUntil) {
-            return null; // Key này chết, Proxy này coi như Tê liệt
-        } else if (deadUntil) {
-            this.deadKeys.delete(keyId);
+        for (let i = 0; i < this.apiKeys.length; i++) {
+            const currentIndex = (startIndex + i) % this.apiKeys.length;
+            const keyId = `rd_key_${currentIndex}`;
+            const deadUntil = this.deadKeys.get(keyId);
+
+            // Nếu Key còn sống, hoặc đã hết hạn phạt
+            if (!deadUntil || Date.now() >= deadUntil) {
+                if (deadUntil) {
+                    console.log(`[RealDebrid] Ân xá cho API Key ${keyId}. Đưa trở lại Pool.`);
+                    this.deadKeys.delete(keyId);
+                }
+                return { key: this.apiKeys[currentIndex], id: keyId };
+            }
         }
 
-        return { key: this.apiKeys[keyIndex], id: keyId };
+        // Toàn bộ mạng lưới Real-Debrid Pool đã cháy
+        return null;
     }
 
-    // Đánh dấu 1 Key ID là đã chết (Timeout phạt 15 phút)
-    markKeyAsDead(keyId) {
-        // Khóa API Key này trong 15 phút (900000 ms)
-        console.warn(`[RealDebrid] Đóng băng API Key ${keyId} trong 15 phút do phát hiện lỗi 424 Domino`);
-        this.deadKeys.set(keyId, Date.now() + 900000);
+    // Đánh dấu 1 Key ID là đã chết (Phạt 6 tiếng nếu dính Ban 403)
+    markKeyAsDead(keyId, reason = 'Unknown') {
+        const penaltyTime = 6 * 60 * 60 * 1000; // 6 tiếng
+        console.warn(`[RealDebrid] Đóng băng API Key ${keyId} trong 6 giờ. Lý do: ${reason}`);
+        this.deadKeys.set(keyId, Date.now() + penaltyTime);
+
+        // Bắt dòng thông báo ra Telegram
+        sendTelegramAlert(`<b>🔥 QUẢ BOM SỐ 7 ĐÃ NỔ!</b>\n\nReal-Debrid API Key <code>${keyId}</code> đã bị tước quyền (Error: ${reason}).\nHệ thống đã tự động kích hoạt <b>Auto-Rotator</b> dời tải sang Key tiếp theo.\n\nVui lòng nạp thêm đạn (Key mới) vào <code>.env</code> nếu tình trạng này lặp lại!`);
     }
 
     async apiRequest(method, endpoint, apiKey, data = null, proxyDomain = null) {
@@ -44,11 +54,8 @@ class RealDebridService {
 
         try {
             // [KỊCH BẢN BẢO MẬT] IP Rotation: Nginx Forward Proxy
-            // Chuyển hướng Traffic gọi API của Node.js sang Nginx (ẩn địa chỉ thực)
             let targetUrl = `${this.baseUrl}${endpoint}`;
             if (proxyDomain) {
-                // Biến URL chuẩn: https://api.real-debrid.com/rest/1.0/torrents/addMagnet
-                // Sang Endpoint Xuyên thủng: https://stream1.pchill.com/rd_proxy/rest/1.0/torrents/addMagnet
                 targetUrl = targetUrl.replace('https://api.real-debrid.com', `${proxyDomain}/rd_proxy`);
             }
 
@@ -96,17 +103,15 @@ class RealDebridService {
      * Complete workflow to get a streamable link from a magnet
      */
     async getStreamLink(magnet, proxyIndex, proxyDomain = null) {
+        const current = this.getKeyForProxy(proxyIndex);
+
+        if (!current) {
+            const keyError = new Error('PROXY_KEY_DEAD');
+            keyError.code = 'PROXY_KEY_DEAD';
+            throw keyError;
+        }
+
         try {
-            // Lấy API Key độc quyền tương ứng với Cluster Proxy cần Stream
-            const current = this.getKeyForProxy(proxyIndex);
-
-            if (!current) {
-                // Key này đã bị đóng băng vì lỗi 424, Nginx này xem như rụng phuộc
-                const keyError = new Error('PROXY_KEY_DEAD');
-                keyError.code = 'PROXY_KEY_DEAD';
-                throw keyError;
-            }
-
             // 1. Add magnet
             const addResult = await this.addMagnet(current.key, magnet, proxyDomain);
             const torrentId = addResult.id;
@@ -117,21 +122,33 @@ class RealDebridService {
             // 3. Wait/Get Info
             let info = await this.getTorrentInfo(current.key, torrentId, proxyDomain);
 
-            // Bắt lỗi Phim chưa được kéo xong về máy chủ đám mây RD (Uncached Trap)
             if (info.status !== 'downloaded') {
                 const customError = new Error(`Phim đang được máy chủ đám mây tải về (${info.progress || 0}%). Vui lòng quay lại sau ít phút!`);
                 customError.isTorrentDownloading = true;
                 throw customError;
             }
 
-            // If it's already cached/downloaded...
             if (info.links && info.links.length > 0) {
                 const rdLink = info.links[0];
                 return { restrictedLink: rdLink, keyId: current.id, _realKeyFallback: current.key };
             }
 
             throw new Error('Không tìm thấy link Stream hợp lệ trong Torrent này');
+
         } catch (error) {
+            const status = error.response ? error.response.status : null;
+
+            // Xử lý Lưới Tử: 401 (Hết hạn), 403 (Banned), 429 (Rate Limit)
+            if (status === 401 || status === 403 || status === 429) {
+                console.warn(`[RealDebrid] Phát hiện Lỗi Tử Huyệt ${status} trên Key ${current.id}`);
+                this.markKeyAsDead(current.id, `HTTP ${status}`);
+
+                // AUTO-ROTATOR: Gọi đệ quy lại hàm này. Vì Key cũ đã dán nhãn DEAD, 
+                // `getKeyForProxy` ở trên cùng đệ quy sẽ tự bốc Key tiếp theo!
+                console.log(`[RealDebrid] Auto-Rotator: Chuyển hướng Traffic sang Cứu viện...`);
+                return this.getStreamLink(magnet, proxyIndex, proxyDomain);
+            }
+
             console.error('Real-Debrid workflow error:', error.message);
             throw error;
         }

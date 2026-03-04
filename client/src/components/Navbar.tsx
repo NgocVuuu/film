@@ -9,6 +9,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/contexts/notification-context';
 import { usePWA } from '@/hooks/usePWA';
+import { RequestMovieModal } from './RequestMovieModal';
 
 interface Notification {
     _id: string;
@@ -44,6 +45,7 @@ export function Navbar() {
     const [showGenreMenu, setShowGenreMenu] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [showRequestModal, setShowRequestModal] = useState(false);
     const [imageError, setImageError] = useState(false);
 
     const browserMenuRef = useRef<HTMLDivElement>(null);
@@ -357,6 +359,11 @@ export function Navbar() {
                                         <Link href="/profile" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
                                             <User className="w-4 h-4" /> Trang cá nhân
                                         </Link>
+                                        {user.isPremium && (
+                                            <button onClick={() => { setShowUserMenu(false); setShowRequestModal(true); }} className="w-full flex items-center justify-start gap-3 px-3 py-2.5 text-sm text-yellow-500 hover:text-yellow-400 hover:bg-white/10 transition-colors border-b border-white/5 font-medium">
+                                                <Crown className="w-4 h-4" /> Yêu cầu phim 4K
+                                            </button>
+                                        )}
                                         <Link href="/favorites" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
                                             <Heart className="w-4 h-4" /> Danh sách yêu thích
                                         </Link>
@@ -499,6 +506,7 @@ export function Navbar() {
                     />
                 </div>
             )}
+            <RequestMovieModal isOpen={showRequestModal} onClose={() => setShowRequestModal(false)} />
         </>
     );
 }

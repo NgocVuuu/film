@@ -510,17 +510,48 @@ const setupCrawler = () => {
     console.log('Crawler: Manual Mode Only (Auto-run moved to GitHub Actions).');
 };
 
+const { Worker } = require('worker_threads');
+const path = require('path');
+
 const startCrawl = async (options) => {
     if (isRunning) return { success: false, message: 'Crawler is already running' };
 
-    // Run in background
-    syncAll(options).then(() => {
-        addLog('Crawl finished', 'success');
-    }).catch(err => {
-        addLog(`Crawl failed: ${err.message}`, 'error');
+    isRunning = true;
+    addLog('Starting Crawler via Worker Thread...', 'info');
+
+    // Phóng quá trình Crawl nặng nhọc sang 1 luồng Background độc lập (CPU riêng)
+    // Để cho luồng chính (Main Thread) tập trung mớm JWT và SocketIO nhanh chóng cho VIP
+    const workerPath = path.join(__dirname, 'workers', 'crawlerWorker.js');
+    const worker = new Worker(workerPath, {
+        workerData: {
+            mongoUri: process.env.MONGO_URI,
+            options: options
+        }
     });
 
-    return { success: true, message: 'Crawler started in background' };
+    worker.on('message', (msg) => {
+        if (msg.success) {
+            addLog(`[Worker] Crawl finished: ${msg.message}`, 'success');
+        } else {
+            addLog(`[Worker] Crawl failed: ${msg.error}`, 'error');
+        }
+        isRunning = false;
+    });
+
+    worker.on('error', (err) => {
+        addLog(`[Worker] Fatal Error: ${err.message}`, 'error');
+        console.error('[Worker] Crashed:', err);
+        isRunning = false;
+    });
+
+    worker.on('exit', (code) => {
+        if (code !== 0) {
+            console.error(`[Worker] stopped with exit code ${code}`);
+        }
+        isRunning = false;
+    });
+
+    return { success: true, message: 'Crawler offloaded to background Worker Thread.' };
 };
 
 const stopCrawl = () => {
@@ -681,10 +712,17 @@ async function processPendingRequests() {
                     throw new Error('Không có slug để tìm phim');
                 }
 
-                console.log(`[REQUESTS] Processing: ${request.movieName} (${slug})`);
+                console.log(`[REQUESTS] Processing: ${request.movieName} (${slug}) [${request.is4kRequest ? '4K' : 'Standard'}]`);
 
-                // Try to fetch from all sources
-                const result = await syncSpecificMovie(slug, null);
+                let result;
+                if (request.is4kRequest) {
+                    // 4K request: use Jackett hunter
+                    const { huntSingleMovie4K } = require('./crawler/hunter');
+                    result = await huntSingleMovie4K(slug);
+                } else {
+                    // Standard request: fetch from OPHIM/KKPHIM/NGUONC
+                    result = await syncSpecificMovie(slug, null);
+                }
 
                 if (result.success) {
                     // Mark as completed

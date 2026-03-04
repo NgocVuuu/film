@@ -77,7 +77,12 @@ const HybridVideoPlayer = ({
     const [currentKeyId, setCurrentKeyId] = useState<string | null>(null); // Lưu trữ RD Key ID hiện tại để báo lỗi
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isNetworkDowngraded, setIsNetworkDowngraded] = useState(false);
     const playerRef = useRef<MediaPlayerInstance>(null);
+    const bufferCountRef = useRef<number>(0);
+    const bufferStartTimeRef = useRef<number>(0);
+    const bufferTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const bufferResetTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Watch Progress Hook
     const { debouncedSave } = useWatchProgress({
@@ -181,6 +186,62 @@ const HybridVideoPlayer = ({
         }
     };
 
+    // [PHASE 4 Red Team] Adaptive Bitrate Fallback Logic - Tránh nghẽn mạng 4G
+    const handleWaiting = () => {
+        // Chỉ kích hoạt Fallback nếu đang xem luồng 4K Torrent
+        if (streamUrl === src || !magnet) return;
+
+        console.log('[AdaptiveFallback] Đang tải luồng đệm (Buffering)...');
+        bufferCountRef.current += 1;
+        bufferStartTimeRef.current = Date.now();
+
+        // 1. Phân tích: Buffering quá 3 lần trong vòng 60s
+        if (bufferCountRef.current >= 3) {
+            triggerQualityFallback("buffering_count");
+            return;
+        }
+
+        // Reset bộ đếm số lần buffer sau 60 giây nếu mạng ổn định trở lại
+        if (bufferResetTimerRef.current) clearTimeout(bufferResetTimerRef.current);
+        bufferResetTimerRef.current = setTimeout(() => {
+            bufferCountRef.current = 0;
+        }, 60000);
+
+        // 2. Phân tích: Thời gian Buffer liên tục quá 10 giây
+        if (bufferTimerRef.current) clearTimeout(bufferTimerRef.current);
+        bufferTimerRef.current = setTimeout(() => {
+            triggerQualityFallback("buffering_timeout");
+        }, 10000);
+    };
+
+    const handlePlaying = () => {
+        // Khi video phát mượt trở lại, dập tắt bộ đếm thời gian timeout
+        if (bufferTimerRef.current) clearTimeout(bufferTimerRef.current);
+    };
+
+    const triggerQualityFallback = (reason: string) => {
+        if (isNetworkDowngraded || streamUrl === src) return;
+
+        console.warn(`[AdaptiveFallback] Phát hiện mạng yếu (${reason}). Tự động hạ độ phân giải xuống luồng HLS 1080p tĩnh.`);
+
+        setIsNetworkDowngraded(true);
+        setError("Mạng yếu, hệ thống đã tự động chuyển sang luồng dự phòng 1080p để đảm bảo độ mượt mà.");
+
+        // Hoán đổi ngay vòi phát dự phòng
+        const currentTime = playerRef.current?.state.currentTime || 0;
+        setStreamUrl(src); // Hạ cấp
+
+        // Force Video Player khôi phục thời gian đang xem
+        setTimeout(() => {
+            if (playerRef.current) {
+                playerRef.current.currentTime = currentTime;
+                playerRef.current.play();
+                // Ẩn thông báo sau 5 giây
+                setTimeout(() => setError(null), 5000);
+            }
+        }, 500);
+    };
+
     if (isLoading && !streamUrl) {
         return (
             <div className="w-full aspect-video bg-black flex flex-col items-center justify-center rounded-xl border border-white/10">
@@ -205,11 +266,13 @@ const HybridVideoPlayer = ({
                 src={streamUrl || src}
                 poster={poster}
                 className="w-full h-full"
-                autoplay={autoPlay}
+                autoPlay={autoPlay}
                 currentTime={startTime}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={onEnded}
                 onError={handlePlayerError}
+                onWaiting={handleWaiting}
+                onPlaying={handlePlaying}
                 playsInline
                 crossOrigin
             >
@@ -258,12 +321,52 @@ const HybridVideoPlayer = ({
             </MediaPlayer>
 
             <style jsx global>{`
+                /* Premium Glassmorphic Theme (Default Layout) */
                 .vds-video-layout {
                     --video-brand: #eab308;
                     --video-font-family: 'Inter', sans-serif;
+                    --video-controls-color: #ffffff;
+                    
+                    /* Menu styling */
+                    --video-menu-bg: rgba(15, 15, 15, 0.7);
+                    --video-menu-border: 1px solid rgba(255, 255, 255, 0.1);
+                    --video-menu-backdrop-filter: blur(20px);
+                    --video-menu-border-radius: 16px;
+                    --video-button-hover-bg: rgba(234, 179, 8, 0.15);
+                    --video-button-hover-color: #eab308;
+                    
+                    /* Sliders */
+                    --video-slider-track-bg: rgba(255, 255, 255, 0.2);
+                    --video-slider-track-fill: #eab308;
+                    --video-slider-thumb-bg: #eab308;
+                    --video-slider-thumb-shadow: 0 0 10px 2px rgba(234, 179, 8, 0.6);
+                    
+                    /* UI Controls */
+                    --video-controls-bg: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0));
+                    
                     -webkit-user-select: none;
                     user-select: none;
                     -webkit-touch-callout: none;
+                }
+                
+                .vds-button {
+                    transition: all 0.2s ease-in-out;
+                }
+                .vds-button:hover {
+                    transform: scale(1.1);
+                }
+
+                .vds-poster {
+                    position: absolute;
+                    inset: 0;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    opacity: 0;
+                    transition: opacity 0.2s;
+                }
+                .vds-poster[data-visible] {
+                    opacity: 1;
                 }
                 
                 /* Tối ưu hóa PWA trên iOS thiết bị tai thỏ */

@@ -1,0 +1,37 @@
+name: "Spider Bot Crawler"
+
+on:
+  schedule:
+    # Chạy tự động (Cronjob): 12 tiếng một lần (Vào 0h và 12h trưa giờ UTC)
+    - cron: '0 0,12 * * *'
+  
+  # Cờ này giúp Sếp có nút bấm chạy Bot thủ công (Run Workflow) trên Giao diện Github
+  workflow_dispatch: 
+
+jobs:
+  run-spider:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Kéo Code Mới Nhất (Checkout repository)
+        uses: actions/checkout@v3
+
+      - name: ⚙️ Cài Đặt Node.js (Setup)
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # PChill đang dùng Node.js mới nên set 18 hoặc 20
+
+      - name: 📦 Cài Đặt Thư Viện (npm install)
+        working-directory: ./server
+        run: npm install axios mongoose slugify dotenv
+
+      - name: 🕷️ Phát Động Chiến Dịch Cào Mạng Nhện (Run Spider Bot)
+        working-directory: ./server
+        env:
+          # Đây là ổ khóa bảo mật. Tuyệt đối KHÔNG hardcode ở đây.
+          # Sếp phải vào Settings > Secrets and variables > Actions > Chọn "New repository secret"
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }} 
+          JACKETT_API_URL: ${{ secrets.JACKETT_API_URL }}
+          JACKETT_API_KEY: ${{ secrets.JACKETT_API_KEY }}
+        run: node scripts/spiderBot.js

@@ -21,6 +21,12 @@ const serverNodeSchema = new mongoose.Schema({
         type: String, // Danh sách các ID API Key của Real-Debrid cấp riêng cho Node này, ví dụ: 'rd_key_0', 'rd_key_1'
         trim: true
     }],
+    metrics: {
+        cpu: { type: String, default: '0' },
+        ram: { type: String, default: '0/0MB (0%)' },
+        activeConnections: { type: Number, default: 0 },
+        lastHeartbeat: { type: Date, default: null }
+    },
     createdAt: {
         type: Date,
         default: Date.now

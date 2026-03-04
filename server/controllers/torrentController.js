@@ -1,12 +1,16 @@
 const User = require('../models/User');
-const realDebrid = require('../utils/realDebrid');
+const debridManager = require('../utils/debridManager');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const ServerNode = require('../models/ServerNode'); // Import Data Động
+const Movie = require('../models/Movie'); // [BẢO MẬT L6] Import Model Phim để đối chiếu Magnet
 const NodeCache = require('node-cache');
 
 // Cache lưu trữ số lượng Magnet đã Request của mỗi User trong 24h (86400s)
 const userMagnetCache = new NodeCache({ stdTTL: 86400, checkperiod: 3600 });
+
+// [BẢO MẬT CẤP ĐỘ 5] Chống Weaponized Fallback DoS: Rate Limit (3 lần / 5 phút)
+const fallbackCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 
 let currentProxyIndex = 0;
 
@@ -30,21 +34,33 @@ exports.getStreamLink = async (req, res) => {
             });
         }
 
-        // [KỊCH BẢN BẢO MẬT] Anti DDoS Magnet: Rate Limiter (Max 20 lượt phim mới / ngày)
-        const cacheKey = `user_magnets_${userId}`;
-        let requestedMagnets = userMagnetCache.get(cacheKey) || [];
-
-        if (!requestedMagnets.includes(magnet)) {
-            if (requestedMagnets.length >= 20) {
-                console.warn(`[Anti-DDoS] User ${userId} đã vượt ngưỡng 20 phim khác nhau/ngày.`);
-                return res.status(429).json({
-                    success: false,
-                    message: 'Bạn đã xem đủ 20 bộ phim trong hôm nay. Để bảo vệ hệ thống, vui lòng quay lại vào ngày mai!'
-                });
-            }
-            requestedMagnets.push(magnet);
-            userMagnetCache.set(cacheKey, requestedMagnets);
+        // [BẢO MẬT CẤP ĐỘ 6] VÁ LỖ HỔNG ÁM SÁT MAGNET (ToS ASSASSINATION)
+        // Kiểm tra xem Magnet này có thực sự nằm trong kho dữ liệu của pChill không
+        // Phải truy vấn Database gốc để chặn Hacker tiêm Magnet rác/Honeypot vào.
+        const validMovie = await Movie.findOne({ "torrents.magnet": magnet }).select('_id name');
+        if (!validMovie) {
+            console.warn(`[SECURITY ALERT] LỖ HỔNG LEVEL 6 BỊ CHẶN: User ${userId} cố tình request Magnet trái phép/ngoài hệ thống: ${magnet}`);
+            return res.status(403).json({
+                success: false,
+                message: 'Hệ thống Từ Chối: Magnet Link không hợp lệ hoặc không có trong cơ sở dữ liệu của chúng tôi!'
+            });
         }
+
+        // [BẢO MẬT CẤP ĐỘ 6] VÁ LỖ HỔNG BÀO MÒN BĂNG THÔNG (Slow-Drip Quota Drain)
+        // Thay vì chỉ đếm số lượng phim độc lập (Dễ lách bằng cách xem 1 phim 24/7),
+        // Áp dụng Quota cứng Cấp Token: Tối đa 15 lượt xin Link (Mỗi link sống 6 tiếng -> Đủ xem 90 tiếng/ngày).
+        // Vượt quá 15 lượt báo lỗi 429 vĩnh viễn trong ngày.
+        const playCountKey = `user_total_plays_${userId}`;
+        let totalPlays = userMagnetCache.get(playCountKey) || 0;
+
+        if (totalPlays >= 15) {
+            console.warn(`[Bandwidth Quota] User ${userId} đã hết lượt request luồng Streaming trong ngày.`);
+            return res.status(429).json({
+                success: false,
+                message: 'Vượt giới hạn FUP (Quá Quota): Bạn đã yêu cầu luồng phát quá số lần cho phép trong ngày. Vui lòng quay lại vào ngày mai để hệ thống phục hồi băng thông!'
+            });
+        }
+        userMagnetCache.set(playCountKey, totalPlays + 1);
 
         // Lấy IP của Client (Trình duyệt người dùng)
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -53,68 +69,94 @@ exports.getStreamLink = async (req, res) => {
         const nginxJwtSecret = process.env.NGINX_JWT_SECRET;
         const isCastMode = req.query.cast === 'true';
 
-        // 1. CHỌN NODE NGINX ĐỘNG TỪ MONGODB (Dynamic Nodes - Tắc Kè Hoa)
+        // 1. CHỌN NODE NGINX ĐỘNG TỪ MONGODB (Dynamic Nodes - Least Load Balancer)
         let proxyUrls = [];
         let proxyIndex = 0;
         let nginxProxyUrl = '';
         let proxyNodeId = '';
+        let selectedNode = null;
 
         if (nginxJwtSecret) {
             // Lấy danh sách Node đang "Active"
             const activeNodes = await ServerNode.find({ status: 'active' });
 
             if (activeNodes && activeNodes.length > 0) {
-                proxyUrls = activeNodes.map(node => node.domain);
+                // Sắp xếp Nodes theo số lượng Connection (Least Connection Algorithm)
+                // Lọc bỏ các Node mất Heartbeat quá 45 giây (chết lâm sàng nhưng Admin chưa gạch tên)
+                const now = new Date();
+                const healthyNodes = activeNodes.filter(n => {
+                    if (!n.metrics || !n.metrics.lastHeartbeat) return true; // Node mới chưa có heartbeat vẫn cho vào
+                    const diffSeconds = (now - new Date(n.metrics.lastHeartbeat)) / 1000;
+                    return diffSeconds <= 45;
+                }).sort((a, b) => {
+                    const connA = (a.metrics && a.metrics.activeConnections) ? a.metrics.activeConnections : 0;
+                    const connB = (b.metrics && b.metrics.activeConnections) ? b.metrics.activeConnections : 0;
+                    return connA - connB;
+                });
+
+                if (healthyNodes.length > 0) {
+                    proxyUrls = healthyNodes.map(node => node.domain);
+
+                    // Tìm Node khỏe nhất có API Key còn sống
+                    for (let i = 0; i < healthyNodes.length; i++) {
+                        const candidateNode = healthyNodes[i];
+                        const candidateIndex = activeNodes.findIndex(n => n._id.toString() === candidateNode._id.toString());
+
+                        const keyData = debridManager.getKeyForProxy(candidateIndex);
+                        if (keyData && keyData.id !== deadKeyId) {
+                            proxyIndex = candidateIndex;
+                            selectedNode = candidateNode;
+                            break;
+                        }
+                    }
+                }
             } else if (process.env.NGINX_PROXY_URL) {
                 // Backward Compatibility (Fallback về .env nếu MongoDB rỗng)
                 proxyUrls = process.env.NGINX_PROXY_URL.split(',').map(url => url.trim()).filter(url => url.length > 0);
+
+                // Thuật toán băm tĩnh nếu dùng Fallback
+                let attempt = 0;
+                while (attempt < proxyUrls.length) {
+                    let candidateIndex = 0;
+                    if (req.user && magnet) {
+                        const hashString = req.user._id.toString() + magnet + (attempt > 0 ? attempt.toString() : '');
+                        const hashInt = parseInt(crypto.createHash('md5').update(hashString).digest('hex').substring(0, 8), 16);
+                        candidateIndex = hashInt % proxyUrls.length;
+                    } else {
+                        candidateIndex = (currentProxyIndex + attempt) % proxyUrls.length;
+                    }
+
+                    const keyData = debridManager.getKeyForProxy(candidateIndex);
+                    if (keyData && keyData.id !== deadKeyId) {
+                        proxyIndex = candidateIndex;
+                        selectedNode = { domain: proxyUrls[proxyIndex] };
+                        if (!req.user || !magnet) currentProxyIndex = candidateIndex + 1;
+                        break;
+                    }
+                    attempt++;
+                }
             }
         }
 
-        if (proxyUrls.length > 0) {
-            let attempt = 0;
-            let foundAliveNode = false;
-
-            while (attempt < proxyUrls.length) {
-                let candidateIndex = 0;
-                if (req.user && magnet) {
-                    const hashString = req.user._id.toString() + magnet + (attempt > 0 ? attempt.toString() : '');
-                    const hashInt = parseInt(crypto.createHash('md5').update(hashString).digest('hex').substring(0, 8), 16);
-                    candidateIndex = hashInt % proxyUrls.length;
-                } else {
-                    candidateIndex = (currentProxyIndex + attempt) % proxyUrls.length;
-                }
-
-                // Lọc bỏ Node Nginx đang sở hữu Key bị chết (Tránh đi vào dải Fallback Loop)
-                const keyData = realDebrid.getKeyForProxy(candidateIndex);
-                if (keyData && keyData.id !== deadKeyId) {
-                    proxyIndex = candidateIndex;
-                    foundAliveNode = true;
-                    if (!req.user || !magnet) currentProxyIndex = candidateIndex + 1;
-                    break;
-                }
-                attempt++;
-            }
-
-            if (!foundAliveNode) {
-                return res.status(503).json({ success: false, message: 'Hệ thống Server Streaming đang quá tải và thiếu hụt API Key. Vui lòng thử lại sau.' });
-            }
-
-            nginxProxyUrl = proxyUrls[proxyIndex];
-            proxyNodeId = `nginx_node_${proxyIndex + 1}`;
-
-            // Kịch Bản Tác Chiến: BÓNG MA DPI (Nhà mạng chặn Tên miền)
-            // Nếu phát hiện Client bị lỗi kết nối mạng (Network Error do DNS/DPI chặn)
-            if (req.query.isNetworkError === 'true' && nginxProxyUrl) {
-                // Đổi Tên miền Chính thành Tên miền Dự Phòng (Rotation)
-                // Ví dụ: Đổi stream1.pchill.com thành s1-backup.pchill.net
-                nginxProxyUrl = nginxProxyUrl.replace('stream', 's').replace('.com', '-backup.net');
-                console.warn(`[DPI Evasion] Phát hiện nhà mạng chặn Domain. Đã kích hoạt tên miền dự phòng: ${nginxProxyUrl}`);
-            }
+        if (!selectedNode) {
+            return res.status(503).json({ success: false, message: 'Hệ thống Server Streaming đang quá tải và thiếu hụt API Key hoặc Node khỏe. Vui lòng thử lại sau.' });
         }
 
-        // 2. Call Real-Debrid service BẰNG Lõi API Key ĐỘC QUYỀN của Node Nginx đó & Mượn IP Nginx proxying
-        const rdData = await realDebrid.getStreamLink(magnet, proxyUrls.length > 0 ? proxyIndex : 0, nginxProxyUrl);
+        nginxProxyUrl = proxyUrls.length > 0 ? (selectedNode.domain || proxyUrls[proxyIndex]) : '';
+        proxyNodeId = `nginx_node_${proxyIndex + 1}`;
+
+        // Kịch Bản Tác Chiến: BÓNG MA DPI (Nhà mạng chặn Tên miền)
+        // Nếu phát hiện Client bị lỗi kết nối mạng (Network Error do DNS/DPI chặn)
+        if (req.query.isNetworkError === 'true' && nginxProxyUrl) {
+            // Đổi Tên miền Chính thành Tên miền Dự Phòng (Rotation)
+            // Ví dụ: Đổi stream1.pchill.com thành s1-backup.pchill.net
+            nginxProxyUrl = nginxProxyUrl.replace('stream', 's').replace('.com', '-backup.net');
+            console.warn(`[DPI Evasion] Phát hiện nhà mạng chặn Domain. Đã kích hoạt tên miền dự phòng: ${nginxProxyUrl}`);
+        }
+
+        // 2. Call Debrid Manager service BẰNG Lõi API Key ĐỘC QUYỀN của Node Nginx đó & Mượn IP Nginx proxying
+        // Manager sẽ tự lo việc Fallback sang AllDebrid/Premiumize nếu Real-Debrid sập
+        const rdData = await debridManager.getStreamLink(magnet, proxyUrls.length > 0 ? proxyIndex : 0, nginxProxyUrl);
 
         let finalStreamUrl = '';
 
@@ -137,7 +179,7 @@ exports.getStreamLink = async (req, res) => {
 
         // Cứu cánh nếu chưa setup Nginx (Bị lỗi 403 nếu server Nginx không cùng IP với server Node.js)
         if (!finalStreamUrl) {
-            const unrestrict = await realDebrid.unrestrictLink(rdData._realKeyFallback, rdData.restrictedLink);
+            const unrestrict = await debridManager.unrestrictLink(rdData._realKeyFallback, rdData.restrictedLink);
             finalStreamUrl = unrestrict.download;
         }
 
@@ -154,7 +196,7 @@ exports.getStreamLink = async (req, res) => {
         console.error('Torrent stream error:', error);
 
         // Bắt lỗi Khả năng đáp ứng API Key
-        if (error.message && error.message.includes('PROXY_KEY_DEAD')) {
+        if (error.message && (error.message.includes('PROXY_KEY_DEAD') || error.message.includes('ALL_PROXY_KEYS_DEAD'))) {
             return res.status(503).json({
                 success: false,
                 message: 'Hệ thống Server Streaming đang dồn tải. Vui lòng thử lại sau vài phút.'
@@ -170,7 +212,7 @@ exports.getStreamLink = async (req, res) => {
         }
 
         // Specific error for missing API Key
-        if (error.message && error.message.includes('REAL_DEBRID_API_KEY')) {
+        if (error.message && error.message.includes('API_KEY is not configured')) {
             return res.status(500).json({
                 success: false,
                 message: 'Hệ thống Torrent đang được bảo trì (API Key missing)'
@@ -196,8 +238,27 @@ exports.fallbackStreamLink = async (req, res) => {
             });
         }
 
+        // [BẢO MẬT CẤP ĐỘ 5] - VÁ LỖ HỔNG: Weaponized Fallback DoS
+        // Zero Trust Backend: Không tin tưởng 100% Client báo tử API Key. 
+        // Phải Rate Limit hành vi báo tử này (Tối đa 3 lần / 5 phút).
+        const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const identityKey = req.user ? req.user._id.toString() : clientIp;
+        const cacheKey = `fallback_rate_${identityKey}`;
+        let fallbackAttempts = fallbackCache.get(cacheKey) || 0;
+
+        if (fallbackAttempts >= 3) {
+            console.warn(`[SECURITY ALERT] LỖ HỔNG CẤP ĐỘ 5 BỊ CHẶN: Phát hiện User/IP ${identityKey} spam Fallback DoS cạn kiệt API Key.`);
+            return res.status(429).json({
+                success: false,
+                message: 'Hệ thống tự vệ: Bạn đã yêu cầu chuyển máy chủ quá nhiều lần trong thời gian ngắn! Vui lòng thử lại sau 5 phút.'
+            });
+        }
+
+        fallbackCache.set(cacheKey, fallbackAttempts + 1);
+
         // 1. Gạch tên API Key bị lỗi khỏi vòng quay trong 15 phút
-        realDebrid.markKeyAsDead(deadKeyId);
+        // Gọi qua DebridManager để nó tự nhận dạng Prefix (rd_ hay ad_)
+        debridManager.markKeyAsDead(deadKeyId);
 
         // Đánh dấu cờ Nếu lỗi do nhà mạng (DPI) để getStreamLink trả về Backup Domain
         if (isNetworkError === 'true' || isNetworkError === true) {

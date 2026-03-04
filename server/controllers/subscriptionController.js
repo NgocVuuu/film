@@ -14,10 +14,9 @@ exports.getPlans = async (req, res) => {
                 duration: 1,
                 price: 50000,
                 features: [
-                    'Xem phim không quảng cáo',
-                    'Lưu tiến độ xem không giới hạn',
-                    'Chất lượng HD/FullHD/4K',
-                    'Ưu tiên luồng tải tốc độ cao'
+                    'Xem phim server riêng 4K',
+                    'Trải nghiệm không quảng cáo',
+                    'Yêu cầu admin thêm phim 4K'
                 ]
             },
             {
@@ -29,9 +28,10 @@ exports.getPlans = async (req, res) => {
                 originalPrice: 150000,
                 badge: 'Tiết kiệm 20k',
                 features: [
-                    'Tất cả tính năng Premium',
-                    'Dành cho người mới bắt đầu',
-                    'Kích hoạt nhanh qua WeScan'
+                    'Xem phim server riêng 4K',
+                    'Trải nghiệm không quảng cáo',
+                    'Yêu cầu admin thêm phim 4K',
+                    'Tiết kiệm 20.000đ'
                 ]
             },
             {
@@ -43,9 +43,10 @@ exports.getPlans = async (req, res) => {
                 originalPrice: 300000,
                 badge: 'Phổ biến nhất (Tiết kiệm 50k)',
                 features: [
-                    'Tất cả tính năng Premium',
-                    'Bảo hành trọn đời gói cước',
-                    'Hỗ trợ cài đặt PWA ưu tiên'
+                    'Xem phim server riêng 4K',
+                    'Trải nghiệm không quảng cáo',
+                    'Yêu cầu admin thêm phim 4K',
+                    'Tiết kiệm 50.000đ'
                 ]
             },
             {
@@ -57,9 +58,10 @@ exports.getPlans = async (req, res) => {
                 originalPrice: 600000,
                 badge: 'Siêu Tiết kiệm (Giảm 150k)',
                 features: [
-                    'Tất cả tính năng Premium',
-                    'Huy hiệu "Fan Cứng" tại Profile',
-                    'Không bao giờ lo bị gián đoạn'
+                    'Xem phim server riêng 4K',
+                    'Trải nghiệm không quảng cáo',
+                    'Yêu cầu admin thêm phim 4K',
+                    'Tiết kiệm 150.000đ (Chiết khấu 25%)'
                 ]
             }
         ];

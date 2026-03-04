@@ -12,6 +12,10 @@ const movieRequestSchema = new mongoose.Schema({
     },
     movieSlug: String,
     ophimUrl: String,
+    is4kRequest: {
+        type: Boolean,
+        default: false
+    },
     status: {
         type: String,
         enum: ['pending', 'processing', 'completed', 'failed'],

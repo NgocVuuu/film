@@ -7,7 +7,7 @@ const { syncSpecificMovie } = require('../crawler');
 exports.requestMovie = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { movieName, movieSlug, ophimUrl } = req.body;
+        const { movieName, movieSlug, ophimUrl, is4kRequest } = req.body;
 
         if (!movieName) {
             return res.status(400).json({
@@ -16,8 +16,20 @@ exports.requestMovie = async (req, res) => {
             });
         }
 
+        const isUserPremium = req.user && req.user.subscription &&
+            req.user.subscription.tier === 'premium' &&
+            req.user.subscription.status === 'active' &&
+            (!req.user.subscription.endDate || new Date(req.user.subscription.endDate) > new Date());
+
+        if (is4kRequest && !isUserPremium) {
+            return res.status(403).json({
+                success: false,
+                message: 'Tính năng yêu cầu phim 4K chỉ dành cho tài khoản Premium'
+            });
+        }
+
         // Check if movie already exists
-        if (movieSlug) {
+        if (movieSlug && !is4kRequest) {
             const existing = await Movie.findOne({ slug: movieSlug });
             if (existing) {
                 return res.status(400).json({
@@ -30,6 +42,7 @@ exports.requestMovie = async (req, res) => {
         // Check if request already exists
         let request = await MovieRequest.findOne({
             movieSlug,
+            is4kRequest: is4kRequest || false,
             status: { $in: ['pending', 'processing'] }
         });
 
@@ -52,6 +65,7 @@ exports.requestMovie = async (req, res) => {
             movieName,
             movieSlug,
             ophimUrl,
+            is4kRequest: is4kRequest || false,
             priority: 1
         });
 
@@ -111,7 +125,7 @@ async function processMovieRequest(requestId) {
     try {
         const request = await MovieRequest.findById(requestId).populate('userId', 'displayName');
         if (!request) return;
-        
+
         // Skip if already processed
         if (request.status !== 'pending' && request.status !== 'processing') return;
 
@@ -134,7 +148,7 @@ async function processMovieRequest(requestId) {
                 .replace(/[^a-z0-9\s-]/g, '')
                 .trim()
                 .replace(/\s+/g, '-');
-            
+
             console.log(`[REQUEST] Generated slug from name: ${slug}`);
         }
 
@@ -142,8 +156,14 @@ async function processMovieRequest(requestId) {
             throw new Error('Không có slug để tìm phim. Vui lòng cung cấp tên phim chính xác.');
         }
 
-        // Use the new crawler to fetch movie from all sources
-        const result = await syncSpecificMovie(slug, null);
+        let result;
+        if (request.is4kRequest) {
+            const { huntSingleMovie4K } = require('../crawler/hunter');
+            result = await huntSingleMovie4K(slug);
+        } else {
+            // Use the new crawler to fetch movie from all sources
+            result = await syncSpecificMovie(slug, null);
+        }
 
         if (result.success) {
             // Update request status to completed

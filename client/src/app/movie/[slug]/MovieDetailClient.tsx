@@ -6,6 +6,7 @@ import { Play, Calendar, Star, Clock, Info, ListPlus, Share2 } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { CommentSection } from '@/components/CommentSection';
 import { AddToListModal } from '@/components/AddToListModal';
+import RequestMovieButton from '@/components/RequestMovieButton';
 import { useAuth } from '@/contexts/auth-context';
 import { usePWA } from '@/hooks/usePWA';
 import { API_URL } from '@/lib/config';
@@ -43,6 +44,12 @@ interface MovieDetail {
     time?: string;
     rating_average?: number;
     rating_count?: number;
+    torrents?: {
+        magnet: string;
+        quality: string;
+        size: string;
+        seeders: number;
+    }[];
     progress?: {
         currentTime: number;
         duration: number;
@@ -361,6 +368,15 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                         <Share2 className="mr-2 w-5 h-5 md:w-6 md:h-6" />
                                         Chia Sẻ
                                     </Button>
+
+                                    {/* 4K Request Button for Premium Users */}
+                                    {user?.isPremium && (!movie.torrents || movie.torrents.length === 0) && (
+                                        <RequestMovieButton
+                                            movieName={movie.name}
+                                            movieSlug={movie.slug}
+                                            is4kRequest={true}
+                                        />
+                                    )}
                                 </div>
 
                                 {/* Cast Preview (Mobile/Tablet only maybe? Keeping simple) */}

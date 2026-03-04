@@ -9,6 +9,9 @@ const {
 
 const { authMiddleware, adminMiddleware } = require('../middleware/authMiddleware');
 
+// Endpoint nhận Heartbeat (Không dùng JWT Admin của hệ thống, tự xác thực bằng Secret)
+router.post('/heartbeat', require('../controllers/adminNodeController').receiveHeartbeat);
+
 const protect = authMiddleware;
 const authorize = (role) => {
     return (req, res, next) => {

@@ -36,10 +36,17 @@ http {
     # Cấu trúc RAM chia sẻ cho Script Lua (10MB tương đương chứa hàng ngàn Link Cache chống Spam RD API)
     lua_shared_dict rd_cache 10m;
     lua_shared_dict locks 1m; # Vùng nhớ Semaphore Lock chặn hiệu ứng Bầy Đàn (Thundering Herd)
-    lua_shared_dict jwt_blacklist 2m; # Bộ nhớ Kill-Switch cấm Token của Khách hàng bị khóa
+    lua_shared_dict jwt_blacklist 10m; # [BẢO MẬT L5] Bộ nhớ Kill-Switch (10MB chứa hàng triệu user)
 
-    # Khởi tạo vùng nhớ đếm kết nối theo IP (Chống IDM cắn băng thông)
-    limit_conn_zone $binary_remote_addr zone=limit_ip:10m;
+    # [BẢO MẬT CẤP ĐỘ 9] Thu Phục Bóng Ma Biến Hình IPv6 (Bypass Connection Limits)
+    # Trích xuất dải /64 cho IPv6 để chặn IDM xoay IP liên tục trên mạng 4G/5G. Giữ nguyên IPv4.
+    map $remote_addr $limit_ip_key {
+        ~^(?P<ipv6_prefix>[0-9a-fA-F]+:[0-9a-fA-F]+:[0-9a-fA-F]+:[0-9a-fA-F]+):.* $ipv6_prefix;
+        default $remote_addr;
+    }
+
+    # Khởi tạo vùng nhớ đếm kết nối theo Nhóm IP đã gom (10MB)
+    limit_conn_zone $limit_ip_key zone=limit_ip:10m;
 
     # Chỉ định file CA để verify SSL
     lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
@@ -68,20 +75,39 @@ http {
     proxy_connect_timeout 60s;
     proxy_send_timeout 60s;
 
+    # [BẢO MẬT CẤP ĐỘ 8] Hầm Băng SSL (Connection Pooling)
+    # Giữ mở sắn 64 đường ống (cầu nối TCP/TLS) với RD, không bắt tay SSL lại từ đầu với mỗi mảnh Chunk.
+    upstream rd_backend {
+        server api.real-debrid.com:443;
+        keepalive 64;
+    }
+
     server {
         listen 80;
         server_name _; # Hứng MỌI tên miền trỏ về IP này (Nginx Catch-All)
+        
+        # [BẢO MẬT CẤP ĐỘ 7] VÁ LỖ HỔNG Xé Mảnh Range (Byte-Range Amplification)
+        # Chặn Hacker bào CPU Nginx bằng việc gửi 10.000 Range Header 1 lúc.
+        max_ranges 1;
 
-        # Vô hiệu hóa log để tiết kiệm Disk I/O nếu cần
-        # access_log off; 
+        # [BẢO MẬT CẤP ĐỘ 8] Tuyệt Tình Cốc Log (Chống bom nổ chậm đầy ổ cứng)
+        # Chỉ giữ lại nhật ký lỗi chí mạng (server chết). Bơ mọi Request 4xx/2xx rác rưởi của Hacker.
+        access_log off; 
+        error_log /var/log/nginx/error.log crit;
 
         # Webhook nhận lệnh Cấm người dùng từ Node.js (Kill-Switch)
         location /admin/ban_user {
-            # Chỉ cho phép IP của Server Node.js (Hoặc Localhost) gọi vào cổng này
-            # allow 127.0.0.1;
-            # deny all;
-
             content_by_lua_block {
+                -- [BẢO MẬT CẤP ĐỘ 5] VÁ LỖ HỔNG Blacklist LRU Eviction Attack
+                -- Bắt buộc Auth Token (Secret Nginx) để chống Spam tràn mảng LRU
+                local secret = os.getenv("NGINX_JWT_SECRET") 
+                local auth_token = ngx.req.get_headers()["Authorization"]
+                
+                if not auth_token or auth_token ~= ("Bearer " .. secret) then
+                    ngx.status = ngx.HTTP_UNAUTHORIZED
+                    return ngx.say("LỖ HỔNG LEVEL 5: Thiếu mã bí mật, cấm truy cập cắm cờ Ban!")
+                end
+
                 local user_id = ngx.var.arg_user_id
                 if not user_id then
                     ngx.status = 400
@@ -99,6 +125,11 @@ http {
         location /play {
             # Tối đa 3 kết nối đồng thời từ 1 IP. Luồng IDM thứ 4 sẽ bị chém (Lỗi 503)
             limit_conn limit_ip 3; 
+
+            # [BẢO MẬT CẤP ĐỘ 9] Phá Bẫy Tarpit Đâm Thủng Socket (Slow Read Attack)
+            # Chặn đứng các luồng tải cố tình mở Socket nhưng kéo chậm 1 byte/giây để làm nghẽn Server.
+            send_timeout 30s;
+            client_body_timeout 30s;
 
             # Giải mã CORS cho Trình phát Vidstack (Bảo mật: Chỉ chấp nhận Domain của bạn)
             add_header 'Access-Control-Allow-Origin' 'https://pchill.com' always;
@@ -147,13 +178,10 @@ http {
                     return ngx.exit(ngx.HTTP_FORBIDDEN)
                 end
 
-                -- VÁ LỖI 3: Trích xuất X-Forwarded-For chuẩn xác, chống Crash/Spoofing
+                -- [BẢO MẬT CẤP ĐỘ 6] VÁ LỖ HỔNG X-Forwarded-For Injection (Header Spoofing)
+                -- TUYỆT ĐỐI không dùng X-Forwarded-For do Client gửi lên để gán IP. 
+                -- Chỉ dùng duy nhất IP kết nối vật lý Socket của Nginx.
                 local client_ip = ngx.var.remote_addr
-                local xff = ngx.req.get_headers()["X-Forwarded-For"]
-                if type(xff) == "table" then xff = xff[1] end
-                if xff and type(xff) == "string" then
-                    client_ip = string.match(xff, "^%s*(%d+%.%d+%.%d+%.%d+)") or client_ip
-                end
 
                 -- 2. Xử lý Cast Token (Chống đứt gãy Tua phim & Chống Hijack mạng 4G)
                 -- Lấy user_id từ Payload JWT (ID cố định) thay vì client_ip dễ biến động
@@ -171,8 +199,18 @@ http {
                 local verified_jwt = jwt:verify(secret, ngx.var.jwt)
                 local is_expired = (verified_jwt.verified == false and string.find(verified_jwt.reason or "", "expire"))
 
-                -- Luật Sinh Tử: Sai chữ ký => BAN. Hết hạn mà Không có Cast Cookie hợp lệ => BAN.
-                if not verified_jwt.verified and not (is_expired and has_valid_cookie) then
+                -- [BẢO MẬT CẤP ĐỘ 5] VÁ LỖ HỔNG Bóng Ma Lệch Pha Đồng Hồ (NTP Clock Drift)
+                -- Ban ân huệ (Leeway) 30 giây bù trừ cho các Server lệch pha Time Zone
+                local out_of_leeway = true
+                if is_expired and jwt_obj.payload.exp then
+                    if ngx.time() <= (jwt_obj.payload.exp + 30) then
+                        out_of_leeway = false -- Mới lố hạn dưới 30s, được tha xí xoá
+                    end
+                end
+
+                -- Luật Sinh Tử: Sai chữ ký => BAN. 
+                -- Hết hạn mà Không có Cast Cookie hợp lệ (Và Lố luôn cả 30s ân hạn Leeway) => BAN.
+                if not verified_jwt.verified and not (is_expired and (has_valid_cookie or not out_of_leeway)) then
                     ngx.status = ngx.HTTP_FORBIDDEN
                     ngx.say("Token Không Hợp Lệ Hoặc Đã Hết Hạn")
                     return ngx.exit(ngx.HTTP_FORBIDDEN)
@@ -210,6 +248,7 @@ http {
                 local cached_link = rd_cache:get(jwt_obj.payload.url)
 
                 if cached_link then
+                    ngx.ctx.original_url = jwt_obj.payload.url -- [Level 7] Cấp cứu nếu Link hit cache nhưng chết ngắt giữa chừng
                     ngx.var.target_url = cached_link
                     ngx.exec("@proxy")
                     return
@@ -228,6 +267,7 @@ http {
                 cached_link = rd_cache:get(jwt_obj.payload.url)
                 if cached_link then
                     lock:unlock()
+                    ngx.ctx.original_url = jwt_obj.payload.url -- [Level 7]
                     ngx.var.target_url = cached_link
                     ngx.exec("@proxy")
                     return
@@ -281,6 +321,7 @@ http {
                 rd_cache:set(jwt_obj.payload.url, rd_data.download, 14400)
                 lock:unlock() -- Mở cổng cho 99 client khác đang xếp hàng được lấy Link từ RAM Cached
                 
+                ngx.ctx.original_url = jwt_obj.payload.url -- [Level 7] Truyền biến cho header_filter_by_lua_block xóa lúc có biến
                 ngx.var.target_url = rd_data.download
                 
                 -- Tạo HTTP request ngầm nội bộ để proxy qua proxy_pass
@@ -292,6 +333,23 @@ http {
         location @proxy {
             # Bắt buộc khai báo DNS Resolver để phân giải tên miền của Real-Debrid chống lỗi 502
             resolver 1.1.1.1 8.8.8.8 valid=300s;
+            
+            # [BẢO MẬT CẤP ĐỘ 7] VÁ LỖ HỔNG Đứt Gánh Giữa Đường (Mid-Stream RD Link Expiration)
+            # Khách đang xem mà phim bị xóa/DMCA/bảo trì => Cứu net tự động xóa Cache để lần bấm Play sau Node.js xin Link mới
+            header_filter_by_lua_block {
+                if ngx.status >= 400 then
+                    local url_to_purge = ngx.var.target_url
+                    -- Do proxy_pass truyền thẳng từ biến cục bộ nên không truy vất trực tiếp JWT Payload được, 
+                    -- ta xóa theo Value target_url luôn bằng cách duyệt khóa hoặc có thể thiết kế phức tạp hơn
+                    -- Tạm thời, xóa theo URL. Tại LUA Block trên: ngx.ctx.original_url = jwt_obj.payload.url
+                    if ngx.ctx.original_url then
+                        local rd_cache = ngx.shared.rd_cache
+                        rd_cache:delete(ngx.ctx.original_url)
+                        ngx.log(ngx.WARN, "[Cứu Nét Level 7] RD trả lỗi " .. ngx.status .. ". Đã Purge Link cũ khỏi RAM Cache.")
+                    end
+                end
+            }
+
             proxy_pass $target_url;
             
             # Giấu IP, truyền đúng Host cho Real-Debrid
@@ -305,8 +363,20 @@ http {
             # Xóa các header nội bộ của Nginx làm sai lệch streaming
             proxy_hide_header Content-Disposition;
             
-            # Không được redirect (RD có thể ném 302 về CDN)
-            proxy_intercept_errors off;
+            # [BẢO MẬT CẤP ĐỘ 8] Bắt Sống 302 Redirect (Tránh Rò Rỉ IP Khách)
+            # Không quăng 302 thẳng mặt Client mà Nginx phải lẳng lặng đi ngầm theo RD CDN Link mới.
+            proxy_intercept_errors on;
+            error_page 301 302 307 = @handle_redirect;
+
+            # [BẢO MẬT CẤP ĐỘ 8] Kết hợp bộ đệm SSL Keepalive
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+        }
+
+        # Khối nội bộ lén lút xử lí 302 Redirect chuyển hướng đi thẳng CDN của Real-Debrid
+        location @handle_redirect {
+            set $saved_redirect_location '$upstream_http_location';
+            proxy_pass $saved_redirect_location;
         }
     }
 }
@@ -318,4 +388,29 @@ Bạn chỉ cần thêm vào file `.env` của thư mục `server/`:
 NGINX_PROXY_URL=http://your-nginx-vps-ip:80
 NGINX_JWT_SECRET=YOUR_SUPER_SECRET_KEY_HERE
 ```
-Vậy là hoàn tất vòng lặp an toàn!
+
+### 4. Bọc Giáp Tàng Hình WARP (Chống Real-Debrid Ban IP Datacenter)
+**LỖ HỔNG CẤP ĐỘ 9**: Nếu VPS Nginx của bạn thuê tại các Datacenter lớn (DigitalOcean, AWS, Hetzner, OVH...), băng thông khủng lồ liên tục trút về một IP Datacenter sẽ khiến hệ thống AI của Real-Debrid đánh gậy vi phạm chính sách "Dùng thương mại" (Commercial Proxy) và **Khóa Vĩnh Viễn IP VPS đó**.
+
+**Cách vá:** Cài đặt Cloudflare WARP lên máy chủ VPS Nginx để ngụy trang IP Proxy thành IP Dân cư (ISP Cloudflare).
+
+1. **Cài đặt WARP CLI (Ubuntu):**
+```bash
+curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
+sudo apt-get update && sudo apt-get install cloudflare-warp
+```
+
+2. **Kích hoạt Proxy WARP Local:**
+```bash
+warp-cli register
+warp-cli set-mode proxy
+warp-cli set-proxy-port 1080
+warp-cli connect
+```
+
+3. **Routing Traffic Nginx qua WARP:**
+Lúc này trên máy chủ Nginx đã mở một cổng Socks5 tại `127.0.0.1:1080`.
+Theo lý thuyết, bạn chỉ cần ép Nginx đẩy mọi request đến Upstream lọt qua cổng Socks này. (Có thể biên dịch Nginx thêm module stream hoặc dùng giải pháp iptables routing mức độ OS để toàn bộ traffic IPv4 gọi lên `api.real-debrid.com` bị bẻ lái vào WARP). Từ lúc đó trở đi, Real-Debrid sẽ chỉ nhìn thấy IP ISP ảo bảo mật của bạn!
+
+Vậy là hoàn tất vòng lặp an toàn Cấp độ Xuyên thủng Trái Đất (Level 9)!

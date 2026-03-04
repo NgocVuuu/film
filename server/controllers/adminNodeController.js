@@ -59,3 +59,48 @@ exports.deleteNode = async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi server' });
     }
 };
+
+// [Nhận Heartbeat từ Nginx Node]
+exports.receiveHeartbeat = async (req, res) => {
+    try {
+        // Simple authentication using a shared secret from .env
+        const authHeader = req.headers.authorization;
+        const secret = process.env.NGINX_JWT_SECRET || 'YOUR_ADMIN_SECRET_OR_JWT_TOKEN';
+
+        if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== secret) {
+            return res.status(401).json({ success: false, message: 'Unauthorized Heartbeat' });
+        }
+
+        const { nodeId, cpu, ram, activeConnections } = req.body;
+
+        if (!nodeId) {
+            return res.status(400).json({ success: false, message: 'Missing nodeId' });
+        }
+
+        // Tạm thời dùng Name để map. Admin cần cấu hình NODE_ID trong bash script khớp với name trong DB
+        // Hoặc có thể map bằng Domain nếu truyền domain.
+        const node = await ServerNode.findOneAndUpdate(
+            { name: nodeId },
+            {
+                $set: {
+                    'metrics.cpu': cpu,
+                    'metrics.ram': ram,
+                    'metrics.activeConnections': activeConnections,
+                    'metrics.lastHeartbeat': new Date()
+                }
+            },
+            { new: true }
+        );
+
+        if (!node) {
+            // Log nhưng không báo lỗi 404 để bash script không bị rối
+            console.warn(`[Heartbeat] Nhận tín hiệu từ Node vô danh: ${nodeId}`);
+            return res.json({ success: true, message: 'Node unfound but heartbeat acknowledged' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[Heartbeat] Lỗi khi nhận nhịp tim:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};

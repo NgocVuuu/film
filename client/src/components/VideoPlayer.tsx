@@ -4,11 +4,13 @@ import Hls from 'hls.js';
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize,
     Settings, Loader2, FastForward, Rewind, PictureInPicture,
-    SkipBack, SkipForward, ListVideo
+    SkipBack, SkipForward, ListVideo, Subtitles, AudioLines, Settings2
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useWatchProgress } from '@/hooks/useWatchProgress';
+import axios from 'axios';
+import { API_URL } from '@/lib/config';
 
 interface WebKitVideoElement extends HTMLVideoElement {
     webkitSupportsPresentationMode?: (mode: string) => boolean;
@@ -18,6 +20,7 @@ interface WebKitVideoElement extends HTMLVideoElement {
 
 interface VideoPlayerProps {
     src: string;
+    magnet?: string;
     poster?: string;
     embedUrl?: string;
     autoPlay?: boolean;
@@ -30,6 +33,7 @@ interface VideoPlayerProps {
     intro?: number[];
     outro?: number[];
     startTime?: number;  // Optional start time from URL param
+    subtitles?: { lang: string; url: string; label: string; default?: boolean }[];
     onEnded?: () => void;  // Callback when video ends
     nextEpisodeInfo?: {
         name: string;
@@ -65,6 +69,7 @@ const formatTime = (seconds: number) => {
 
 export default function VideoPlayer({
     src,
+    magnet,
     poster,
     embedUrl,
     autoPlay,
@@ -77,6 +82,7 @@ export default function VideoPlayer({
     intro,
     outro,
     startTime = 0,
+    subtitles = [],
     onEnded,
     nextEpisodeInfo,
     prevEpisodeInfo,
@@ -102,6 +108,10 @@ export default function VideoPlayer({
     const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // Premium Info
+    const [premiumStreamUrl, setPremiumStreamUrl] = useState<string | null>(null);
+    const [currentKeyId, setCurrentKeyId] = useState<string | null>(null);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [showControls, setShowControls] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
@@ -118,7 +128,14 @@ export default function VideoPlayer({
     // Quality State
     const [qualityLevels, setQualityLevels] = useState<{ height: number; bitrate: number; index: number }[]>([]);
     const [currentQuality, setCurrentQuality] = useState(-1); // -1 is Auto
-    const [showSettings, setShowSettings] = useState(false);
+
+    // Menu States
+    const [activeMenu, setActiveMenu] = useState<'settings' | 'subtitles' | 'audio' | 'quality' | null>(null);
+
+    // Audio Tracks & Subtitles State
+    const [audioTracks, setAudioTracks] = useState<{ id: number; name: string; lang?: string }[]>([]);
+    const [currentAudioTrack, setCurrentAudioTrack] = useState<number>(-1);
+    const [currentSubtitleIndex, setCurrentSubtitleIndex] = useState<number>(subtitles && subtitles.findIndex(s => s.default) !== -1 ? subtitles.findIndex(s => s.default) : -1);
 
     // Episode panel state
     const [showEpisodePanel, setShowEpisodePanel] = useState(false);
@@ -126,6 +143,7 @@ export default function VideoPlayer({
 
     // Timer for hiding controls
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [playPauseFeedback, setPlayPauseFeedback] = useState<'play' | 'pause' | null>(null);
 
     // Watch Progress Hook
     const { initialProgress, debouncedSave } = useWatchProgress({
@@ -139,13 +157,42 @@ export default function VideoPlayer({
 
     // -- Logic --
 
+    // Premium Stream Initialization
+    useEffect(() => {
+        const fetchPremiumLink = async () => {
+            if (!magnet || !user || user.subscription?.tier !== 'premium') {
+                setPremiumStreamUrl(null);
+                return;
+            }
+
+            try {
+                const response = await axios.get(`${API_URL}/api/torrent/stream`, {
+                    params: { magnet },
+                    withCredentials: true
+                });
+
+                if (response.data.success && response.data.data.streamUrl) {
+                    setPremiumStreamUrl(response.data.data.streamUrl);
+                    if (response.data.data.keyId) {
+                        setCurrentKeyId(response.data.data.keyId);
+                    }
+                }
+            } catch (err: any) {
+                console.error('[VideoPlayer] Real-Debrid Error:', err);
+                // Note: Keep premiumStreamUrl as null so it falls back to activeSrc (src)
+            }
+        };
+
+        fetchPremiumLink();
+    }, [magnet, user]);
+
     // Auto-hide controls effect
     useEffect(() => {
-        if (isPlaying && showControls && !showSettings) {
+        if (isPlaying && showControls && !activeMenu) {
             const timer = setTimeout(() => setShowControls(false), 3000);
             return () => clearTimeout(timer);
         }
-    }, [isPlaying, showControls, showSettings]);
+    }, [isPlaying, showControls, activeMenu]);
 
     const handleMouseMove = () => {
         if (!showControls) setShowControls(true);
@@ -159,12 +206,15 @@ export default function VideoPlayer({
 
         if (!videoRef.current.paused) {
             videoRef.current.pause();
+            setPlayPauseFeedback('pause');
         } else {
             videoRef.current.play().catch(e => {
                 if (e.name !== 'AbortError') console.error('Play error:', e);
             });
+            setPlayPauseFeedback('play');
         }
         setShowControls(true);
+        setTimeout(() => setPlayPauseFeedback(null), 500);
     };
 
     const handleTimeUpdate = () => {
@@ -495,7 +545,7 @@ export default function VideoPlayer({
         if (videoRef.current) {
             videoRef.current.playbackRate = speed;
             setPlaybackSpeed(speed);
-            setShowSettings(false);
+            setActiveMenu(null);
         }
     };
 
@@ -503,7 +553,50 @@ export default function VideoPlayer({
         if (hlsRef.current) {
             hlsRef.current.currentLevel = levelIndex;
             setCurrentQuality(levelIndex);
-            setShowSettings(false);
+            setActiveMenu(null);
+        }
+    };
+
+    const changeSubtitle = (index: number) => {
+        if (videoRef.current) {
+            const tracks = videoRef.current.textTracks;
+            for (let i = 0; i < tracks.length; i++) {
+                tracks[i].mode = i === index ? 'showing' : 'hidden'; // Turn on selected, off others
+            }
+            setCurrentSubtitleIndex(index);
+        }
+        setActiveMenu(null);
+    };
+
+    const changeAudioTrack = (id: number) => {
+        if (hlsRef.current) {
+            hlsRef.current.audioTrack = id;
+            setCurrentAudioTrack(id);
+        }
+        setActiveMenu(null);
+    };
+
+    const triggerCast = async () => {
+        const video = videoRef.current as any;
+        if (!video) return;
+
+        try {
+            if (video.remote && video.remote.prompt) {
+                // Standard W3C Remote Playback API (e.g., Chrome to Chromecast/Android TV)
+                await video.remote.prompt();
+            } else if (video.webkitShowPlaybackTargetPicker) {
+                // Safari AirPlay
+                video.webkitShowPlaybackTargetPicker();
+            } else {
+                alert('Trình duyệt của bạn không hỗ trợ tính năng Cast trực tiếp. Kiến nghị sử dụng Google Chrome (Thiết bị Android/TV) hoặc Safari (AirPlay).');
+            }
+        } catch (error: any) {
+            if (error?.name === 'NotFoundError') {
+                alert('Không tìm thấy thiết bị Cast nào khả dụng trên mạng mạng của bạn hoặc bạn chưa cấp quyền truy cập.');
+            } else if (error?.name !== 'NotAllowedError') {
+                console.error('[Cast] Error:', error);
+                alert('Có lỗi xảy ra khi kết nối với thiết bị Cast/TV.');
+            }
         }
     };
 
@@ -540,7 +633,9 @@ export default function VideoPlayer({
         // Disable Picture-in-Picture on iOS (can interfere with inline playback)
         video.disablePictureInPicture = false;
 
-        if (!src) {
+        const activeSrc = premiumStreamUrl || src;
+
+        if (!activeSrc) {
             setError(true);
             setIsLoading(false);
             return;
@@ -550,7 +645,21 @@ export default function VideoPlayer({
         setIsLoading(true);
         let hls: Hls;
 
-        const onVideoLoaded = () => setIsLoading(false);
+        video.addEventListener('loadeddata', () => {
+            setIsLoading(false);
+            // Wait a tick for text tracks to populate
+            setTimeout(() => {
+                if (video.textTracks && subtitles) {
+                    const defaultIndex = subtitles.findIndex(s => s.default);
+                    if (defaultIndex !== -1) setCurrentSubtitleIndex(defaultIndex);
+
+                    // Force the initial mode
+                    for (let i = 0; i < video.textTracks.length; i++) {
+                        video.textTracks[i].mode = i === defaultIndex ? 'showing' : 'hidden';
+                    }
+                }
+            }, 100);
+        });
         const onVideoWaiting = () => setIsLoading(true);
         const onVideoPlaying = () => {
             setIsLoading(false);
@@ -596,7 +705,6 @@ export default function VideoPlayer({
             if (isFS) setIsLandscape(false);
         };
 
-        video.addEventListener('loadeddata', onVideoLoaded);
         video.addEventListener('waiting', onVideoWaiting);
         video.addEventListener('playing', onVideoPlaying);
         video.addEventListener('pause', onVideoPause);
@@ -628,7 +736,7 @@ export default function VideoPlayer({
             });
             hlsRef.current = hls;
 
-            hls.loadSource(src);
+            hls.loadSource(activeSrc);
             hls.attachMedia(video);
 
             hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
@@ -656,8 +764,37 @@ export default function VideoPlayer({
                 }
             });
 
-            hls.on(Hls.Events.ERROR, function (event, data) {
+            hls.on(Hls.Events.ERROR, async function (event, data) {
                 if (data.fatal) {
+                    const isNetworkError = data.type === Hls.ErrorTypes.NETWORK_ERROR || data.type === Hls.ErrorTypes.MEDIA_ERROR;
+
+                    // Fallback cấp cứu Premium Nginx Proxy/DPI chặn
+                    if (user?.subscription?.tier === 'premium' && magnet && currentKeyId && isNetworkError) {
+                        console.warn(`[VideoPlayer] Trigger Fallback Cấp cứu DPI/424...`);
+                        const savedTime = videoRef.current?.currentTime || 0;
+                        try {
+                            const response = await axios.get(`${API_URL}/api/torrent/fallback`, {
+                                params: { magnet, deadKeyId: currentKeyId, isNetworkError: data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'true' : 'false' },
+                                withCredentials: true
+                            });
+                            if (response.data.success && response.data.data.streamUrl) {
+                                setPremiumStreamUrl(response.data.data.streamUrl);
+                                if (response.data.data.keyId) setCurrentKeyId(response.data.data.keyId);
+
+                                // Recover time
+                                setTimeout(() => {
+                                    if (videoRef.current) {
+                                        videoRef.current.currentTime = savedTime;
+                                        videoRef.current.play();
+                                    }
+                                }, 500);
+                                return; // Prevent HLS destroy
+                            }
+                        } catch (fallbackErr) {
+                            console.error('[VideoPlayer] Fallback failed:', fallbackErr);
+                        }
+                    }
+
                     switch (data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
                             hls.startLoad();
@@ -671,6 +808,18 @@ export default function VideoPlayer({
                             break;
                     }
                 }
+            });
+
+            // Lắng nghe Multi-Audio tracks (Thuyết minh/Lồng tiếng kép)
+            hls.on(Hls.Events.AUDIO_TRACK_LOADED, () => {
+                const tracks = hlsRef.current?.audioTracks || [];
+                if (tracks.length > 1) { // Only show if more than 1 audio track
+                    setAudioTracks(tracks.map(t => ({ id: t.id, name: t.name, lang: t.lang })));
+                    setCurrentAudioTrack(hlsRef.current?.audioTrack || 0);
+                }
+            });
+            hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (event, data) => {
+                setCurrentAudioTrack(data.id);
             });
 
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -694,7 +843,8 @@ export default function VideoPlayer({
 
         return () => {
             if (hls) hls.destroy();
-            video.removeEventListener('loadeddata', onVideoLoaded);
+            // Xóa listener tránh mem leak
+            // video.removeEventListener('loadeddata', onVideoLoaded); // We used anon inline func above
             video.removeEventListener('waiting', onVideoWaiting);
             video.removeEventListener('playing', onVideoPlaying);
             video.removeEventListener('pause', onVideoPause);
@@ -709,7 +859,7 @@ export default function VideoPlayer({
                 // handle iOS pip state change if needed
             });
         };
-    }, [src, autoPlay]);
+    }, [src, autoPlay, premiumStreamUrl, magnet, user, currentKeyId]);
 
     // Countdown timer for next episode
     useEffect(() => {
@@ -829,8 +979,20 @@ export default function VideoPlayer({
                 poster={poster}
                 className="w-full h-full object-contain rounded-lg"
                 playsInline
+                crossOrigin="anonymous"
                 autoPlay={autoPlay}
-            />
+            >
+                {subtitles.map((sub, i) => (
+                    <track
+                        key={i}
+                        src={sub.url}
+                        kind="subtitles"
+                        srcLang={sub.lang}
+                        label={sub.label}
+                        default={sub.default}
+                    />
+                ))}
+            </video>
 
             {/* Gesture Feedback Overlay */}
             {gestureFeedback && (
@@ -877,6 +1039,19 @@ export default function VideoPlayer({
                         <span className="text-xl font-bold">
                             {seekFeedback.direction === 'forward' ? '+' : '-'}{seekFeedback.amount}s
                         </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Play/Pause Feedback Overlay */}
+            {playPauseFeedback && (
+                <div className={`absolute inset-0 flex items-center justify-center z-40 pointer-events-none ${isLandscape ? '-rotate-90' : ''}`}>
+                    <div className="bg-black/40 backdrop-blur-md p-4 rounded-full text-white/90 animate-in zoom-in fade-in duration-300 zoom-out fade-out">
+                        {playPauseFeedback === 'play' ? (
+                            <Play className="w-12 h-12 fill-current" />
+                        ) : (
+                            <Pause className="w-12 h-12 fill-current" />
+                        )}
                     </div>
                 </div>
             )}
@@ -1041,15 +1216,15 @@ export default function VideoPlayer({
                 {/* Main Controls */}
                 <div className="flex items-center justify-between gap-0.5" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-0.5 sm:gap-2 md:gap-4">
-                        <Button variant="ghost" size="icon" onClick={togglePlay} className="text-white hover:text-primary hover:bg-transparent">
-                            {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
+                        <Button variant="ghost" size="icon" onClick={togglePlay} className="text-white hover:text-primary hover:bg-transparent h-8 w-8">
+                            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
                         </Button>
 
-                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime -= 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent">
-                            <Rewind className="w-5 h-5" />
+                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime -= 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent h-8 w-8">
+                            <Rewind className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime += 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent">
-                            <FastForward className="w-5 h-5" />
+                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime += 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent h-8 w-8">
+                            <FastForward className="w-4 h-4" />
                         </Button>
 
                         <div className="flex items-center gap-1 border-l border-white/10 ml-1 sm:ml-2 pl-1 sm:pl-2">
@@ -1058,7 +1233,7 @@ export default function VideoPlayer({
                                 size="icon"
                                 onClick={(e) => { e.stopPropagation(); onPrevEpisode?.(); }}
                                 disabled={!onPrevEpisode || !prevEpisodeInfo}
-                                className="text-white/70 hover:text-white hover:bg-white/10 h-8 w-8 disabled:opacity-30 disabled:hover:bg-transparent"
+                                className="text-white/70 hover:text-white hover:bg-white/10 h-7 w-7 disabled:opacity-30 disabled:hover:bg-transparent"
                                 title={prevEpisodeInfo ? `Tập trước: ${prevEpisodeInfo.name}` : ''}
                             >
                                 <SkipBack className="w-4 h-4" />
@@ -1068,7 +1243,7 @@ export default function VideoPlayer({
                                 size="icon"
                                 onClick={(e) => { e.stopPropagation(); onNextEpisode?.(); }}
                                 disabled={!onNextEpisode || !nextEpisodeInfo}
-                                className="text-white/70 hover:text-white hover:bg-white/10 h-8 w-8 disabled:opacity-30 disabled:hover:bg-transparent"
+                                className="text-white/70 hover:text-white hover:bg-white/10 h-7 w-7 disabled:opacity-30 disabled:hover:bg-transparent"
                                 title={nextEpisodeInfo ? `Tập tiếp theo: ${nextEpisodeInfo.name}` : ''}
                             >
                                 <SkipForward className="w-4 h-4" />
@@ -1076,8 +1251,8 @@ export default function VideoPlayer({
                         </div>
 
                         <div className="flex items-center gap-1 group/volume">
-                            <Button variant="ghost" size="icon" onClick={toggleMute} className="text-white hover:text-primary hover:bg-transparent">
-                                {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                            <Button variant="ghost" size="icon" onClick={toggleMute} className="text-white hover:text-primary hover:bg-transparent h-8 w-8">
+                                {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                             </Button>
                             {/* Hide volume slider on mobile, show on hover/group on desktop */}
                             <input
@@ -1096,40 +1271,112 @@ export default function VideoPlayer({
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-1 sm:gap-3">
-                        {/* Settings Button logic */}
-                        <div className="relative">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); }}
-                                className={`text-white hover:text-primary hover:bg-transparent ${showSettings ? 'rotate-90 text-primary' : ''} transition-all`}
-                            >
-                                <Settings className="w-5 h-5" />
-                            </Button>
+                    <div className="flex items-center gap-0.5 sm:gap-1 text-white/80">
+                        {/* Cast Button */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); triggerCast(); }}
+                            className="text-white hover:text-primary hover:bg-transparent transition-all hidden md:flex h-8 w-8"
+                            title="Truyền lên TV (Cast/AirPlay)"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /><line x1="2" y1="20" x2="2.01" y2="20" /></svg>
+                        </Button>
 
-
-                            {/* Settings Popup */}
-                            {showSettings && (
-                                <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
-                                    {/* Speed */}
-                                    <div>
-                                        <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tốc độ</p>
-                                        <div className="grid grid-cols-4 gap-1">
-                                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(speed => (
+                        {/* Subtitles Button logic */}
+                        {subtitles && subtitles.length > 0 && (
+                            <div className="relative border-r border-white/10 pr-1 mr-1">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === 'subtitles' ? null : 'subtitles'); }}
+                                    className={`text-white hover:text-primary hover:bg-transparent ${activeMenu === 'subtitles' ? 'text-primary' : ''} transition-all h-8 w-8`}
+                                    title="Tùy chọn phụ đề"
+                                >
+                                    <Subtitles className="w-4 h-4" />
+                                </Button>
+                                {/* Subtitles Popup */}
+                                {activeMenu === 'subtitles' && (
+                                    <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+                                        <div>
+                                            <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Phụ đề</p>
+                                            <div className="flex flex-col gap-1">
                                                 <button
-                                                    key={speed}
-                                                    onClick={() => changeSpeed(speed)}
-                                                    className={`text-xs p-1 rounded ${playbackSpeed === speed ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
+                                                    onClick={() => changeSubtitle(-1)}
+                                                    className={`text-xs p-1.5 rounded text-left ${currentSubtitleIndex === -1 ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
                                                 >
-                                                    {speed}x
+                                                    Tắt phụ đề
                                                 </button>
-                                            ))}
+                                                {subtitles.map((sub, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => changeSubtitle(idx)}
+                                                        className={`text-xs p-1.5 rounded text-left truncate ${currentSubtitleIndex === idx ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
+                                                    >
+                                                        {sub.label || sub.lang || `Phụ đề ${idx + 1}`}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
+                                )}
+                            </div>
+                        )}
 
-                                    {/* Quality */}
-                                    {qualityLevels.length > 0 && (
+                        {/* Audio Tracks Button logic */}
+                        {audioTracks.length > 0 && (
+                            <div className="relative border-r border-white/10 pr-1 mr-1">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === 'audio' ? null : 'audio'); }}
+                                    className={`text-white hover:text-primary hover:bg-transparent ${activeMenu === 'audio' ? 'text-primary' : ''} transition-all h-8 w-8`}
+                                    title="Tùy chọn âm thanh"
+                                >
+                                    <AudioLines className="w-4 h-4" />
+                                </Button>
+                                {/* Audio Popup */}
+                                {activeMenu === 'audio' && (
+                                    <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+                                        <div>
+                                            <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Âm thanh</p>
+                                            <div className="flex flex-col gap-1">
+                                                {audioTracks.map(track => (
+                                                    <button
+                                                        key={track.id}
+                                                        onClick={() => changeAudioTrack(track.id)}
+                                                        className={`text-xs p-1.5 rounded text-left truncate ${currentAudioTrack === track.id ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
+                                                    >
+                                                        {track.name || track.lang || `Kênh ${track.id + 1}`}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Quality Button logic */}
+                        {qualityLevels.length > 0 && (
+                            <div className="relative">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === 'quality' ? null : 'quality'); }}
+                                    className={`text-white hover:text-primary hover:bg-transparent ${activeMenu === 'quality' ? 'text-primary' : ''} transition-all h-8 w-8`}
+                                    title="Tùy chọn chất lượng"
+                                >
+                                    <Settings2 className="w-4 h-4" />
+                                    {currentQuality !== -1 && (
+                                        <span className="absolute -top-1 -right-1 bg-primary text-black text-[8px] font-bold px-1 rounded">
+                                            {qualityLevels.find(q => q.index === currentQuality)?.height}p
+                                        </span>
+                                    )}
+                                </Button>
+                                {/* Quality Popup */}
+                                {activeMenu === 'quality' && (
+                                    <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
                                         <div>
                                             <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Chất lượng</p>
                                             <div className="flex flex-col gap-1">
@@ -1150,7 +1397,55 @@ export default function VideoPlayer({
                                                 ))}
                                             </div>
                                         </div>
-                                    )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Settings Button logic */}
+                        <div className="relative border-r border-white/10 pr-1 mr-1">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === 'settings' ? null : 'settings'); }}
+                                className={`text-white hover:text-primary hover:bg-transparent ${activeMenu === 'settings' ? 'rotate-90 text-primary' : ''} transition-all h-8 w-8`}
+                                title="Cài đặt phát"
+                            >
+                                <Settings className="w-4 h-4" />
+                            </Button>
+
+
+                            {/* Settings Popup */}
+                            {activeMenu === 'settings' && (
+                                <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+
+                                    {/* PiP Mode */}
+                                    <div>
+                                        <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Chế độ xem</p>
+                                        <button
+                                            onClick={(e) => { togglePIP(e); setActiveMenu(null); }}
+                                            className="w-full text-xs p-1.5 rounded text-left hover:bg-white/10 flex items-center justify-between"
+                                        >
+                                            Hình trong hình (PiP)
+                                            <PictureInPicture className="w-4 h-4 ml-2" />
+                                        </button>
+                                    </div>
+
+                                    {/* Speed */}
+                                    <div className="mt-3">
+                                        <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tốc độ phát</p>
+                                        <div className="grid grid-cols-4 gap-1">
+                                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(speed => (
+                                                <button
+                                                    key={speed}
+                                                    onClick={() => changeSpeed(speed)}
+                                                    className={`text-xs p-1 rounded ${playbackSpeed === speed ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
+                                                >
+                                                    {speed}x
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -1167,41 +1462,18 @@ export default function VideoPlayer({
                                             setPanelServerName(episodeServers[0].server_name);
                                         }
                                         setShowEpisodePanel(v => !v);
-                                        setShowSettings(false);
+                                        setActiveMenu(null);
                                     }}
-                                    className={`text-white hover:text-primary hover:bg-transparent ${showEpisodePanel ? 'text-primary' : ''}`}
+                                    className={`text-white hover:text-primary hover:bg-transparent ${showEpisodePanel ? 'text-primary' : ''} h-8 w-8`}
                                     title="Danh sách tập"
                                 >
-                                    <ListVideo className="w-5 h-5" />
+                                    <ListVideo className="w-4 h-4" />
                                 </Button>
                             </div>
                         )}
 
-                        {/* Mobile Rotate Button (Force Landscape) - Removed per request */}
-                        {/* <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={toggleLandscape}
-                            className={`text-white hover:text-primary hover:bg-transparent md:hidden ${isLandscape ? 'text-primary' : ''}`}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-                                <path d="M21 3v5h-5" />
-                            </svg>
-                        </Button> */}
-
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => togglePIP(e)}
-                            className="text-white hover:text-primary hover:bg-transparent flex"
-                            title="Picture-in-Picture"
-                        >
-                            <PictureInPicture className="w-5 h-5" />
-                        </Button>
-
-                        <Button variant="ghost" size="icon" onClick={(e) => toggleFullscreen(e)} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center">
-                            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                        <Button variant="ghost" size="icon" onClick={(e) => toggleFullscreen(e)} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center h-8 w-8">
+                            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
                         </Button>
                     </div>
                 </div>

@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
-import HybridVideoPlayer from '@/components/HybridVideoPlayer';
 import { Play, ArrowLeft, Crown } from 'lucide-react';
 import { ReportModal } from '@/components/ReportModal';
 import { CommentSection } from '@/components/CommentSection';
@@ -54,6 +53,9 @@ interface MovieDetail {
         size: string;
         seeders: number;
         isPremiumOnly: boolean;
+        subtitleUrl?: string;
+        subtitleLanguage?: string;
+        hasViSub?: boolean;
     }[];
     subtitles?: {
         lang: string;
@@ -184,10 +186,12 @@ export default function WatchPage() {
                 const torrentServer: Episode = {
                     server_name: 'PREMIUM - 4K TORRENT',
                     server_data: movie.torrents.map(t => ({
-                        name: `${t.quality} (${t.size})`,
+                        name: `${t.quality} (${t.size})${t.hasViSub ? ' - Vietsub' : ''}`,
                         slug: `torrent-${t.quality}-${t.size}`.toLowerCase().replace(/\s+/g, '-'),
                         link_m3u8: t.magnet,
-                        link_embed: ''
+                        link_embed: '',
+                        subtitleUrl: t.subtitleUrl,
+                        subtitleLanguage: t.subtitleLanguage
                     }))
                 };
                 filtered.push(torrentServer);
@@ -484,74 +488,62 @@ export default function WatchPage() {
 
                     <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (
-                            isPremium && (currentSource === 'Premium' || currentEpisode.link_m3u8.startsWith('magnet:')) ? (
-                                <HybridVideoPlayer
-                                    key={currentEpisode.link_m3u8}
-                                    src={currentEpisode.link_m3u8.startsWith('magnet:') ? '' : currentEpisode.link_m3u8}
-                                    magnet={currentEpisode.link_m3u8.startsWith('magnet:') ? currentEpisode.link_m3u8 : undefined}
-                                    poster={movie.poster_url}
-                                    autoPlay={shouldAutoPlay}
-                                    movieSlug={movie.slug}
-                                    movieName={movie.name}
-                                    movieThumb={movie.thumb_url}
-                                    episodeSlug={currentEpisode.slug}
-                                    episodeName={currentEpisode.name}
-                                    serverName={currentServerName}
-                                    startTime={startTime}
-                                    onTimeUpdate={(time) => setPlayerTime(time)}
-                                    onEnded={handleNextEpisode}
-                                    onNextEpisode={handleNextEpisode}
-                                    onPrevEpisode={handlePrevEpisode}
-                                    subtitles={movie?.subtitles?.map(s => ({
+                            <VideoPlayer
+                                key={currentEpisode.link_m3u8}
+                                src={currentEpisode.link_m3u8.startsWith('magnet:') ? '' : currentEpisode.link_m3u8}
+                                magnet={currentEpisode.link_m3u8.startsWith('magnet:') ? currentEpisode.link_m3u8 : undefined}
+                                poster={movie.poster_url}
+                                embedUrl={currentEpisode.link_embed}
+                                autoPlay={shouldAutoPlay}
+                                movieSlug={movie.slug}
+                                movieName={movie.name}
+                                movieThumb={movie.thumb_url}
+                                episodeSlug={currentEpisode.slug}
+                                episodeName={currentEpisode.name}
+                                serverName={currentServerName}
+                                intro={currentEpisode.time_intro}
+                                outro={currentEpisode.time_outro}
+                                startTime={startTime}
+                                onTimeUpdate={(time) => setPlayerTime(time)}
+                                onEnded={handleNextEpisode}
+                                nextEpisodeInfo={nextEpisode ? {
+                                    name: nextEpisode.episode.name,
+                                    serverName: getCleanServerName(nextEpisode.server)
+                                } : undefined}
+                                prevEpisodeInfo={prevEpisode ? {
+                                    name: prevEpisode.episode.name,
+                                    serverName: getCleanServerName(prevEpisode.server)
+                                } : undefined}
+                                onNextEpisode={handleNextEpisode}
+                                onPrevEpisode={handlePrevEpisode}
+                                episodeServers={filteredServers.map(s => ({
+                                    server_name: s.server_name,
+                                    cleanName: getCleanServerName(s.server_name),
+                                    episodes: s.server_data.map((ep: { slug: string; name: string }) => ({
+                                        slug: ep.slug,
+                                        name: ep.name
+                                    }))
+                                }))}
+                                onEpisodeSelect={(serverName, episodeSlug) => {
+                                    const server = filteredServers.find(s => s.server_name === serverName);
+                                    const ep = server?.server_data.find((e: { slug: string }) => e.slug === episodeSlug);
+                                    if (ep) handleEpisodeClick(serverName, ep);
+                                }}
+                                subtitles={[
+                                    ...(movie?.subtitles?.map(s => ({
                                         lang: s.lang,
                                         label: s.label,
                                         url: s.url,
                                         default: s.isDefault
-                                    }))}
-                                />
-                            ) : (
-                                <VideoPlayer
-                                    key={currentEpisode.link_m3u8}
-                                    src={currentEpisode.link_m3u8}
-                                    poster={movie.poster_url}
-                                    embedUrl={currentEpisode.link_embed}
-                                    autoPlay={shouldAutoPlay}
-                                    movieSlug={movie.slug}
-                                    movieName={movie.name}
-                                    movieThumb={movie.thumb_url}
-                                    episodeSlug={currentEpisode.slug}
-                                    episodeName={currentEpisode.name}
-                                    serverName={currentServerName}
-                                    intro={currentEpisode.time_intro}
-                                    outro={currentEpisode.time_outro}
-                                    startTime={startTime}
-                                    onTimeUpdate={(time) => setPlayerTime(time)}
-                                    onEnded={handleNextEpisode}
-                                    nextEpisodeInfo={nextEpisode ? {
-                                        name: nextEpisode.episode.name,
-                                        serverName: getCleanServerName(nextEpisode.server)
-                                    } : undefined}
-                                    prevEpisodeInfo={prevEpisode ? {
-                                        name: prevEpisode.episode.name,
-                                        serverName: getCleanServerName(prevEpisode.server)
-                                    } : undefined}
-                                    onNextEpisode={handleNextEpisode}
-                                    onPrevEpisode={handlePrevEpisode}
-                                    episodeServers={filteredServers.map(s => ({
-                                        server_name: s.server_name,
-                                        cleanName: getCleanServerName(s.server_name),
-                                        episodes: s.server_data.map((ep: { slug: string; name: string }) => ({
-                                            slug: ep.slug,
-                                            name: ep.name
-                                        }))
-                                    }))}
-                                    onEpisodeSelect={(serverName, episodeSlug) => {
-                                        const server = filteredServers.find(s => s.server_name === serverName);
-                                        const ep = server?.server_data.find((e: { slug: string }) => e.slug === episodeSlug);
-                                        if (ep) handleEpisodeClick(serverName, ep);
-                                    }}
-                                />
-                            )
+                                    })) || []),
+                                    ...((currentServerName === 'PREMIUM - 4K TORRENT' && (currentEpisode as any)?.subtitleUrl) ? [{
+                                        lang: (currentEpisode as any).subtitleLanguage || 'vi',
+                                        label: `Vietnamese (Auto)`,
+                                        url: (currentEpisode as any).subtitleUrl,
+                                        default: true
+                                    }] : [])
+                                ]}
+                            />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-surface-900">
                                 <p className="text-gray-500">Đang tải player...</p>

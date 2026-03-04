@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from './ui/button';
-import { Film, Loader2, CheckCircle } from 'lucide-react';
+import { Film, Loader2, CheckCircle, Crown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
@@ -10,9 +10,10 @@ import { customFetch } from '@/lib/api';
 interface RequestMovieButtonProps {
     movieName: string;
     movieSlug?: string;
+    is4kRequest?: boolean;
 }
 
-export default function RequestMovieButton({ movieName, movieSlug }: RequestMovieButtonProps) {
+export default function RequestMovieButton({ movieName, movieSlug, is4kRequest }: RequestMovieButtonProps) {
     const { user } = useAuth();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -33,7 +34,8 @@ export default function RequestMovieButton({ movieName, movieSlug }: RequestMovi
                 credentials: 'include',
                 body: JSON.stringify({
                     movieName,
-                    movieSlug
+                    movieSlug,
+                    is4kRequest
                 })
             });
 
@@ -69,12 +71,20 @@ export default function RequestMovieButton({ movieName, movieSlug }: RequestMovi
         <Button
             onClick={handleRequest}
             disabled={loading}
-            className="bg-primary hover:bg-primary/90 text-black font-bold"
+            className={is4kRequest
+                ? "bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold shadow-[0_0_15px_rgba(234,179,8,0.4)]"
+                : "bg-primary hover:bg-primary/90 text-black font-bold"
+            }
         >
             {loading ? (
                 <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Đang gửi...
+                </>
+            ) : is4kRequest ? (
+                <>
+                    <Crown className="w-4 h-4 mr-2" />
+                    Yêu cầu 4K
                 </>
             ) : (
                 <>

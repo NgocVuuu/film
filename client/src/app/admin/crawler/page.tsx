@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Play, Loader2, RefreshCw, Download } from 'lucide-react';
+import { Play, Loader2, RefreshCw, Download, Radar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import toast from 'react-hot-toast';
@@ -8,6 +8,7 @@ import { customFetch } from '@/lib/api';
 import SearchAutocomplete from './SearchAutocomplete';
 interface CrawlerStatus {
     isRunning: boolean;
+    isHunterRunning?: boolean;
     blacklistSize: number;
     currentPage?: number;
 }
@@ -127,6 +128,29 @@ export default function AdminCrawlerPage() {
         }
     };
 
+    const handleHunt4K = async () => {
+        if (status?.isHunterRunning) return;
+
+        if (!confirm('Kích hoạt Truy bắt 4K? Hệ thống sẽ quét qua kho phim và tự động bổ sung Torrent 4K/Metadata còn thiếu vào Nháp. Tiến trình chạy ngầm mất vài giờ.')) return;
+
+        try {
+            const response = await customFetch(`/api/admin/crawler/hunt-4k`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            if (data.success) {
+                toast.success(data.message);
+                fetchStatus();
+                fetchLogs();
+            } else {
+                toast.error(data.message);
+            }
+        } catch {
+            toast.error('Lỗi khởi động Săn 4K');
+        }
+    };
+
     const handleAddToBlacklist = async () => {
         if (!newItem.trim()) return;
         try {
@@ -216,8 +240,13 @@ export default function AdminCrawlerPage() {
                 <div className="bg-surface-900 border border-white/10 rounded-xl p-6">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-xl font-bold text-white">Trạng thái</h2>
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${status?.isRunning ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                            {status?.isRunning ? 'Đang chạy' : 'Đang nghỉ'}
+                        <div className="flex items-center gap-3">
+                            <div className={`px-3 py-1 rounded-full text-sm font-medium ${status?.isRunning ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                                Crawler: {status?.isRunning ? 'Đang chạy' : 'Đang nghỉ'}
+                            </div>
+                            <div className={`px-3 py-1 rounded-full text-sm font-medium ${status?.isHunterRunning ? 'bg-amber-500/20 text-amber-500' : 'bg-gray-500/20 text-gray-400'}`}>
+                                4K Bot: {status?.isHunterRunning ? 'Đang dò quét' : 'Đang nghỉ'}
+                            </div>
                         </div>
                     </div>
 
@@ -231,23 +260,38 @@ export default function AdminCrawlerPage() {
                                 className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-white"
                             />
                         </div>
-                        <Button
-                            onClick={() => handleStartCrawl(false)}
-                            disabled={status?.isRunning}
-                            className="bg-primary text-black hover:bg-primary/90"
-                        >
-                            <Play className="w-4 h-4 mr-2" /> Start Update
-                        </Button>
-                        <Button
-                            onClick={() => handleStartCrawl(true)}
-                            disabled={status?.isRunning}
-                            variant="destructive"
-                        >
-                            <RefreshCw className="w-4 h-4 mr-2" /> Full Crawl
-                        </Button>
-                        {status?.isRunning && (
-                            <Button onClick={handleStopCrawl} variant="secondary">Stop</Button>
-                        )}
+                        <div className="flex flex-col gap-2">
+                            <div className="flex gap-2 w-full">
+                                <Button
+                                    onClick={() => handleStartCrawl(false)}
+                                    disabled={status?.isRunning}
+                                    className="bg-primary text-black hover:bg-primary/90 flex-1"
+                                >
+                                    <Play className="w-4 h-4 mr-2" /> Start Update
+                                </Button>
+                                <Button
+                                    onClick={() => handleStartCrawl(true)}
+                                    disabled={status?.isRunning}
+                                    variant="destructive"
+                                    className="flex-1"
+                                >
+                                    <RefreshCw className="w-4 h-4 mr-2" /> Full Crawl
+                                </Button>
+                            </div>
+                            <div className="flex gap-2 w-full">
+                                {status?.isRunning && (
+                                    <Button onClick={handleStopCrawl} variant="secondary" className="flex-1">Stop Crawl</Button>
+                                )}
+                                <Button
+                                    onClick={handleHunt4K}
+                                    disabled={status?.isHunterRunning}
+                                    className="bg-amber-500 text-black hover:bg-amber-600 gap-2 flex-[2] border-none shadow-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all flex items-center justify-center font-bold"
+                                >
+                                    {status?.isHunterRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radar className="w-4 h-4" />}
+                                    {status?.isHunterRunning ? 'Đang Săn 4K...' : 'Bot Săn 4K VIP'}
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

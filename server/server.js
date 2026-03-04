@@ -283,6 +283,11 @@ mongoose.connect(MONGO_URI)
     .then(() => {
         console.log('Đã kết nối MongoDB');
         setupCrawler();
+
+        // Bắt đầu nhịp tim Health Check quản lý Nginx Proxy Nodes
+        const healthCheck = require('./services/healthCheck');
+        healthCheck.start();
+
         // syncMovies(); // Uncomment to run immediately
     })
     .catch(err => console.error('Lỗi kết nối MongoDB:', err));

@@ -9,6 +9,7 @@ const adminReportController = require('../controllers/adminReportController');
 const adminMovieController = require('../controllers/adminMovieController');
 const adminNotificationController = require('../controllers/adminNotificationController');
 const adminFeedbackController = require('../controllers/adminFeedbackController');
+const adminDraftController = require('../controllers/adminDraftController');
 const { authMiddleware, adminMiddleware } = require('../middleware/authMiddleware');
 
 // All routes require admin authentication
@@ -36,6 +37,7 @@ router.post('/movie-requests/:requestId/reject', adminRequestController.rejectRe
 
 // Crawler management
 router.post('/crawler/sync', adminCrawlerController.triggerSync);
+router.post('/crawler/hunt-4k', adminCrawlerController.triggerHunt);
 router.post('/crawler/stop-sync', adminCrawlerController.stopCrawler);
 router.get('/crawler/status', adminCrawlerController.getCrawlerStatus);
 router.get('/crawler/blacklist', adminCrawlerController.getBlacklist);
@@ -82,5 +84,10 @@ router.get('/crawler/status', adminController.getCrawlerStatus);
 router.get('/crawler/logs', adminController.getCrawlerLogs);
 router.post('/crawler/start', adminController.startCrawler);
 router.post('/crawler/stop', adminController.stopCrawler);
+
+// Crawler Draft Movies (Phim Nháp từ Spider)
+router.get('/drafts', adminDraftController.getAllDrafts);
+router.post('/drafts/:slug/publish', adminDraftController.publishDraft);
+router.delete('/drafts/:slug', adminDraftController.deleteDraft);
 
 module.exports = router;

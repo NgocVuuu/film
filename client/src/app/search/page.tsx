@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, Suspense } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
 import RequestMovieButton from '@/components/RequestMovieButton';
@@ -29,6 +30,10 @@ interface Movie {
 }
 
 function SearchContent() {
+    const { user } = useAuth();
+    const isPremium = user?.subscription?.tier === 'premium' &&
+        user?.subscription?.status === 'active' &&
+        (!user?.subscription?.endDate || new Date(user.subscription.endDate) > new Date());
     const searchParams = useSearchParams();
     const router = useRouter();
     // const query = searchParams.get('q'); // Old standard query
@@ -268,7 +273,7 @@ function SearchContent() {
                                         <p className="text-gray-400 text-sm mb-6">
                                             Hãy gửi yêu cầu để chúng tôi cập nhật phim này lên hệ thống sớm nhất có thể!
                                         </p>
-                                        <RequestMovieButton movieName={queryKeyword || ''} />
+                                        <RequestMovieButton movieName={queryKeyword || ''} is4kRequest={isPremium} />
                                     </div>
                                 )}
 

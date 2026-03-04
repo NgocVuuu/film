@@ -1,0 +1,99 @@
+const mongoose = require('mongoose');
+
+const movieDraftSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    origin_name: { type: String },
+    slug: { type: String, required: true, unique: true, index: true },
+    content: { type: String },
+    type: { type: String }, // 'series', 'single', 'hoathinh', 'tvshows'
+    status: { type: String }, // 'completed', 'ongoing'
+    thumb_url: { type: String },
+    poster_url: { type: String },
+    is_copyright: { type: Boolean, default: false },
+    sub_docquyen: { type: Boolean, default: false },
+    chieurap: { type: Boolean, default: false },
+    trailer_url: { type: String },
+    time: { type: String },
+    episode_current: { type: String },
+    episode_total: { type: String },
+    quality: { type: String },
+    lang: { type: String },
+    notify: { type: String },
+    showtimes: { type: String },
+    year: { type: Number },
+    view: { type: Number, default: 0 },
+    rating_average: { type: Number, default: 0 }, // 0-10 scale
+    rating_count: { type: Number, default: 0 },
+
+    // Array types
+    actor: [{ type: String }],
+    director: [{ type: String }],
+    category: [{
+        id: String,
+        name: String,
+        slug: String
+    }],
+    country: [{
+        id: String,
+        name: String,
+        slug: String
+    }],
+
+    // Episodes
+    episodes: [
+        {
+            server_name: String,
+            server_data: [
+                {
+                    name: String,
+                    slug: String,
+                    filename: String,
+                    link_embed: String,
+                    link_m3u8: String,
+                    time_intro: [{ type: Number }], // [start, end] in seconds
+                    time_outro: [{ type: Number }], // [start, end] in seconds
+                },
+            ],
+        },
+    ],
+
+    // High quality sources (Torrent/Magnet)
+    torrents: [
+        {
+            magnet: String,
+            quality: String, // 4K, 1080p, Bluray, etc.
+            size: String,
+            seeders: Number,
+            isPremiumOnly: { type: Boolean, default: true }
+        }
+    ],
+
+    // Subtitles
+    subtitles: [
+        {
+            lang: String, // 'vi', 'en', etc.
+            label: String, // 'Tiếng Việt', 'English'
+            url: String,   // URL to .srt or .vtt file
+            isDefault: { type: Boolean, default: false }
+        }
+    ],
+
+    isFeatured: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: false }, // Mặc định là false trong Bảng Nháp
+    lastNotifiedEpisode: { type: String },
+
+    updatedAt: { type: Date, default: Date.now },
+});
+
+// Text index for search
+movieDraftSchema.index({ name: 'text', origin_name: 'text', 'actor': 'text', 'director': 'text' });
+
+// Compound indexes for performant queries
+movieDraftSchema.index({ 'category.slug': 1, updatedAt: -1 });
+movieDraftSchema.index({ 'country.slug': 1, updatedAt: -1 });
+movieDraftSchema.index({ type: 1, updatedAt: -1 });
+movieDraftSchema.index({ status: 1, updatedAt: -1 });
+movieDraftSchema.index({ chieurap: 1, updatedAt: -1 });
+movieDraftSchema.index({ view: -1 }); // Trending
+
+module.exports = mongoose.model('MovieDraft', movieDraftSchema);

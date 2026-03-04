@@ -1,4 +1,5 @@
 const { syncAll, syncSpecificMovie, searchMovieByName, addToBlacklist, removeFromBlacklist, getBlacklist, getStatus, stopSync } = require('../crawler');
+const { run4KHunterBot, getHunterStatus } = require('../crawler/hunter');
 
 // Stop crawler
 exports.stopCrawler = (req, res) => {
@@ -37,9 +38,36 @@ exports.triggerSync = async (req, res) => {
 // Get crawler status
 exports.getCrawlerStatus = (req, res) => {
     const status = getStatus();
+    const hunterStatus = getHunterStatus();
     res.json({
         success: true,
-        data: status
+        data: {
+            ...status,
+            isHunterRunning: hunterStatus.isRunning
+        }
+    });
+};
+
+// Trigger Hunt Premium 4K
+exports.triggerHunt = async (req, res) => {
+    const { isRunning } = getHunterStatus();
+    if (isRunning) {
+        return res.status(400).json({
+            success: false,
+            message: 'Bot Săn 4K đang đi tuần. Vui lòng thử lại sau.'
+        });
+    }
+
+    // Chạy ngầm bot săn phim
+    run4KHunterBot().then(result => {
+        console.log(`[Hunter] Bot chạy xong:`, result);
+    }).catch(err => {
+        console.error('[Hunter] Bot lỗi:', err);
+    });
+
+    res.json({
+        success: true,
+        message: 'Đã cử Đội kiểm Lâm (Săn 4K) xuất phát. Sẽ tìm phim thiếu 4K và mang về Nháp.'
     });
 };
 

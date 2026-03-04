@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { X, Loader2, Film, TrendingUp, Download } from 'lucide-react';
+import { X, Loader2, Film, TrendingUp, Download, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
@@ -18,6 +18,7 @@ interface MovieRequest {
     requestCount: number;
     createdAt: string;
     errorMessage?: string;
+    is4kRequest?: boolean;
 }
 
 export default function AdminRequestsPage() {
@@ -182,7 +183,15 @@ export default function AdminRequestsPage() {
                                             <div className="flex items-center gap-3">
                                                 <Film className="w-5 h-5 text-primary shrink-0" />
                                                 <div>
-                                                    <div className="font-medium text-white">{request.movieName}</div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium text-white">{request.movieName}</span>
+                                                        {request.is4kRequest && (
+                                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-full flex items-center gap-1 shrink-0">
+                                                                <Crown className="w-3 h-3" />
+                                                                4K
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     {request.movieSlug && (
                                                         <div className="text-xs text-gray-500">{request.movieSlug}</div>
                                                     )}

@@ -226,6 +226,11 @@ export function CommentSection({ movieSlug, episodeName }: CommentSectionProps) 
                                     Admin
                                 </span>
                             )}
+                            {comment.user?.role === 'premium' && (
+                                <span className="bg-yellow-500/20 text-yellow-500 text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider border border-yellow-500/20 flex items-center gap-1">
+                                    <Star className="w-3 h-3 fill-current" /> VIP
+                                </span>
+                            )}
                             <span className="text-xs text-gray-500">
                                 • {new Date(comment.createdAt).toLocaleDateString('vi-VN')}
                             </span>

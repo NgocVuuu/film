@@ -59,6 +59,18 @@ export default function PricingPage() {
         fetchPlans();
     }, []);
 
+    // Prevent body scroll when modal is open
+    useEffect(() => {
+        if (showModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [showModal]);
+
     const handleSubscribe = async (plan: Plan) => {
         if (!user) {
             toast.error('Vui lòng đăng nhập để đăng ký');
@@ -156,7 +168,7 @@ export default function PricingPage() {
                         Trải nghiệm <span className="text-gold-gradient">không giới hạn</span>
                     </h1>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-2">
-                        Hỗ trợ thanh toán ẩn danh qua WeScan và BuyMeACoffee.
+                        Hỗ trợ thanh toán qua WeScan và BuyMeACoffee.
                     </p>
                     <p className="text-gray-500 text-sm max-w-xl mx-auto italic">
                         Ủng hộ ad chút để duy trì web nhé, quả thật server đắt lắm 😭
@@ -188,13 +200,15 @@ export default function PricingPage() {
 
                                 <div className="text-center mb-6">
                                     <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
-                                    <div className="flex items-baseline justify-center gap-1">
-                                        <span className="text-4xl font-bold text-primary">
-                                            {formatPrice(plan.price)}
-                                        </span>
+                                    <div className="flex flex-col items-center justify-center gap-2">
+                                        <div className="flex items-baseline justify-center gap-1">
+                                            <span className="text-4xl font-bold text-primary">
+                                                {formatPrice(plan.price)}
+                                            </span>
+                                        </div>
                                     </div>
                                     {plan.originalPrice && (
-                                        <p className="text-sm text-gray-500 line-through mt-1">
+                                        <p className="text-sm text-gray-500 line-through mt-2">
                                             {formatPrice(plan.originalPrice)}
                                         </p>
                                     )}
@@ -237,9 +251,9 @@ export default function PricingPage() {
                 {/* Disclaimer */}
                 <div className="text-center mt-12 space-y-2">
                     <p className="text-gray-500 text-sm">
-                        Hỗ trợ tất cả ngân hàng tại Việt Nam (VietQR).
+                        Hỗ trợ tất cả ngân hàng tại Việt Nam, Thẻ Quốc Tế (Visa, MasterCard), PayPal.
                     </p>
-                    <p className="text-gray-600 text-xs italic">
+                    <p className="text-gray-500 font-medium text-base mt-4">
                         Mỗi sự ủng hộ của bạn giúp ad duy trì và cải thiện dịch vụ. Cảm ơn bạn rất nhiều! ❤️
                     </p>
                 </div>
@@ -247,71 +261,99 @@ export default function PricingPage() {
 
             {/* Payment Modal */}
             {showModal && paymentData && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                    <div className="bg-surface-900 border border-white/10 rounded-2xl w-full max-w-md max-h-[calc(100vh-2rem)] overflow-hidden shadow-2xl relative flex flex-col">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pt-24"
+                    onClick={() => setShowModal(false)}
+                >
+                    <div
+                        className="bg-surface-900 border border-white/10 rounded-2xl w-full max-w-lg max-h-[calc(100vh-8rem)] overflow-hidden shadow-2xl relative flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <button
                             onClick={() => setShowModal(false)}
-                            className="absolute top-3 right-3 text-gray-400 hover:text-white p-1.5 z-10 bg-black/20 rounded-full backdrop-blur-md transition-colors"
+                            className="absolute top-2 right-2 text-gray-400 hover:text-white p-1 z-10 bg-black/30 rounded-full backdrop-blur-md transition-colors"
                         >
                             <X className="w-5 h-5" />
                         </button>
 
-                        <div className="p-5 md:p-6 bg-surface-800 text-white flex flex-col gap-4 overflow-y-auto">
-                            <div className="text-center mb-2">
-                                <h3 className="text-xl font-bold mb-1">Thanh toán ẩn danh</h3>
-                                <p className="text-gray-400 text-xs">Sếp vui lòng chọn cổng thanh toán để được chuyển hướng.</p>
+                        <div className="px-4 pb-4 md:px-5 md:pb-5 pt-3 bg-surface-800 text-white flex flex-col gap-3 overflow-y-auto">
+                            <div className="text-center mb-0 mt-1">
+                                <h3 className="text-lg font-bold mb-0.5">Nâng cấp Premium</h3>
+                                <p className="text-gray-400 text-[11px]">Sếp vui lòng chọn hướng thanh toán bên dưới nhé.</p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 mb-2">
-                                <a
-                                    href="https://wescan.vn/dngocvu14"
-                                    target="_blank"
-                                    className="p-4 border border-primary/20 bg-primary/5 rounded-xl text-center hover:bg-primary/10 hover:scale-105 transition-all"
-                                >
-                                    <p className="text-xs text-primary font-bold mb-1 uppercase">Lựa chọn 1</p>
-                                    <p className="text-sm font-bold text-white flex items-center justify-center gap-2">
-                                        WeScan <ArrowRight className="w-3 h-3" />
-                                    </p>
-                                </a>
-                                <a
-                                    href="https://buymeacoffee.com/pchill_admin"
-                                    target="_blank"
-                                    className="p-3 border border-white/10 bg-white/5 rounded-xl text-center hover:bg-white/10 hover:scale-105 transition-all"
-                                >
-                                    <p className="text-[10px] text-gray-400 font-bold mb-1 uppercase">Lựa chọn 2</p>
-                                    <p className="text-sm font-bold text-white flex items-center justify-center gap-2">
-                                        BMC <ArrowRight className="w-3 h-3" />
-                                    </p>
-                                </a>
-                            </div>
+                            {/* Step 1: Copy Data */}
+                            <div className="space-y-2">
+                                <p className="text-xs font-bold text-gray-300">BƯỚC 1: Sao chép thông tin</p>
 
-                            <div className="space-y-3">
-                                <div className="bg-black/30 p-4 rounded-lg border border-primary/30 relative group shadow-inner">
-                                    <p className="text-gray-400 text-xs uppercase mb-1">Nội dung chuyển khoản (BẮT BUỘC)</p>
+                                <div className="bg-black/30 p-3 rounded-lg border border-primary/30 relative group shadow-inner">
+                                    <p className="text-gray-400 text-[10px] uppercase mb-1">Mã Giao Dịch (BẮT BUỘC)</p>
                                     <div className="flex justify-between items-center">
-                                        <p className="font-mono font-bold text-xl text-yellow-400">{paymentData.content}</p>
-                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.content)} className="text-gray-400 hover:text-white h-8 w-8 p-0">
-                                            <Copy className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                    <p className="text-[11px] text-red-500 mt-2 font-medium">
-                                        * Sếp <strong>PHẢI</strong> copy chính xác mã này vào lời nhắn khi donate qua WeScan hoặc BMC.
-                                    </p>
-                                </div>
-
-                                <div className="bg-black/30 p-4 rounded-lg border border-white/5 shadow-inner">
-                                    <p className="text-gray-400 text-xs uppercase mb-1">Số tiền cần thanh toán</p>
-                                    <div className="flex justify-between items-center">
-                                        <p className="font-mono font-bold text-xl">{formatPrice(paymentData.amount)}</p>
-                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.amount.toString())} className="text-gray-400 hover:text-white h-8 w-8 p-0">
-                                            <Copy className="w-4 h-4" />
+                                        <p className="font-mono font-bold text-lg text-yellow-400">{paymentData.content}</p>
+                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.content)} className="text-gray-400 hover:text-white h-6 w-6 p-0 group">
+                                            <Copy className="w-3.5 h-3.5 group-active:scale-95 transition-transform" />
                                         </Button>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-center gap-1.5 text-amber-600 font-medium bg-amber-50 px-3 py-1.5 mt-1 rounded-full text-[11px] w-fit mx-auto border border-amber-200">
-                                    <Crown className="w-3 h-3" />
-                                    Phiếu nâng cấp xử lý thủ công (5-30p)
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="bg-black/30 p-2.5 rounded-lg border border-white/5 shadow-inner">
+                                        <p className="text-gray-400 text-[10px] uppercase mb-1">Số tiền (WeScan)</p>
+                                        <div className="flex justify-between items-center">
+                                            <p className="font-mono font-bold text-base text-primary/90">{formatPrice(paymentData.amount)}</p>
+                                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.amount.toString())} className="text-gray-400 hover:text-white h-6 w-6 p-0 group shrink-0">
+                                                <Copy className="w-3.5 h-3.5 group-active:scale-95 transition-transform" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="bg-yellow-500/5 p-2.5 rounded-lg border border-yellow-500/10 shadow-inner">
+                                        <p className="text-yellow-500/80 text-[10px] uppercase mb-1">Buy Me A Coffee</p>
+                                        <div className="flex justify-between items-center">
+                                            <p className="font-mono font-bold text-xs text-yellow-400">Chọn gói thời hạn tương ứng</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Step 2: Choose Method */}
+                            <div className="space-y-2">
+                                <p className="text-xs font-bold text-gray-300">BƯỚC 2: Chọn cổng thanh toán và dán Mã Giao Dịch</p>
+                                <div className="grid grid-cols-2 gap-3 mb-1">
+                                    <a
+                                        href="https://wescan.vn/dngocvu14"
+                                        target="_blank"
+                                        className="p-2.5 border border-primary/20 bg-primary/5 rounded-xl text-center hover:bg-primary/20 transition-all flex flex-col justify-center gap-1"
+                                    >
+                                        <p className="text-sm font-bold text-white flex items-center justify-center gap-1.5">
+                                            WeScan <ArrowRight className="w-3 h-3" />
+                                        </p>
+                                        <p className="text-[9px] text-gray-400 leading-tight">Mở App Ngân hàng quét thẻ WeScan</p>
+                                    </a>
+                                    <div className="flex flex-col gap-2">
+                                        <p className="text-[10px] text-yellow-500 mb-0 font-medium text-center">
+                                            Vào mục <b>Shop/Extras</b> trên BMC và chọn gói tương ứng:
+                                        </p>
+                                        <a
+                                            href="https://buymeacoffee.com/pchill_admin/extras"
+                                            target="_blank"
+                                            className="p-2.5 border border-yellow-500/20 bg-yellow-500/5 rounded-xl text-center hover:bg-yellow-500/20 transition-all flex flex-col justify-center gap-1"
+                                        >
+                                            <p className="text-sm font-bold text-yellow-400 flex items-center justify-center gap-1.5">
+                                                Buy me a coffee (Thẻ Quốc Tế, PayPal) <ArrowRight className="w-3 h-3" />
+                                            </p>
+                                            <p className="text-[9px] text-gray-400 leading-tight">Chọn chính xác gói 1T / 3T / 6T / 12T trong mục Extras</p>
+                                        </a>
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-red-500 mb-0 font-medium leading-tight text-center">
+                                    * LƯU Ý: Phải ghi đúng Mã Giao Dịch vào phần Lời Nhắn nhé sếp!
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col gap-2 mt-2">
+                                <div className="flex items-center justify-center gap-1.5 text-amber-600 font-medium bg-amber-50 px-3 py-1.5 rounded-full text-[10px] w-fit mx-auto border border-amber-200 shadow-sm">
+                                    <Crown className="w-3.5 h-3.5" />
+                                    Xử lý thủ công (5-30p)
                                 </div>
 
                                 <Button
@@ -319,7 +361,7 @@ export default function PricingPage() {
                                         toast.success('Ghi nhận thành công! Yêu cầu của bạn sẽ được duyệt sớm.', { duration: 5000 });
                                         setShowModal(false);
                                     }}
-                                    className="w-full bg-primary hover:bg-primary/90 text-black font-bold py-5 text-base mt-2 shadow-lg"
+                                    className="w-full bg-primary hover:bg-primary/90 text-black font-bold py-4 text-sm shadow-xl shrink-0"
                                 >
                                     Tôi đã hoàn tất chuyển khoản
                                 </Button>
