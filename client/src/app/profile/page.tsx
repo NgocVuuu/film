@@ -49,6 +49,9 @@ function ProfileContent() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [changingPassword, setChangingPassword] = useState(false);
 
+    // PWA section toggle (collapsed by default)
+    const [showPwaSection, setShowPwaSection] = useState(false);
+
     // Refresh user data on mount to get latest subscription info
     useEffect(() => {
         refresh();
@@ -191,7 +194,7 @@ function ProfileContent() {
                                 <p className="text-gray-500 text-xs leading-relaxed font-vietnamese">
                                     {user.isPremium
                                         ? 'Cảm ơn bạn đã "nuôi" ad! Nhờ bạn mà server vẫn chạy phà phà, cùng tận hưởng đặc quyền thôi nào! ✨🙏'
-                                        : 'Sếp ơi, nâng cấp Premium để ad có thêm bát phở, còn sếp được hưởng đặc quyền thượng lưu nhé! 🥺🍜👑'}
+                                        : '🚧 Tính năng User Premium đang được phát triển. Sẽ sớm ra mắt!'}
                                 </p>
                             </div>
                             {/* Hidden: Nâng cấp / Gia hạn button */}
@@ -209,17 +212,25 @@ function ProfileContent() {
 
                     {/* PWA Features Section */}
                     <div className="mb-8">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Smartphone className="w-5 h-5 text-primary" />
-                            <h2 className="text-lg font-bold text-white">Ứng dụng di động</h2>
-                            {user.isPremium && (
-                                <span className="bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">PREMIUM</span>
-                            )}
-                        </div>
-                        {user.isPremium ? (
-                            <PWASettings />
-                        ) : (
-                            <PremiumUpsellCard feature="Ứng dụng di động" compact />
+                        <button
+                            onClick={() => setShowPwaSection(prev => !prev)}
+                            className="w-full flex items-center justify-between gap-2 mb-4 group"
+                        >
+                            <div className="flex items-center gap-2">
+                                <Smartphone className="w-5 h-5 text-primary" />
+                                <h2 className="text-lg font-bold text-white">Ứng dụng di động</h2>
+                                {user.isPremium && (
+                                    <span className="bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">PREMIUM</span>
+                                )}
+                            </div>
+                            <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${showPwaSection ? 'rotate-90' : ''}`} />
+                        </button>
+                        {showPwaSection && (
+                            user.isPremium ? (
+                                <PWASettings />
+                            ) : (
+                                <PWAInstallGuide />
+                            )
                         )}
                     </div>
 
@@ -308,7 +319,7 @@ function ProfileContent() {
                                         <p className="text-xs text-gray-500 leading-normal font-vietnamese">
                                             {user.isPremium
                                                 ? 'Cảm ơn bạn đã "nuôi" ad! Nhờ bạn mà server vẫn chạy phà phà, cùng tận hưởng đặc quyền thôi nào! ✨🙏'
-                                                : 'Sếp ơi, nâng cấp Premium để ad có thêm bát phở, còn sếp được hưởng đặc quyền thượng lưu nhé! 🥺🍜👑'}
+                                                : '🚧 Tính năng User Premium đang được phát triển. Sẽ sớm ra mắt!'}
                                         </p>
                                     </div>
                                 </div>
@@ -482,7 +493,7 @@ function ProfileContent() {
                                     {user.isPremium ? (
                                         <PWASettings />
                                     ) : (
-                                        <PremiumUpsellCard feature="Tải ứng dụng di động" />
+                                        <PWAInstallGuide />
                                     )}
                                 </div>
                             ) : activeTab === 'chat' ? (
@@ -526,4 +537,60 @@ function MobileMenuLink({ href, icon: Icon, label }: { href: string; icon: React
         </Link>
     );
 }
+
+function PWAInstallGuide() {
+    return (
+        <div className="space-y-3">
+            <p className="text-sm text-gray-300 leading-relaxed">
+                Cài app <span className="text-primary font-semibold">Pchill</span> miễn phí — chỉ cần thêm web ra màn hình chính, không cần App Store hay Google Play!
+            </p>
+
+            {/* iOS */}
+            <div className="bg-surface-800/60 border border-white/8 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2 mb-3">
+                    <span className="text-base"></span>
+                    <p className="text-sm font-bold text-white">iPhone / iPad (Safari)</p>
+                </div>
+                <div className="space-y-2 text-xs text-gray-400">
+                    <div className="flex items-start gap-2.5">
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">1</span>
+                        <span>Mở Safari và truy cập trang web</span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">2</span>
+                        <span>Nhấn nút <span className="text-white font-medium">Chia sẻ</span> <span className="text-primary">⬆</span> ở góc trên phải</span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">3</span>
+                        <span>Chọn <span className="text-white font-medium">&quot;Thêm vào màn hình chính&quot;</span> rồi nhấn <span className="text-white font-medium">Thêm</span></span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Android */}
+            <div className="bg-surface-800/60 border border-white/8 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2 mb-3">
+                    <p className="text-sm font-bold text-white">Android (Chrome)</p>
+                </div>
+                <div className="space-y-2 text-xs text-gray-400">
+                    <div className="flex items-start gap-2.5">
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">1</span>
+                        <span>Mở Chrome và truy cập trang web</span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">2</span>
+                        <span>Nhấn dấu <span className="text-white font-medium">⋮</span> (3 chấm) góc trên phải</span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">3</span>
+                        <span>Chọn <span className="text-white font-medium">&quot;Thêm vào màn hình chính&quot;</span> rồi xác nhận</span>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    );
+}
+
 

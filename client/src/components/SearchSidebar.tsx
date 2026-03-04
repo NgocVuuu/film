@@ -10,14 +10,32 @@ export function SearchSidebar() {
     const [openSection, setOpenSection] = useState<string | null>('category');
 
     const toggleSection = (section: string) => {
-        setOpenSection(openSection === section ? null : section);
+        const isOpening = openSection !== section;
+        setOpenSection(isOpening ? section : null);
+
+        if (isOpening) {
+            setTimeout(() => {
+                const element = document.getElementById(`filter-group-${section}`);
+                const container = document.getElementById('filter-scroll-container');
+                if (element && container) {
+                    const topPos = element.offsetTop;
+                    container.scrollTo({
+                        top: topPos - 24, // Leave a 24px gap above (1.5rem / p-6 roughly)
+                        behavior: 'smooth'
+                    });
+                } else if (element) {
+                    // Fallback to native scroll if container not found
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        }
     };
 
     const handleFilter = (key: string, value: string) => {
         const params = new URLSearchParams(searchParams.toString());
         // Keep category as 'category' to match backend expectation
         const paramKey = key;
-        
+
         if (value === 'all') {
             params.delete(paramKey);
         } else {
@@ -31,7 +49,7 @@ export function SearchSidebar() {
         // Keep category as 'category' for consistency
         const paramKey = key;
         const current = searchParams.get(paramKey);
-        
+
         // Handle encoded values for comparison
         if (value === 'all') return !current;
         return current === value || decodeURIComponent(current || '') === value;
@@ -109,14 +127,14 @@ export function SearchSidebar() {
     ];
 
     return (
-        <div className="w-full lg:w-64 shrink-0 space-y-4">
-            <div className="flex items-center gap-2 font-bold text-white mb-4">
+        <div className="w-full lg:w-64 shrink-0 space-y-4 md:space-y-6">
+            <div className="hidden lg:flex items-center gap-2 font-bold text-white mb-4">
                 <Filter className="w-5 h-5 text-primary" />
                 Bộ lọc tìm kiếm
             </div>
 
             {filters.map((group) => (
-                <div key={group.id} className="border border-white/10 rounded-lg overflow-hidden bg-surface-900">
+                <div key={group.id} id={`filter-group-${group.id}`} className="border border-white/10 rounded-lg overflow-hidden bg-surface-900 scroll-mt-4">
                     <button
                         onClick={() => toggleSection(group.id)}
                         className="w-full flex items-center justify-between p-3 text-sm font-medium text-white hover:bg-white/5 transition-colors"
@@ -131,8 +149,8 @@ export function SearchSidebar() {
                                     key={opt.value}
                                     onClick={() => handleFilter(group.id, opt.value)}
                                     className={`w-full flex items-center justify-between px-2 py-1.5 text-sm rounded transition-colors ${isActive(group.id, opt.value)
-                                            ? 'text-primary bg-primary/10'
-                                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                        ? 'text-primary bg-primary/10'
+                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
                                         }`}
                                 >
                                     {opt.label}

@@ -110,8 +110,51 @@ export default function Home() {
 
           setTrendingMovies(trendingMovies || []);
           setFeaturedMovies(featuredMovies || []);
-          setUpcomingMovies(upcomingMovies || []);
-          setContinueWatchingMovies(continueWatching || []);
+          // Merge local history with API history for instant sync
+          let mergedHistory = continueWatching || [];
+          try {
+            const localHistoryStr = localStorage.getItem('history');
+            if (localHistoryStr) {
+              const localHistory = JSON.parse(localHistoryStr);
+              if (Array.isArray(localHistory) && localHistory.length > 0) {
+                // Determine if local history is newer or has items not yet synced
+                const localMap = new Map(localHistory.map(item => [item.slug, item]));
+                const apiMap = new Map((continueWatching || []).map((item: any) => [item.slug, item]));
+
+                // Add or update items from local history
+                const finalHistory: any[] = [];
+                const processedSlugs = new Set();
+
+                // First pass: local history (which is assumed most recent)
+                for (const localItem of localHistory) {
+                  if (localItem && localItem.slug) {
+                    finalHistory.push(localItem);
+                    processedSlugs.add(localItem.slug);
+                  }
+                }
+
+                // Second pass: add API history items that aren't in local history
+                for (const apiItem of (continueWatching || [])) {
+                  if (apiItem && apiItem.slug && !processedSlugs.has(apiItem.slug)) {
+                    finalHistory.push(apiItem);
+                  }
+                }
+
+                // Sort by viewedAt if available, descending
+                finalHistory.sort((a, b) => {
+                  const timeA = a.viewedAt ? new Date(a.viewedAt).getTime() : 0;
+                  const timeB = b.viewedAt ? new Date(b.viewedAt).getTime() : 0;
+                  return timeB - timeA;
+                });
+
+                mergedHistory = finalHistory.slice(0, 10); // Keep max 10
+              }
+            }
+          } catch (e) {
+            console.error('Error merging local history:', e);
+          }
+
+          setContinueWatchingMovies(mergedHistory);
 
           setLatestMovies(latestMovies || []);
           setChinaMovies(chinaMovies || []);

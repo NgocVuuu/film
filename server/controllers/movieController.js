@@ -399,6 +399,7 @@ const getMovies = async (req, res) => {
             query.$or = [
                 { name: { $regex: q, $options: 'i' } },
                 { origin_name: { $regex: q, $options: 'i' } },
+                { actor: { $regex: q, $options: 'i' } },
                 { slug: { $regex: q, $options: 'i' } }
             ];
         }

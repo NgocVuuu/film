@@ -272,44 +272,51 @@ export default function VideoPlayer({
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!touchStartRef.current || !containerRef.current) return;
 
-        // Gestures only active in fullscreen (landscape/zoomed)
-        if (!isFullscreen && !isLandscape) return;
+        const currentY = e.touches[0].clientY;
+        const currentX = e.touches[0].clientX;
+        const deltaY = touchStartRef.current.y - currentY;
+        const deltaX = currentX - touchStartRef.current.x;
 
-        // Prevent page scroll
-        // e.preventDefault(); // Warning: Passive event listener issue in React?
-        // Better handled via CSS touch-action: none
-
-        const deltaY = touchStartRef.current.y - e.touches[0].clientY;
-        const deltaX = e.touches[0].clientX - touchStartRef.current.x;
         const rect = containerRef.current.getBoundingClientRect();
-        const sensitive = 150; // Pixels to scroll to max change
 
-        // Ignore horizontal swipes (seeking) - threshold 30px difference
-        if (Math.abs(deltaX) > Math.abs(deltaY) + 30) return;
+        // Determine gesture direction from accumulated movement
+        // Only trigger volume/brightness if primarily vertical swipe
+        if (Math.abs(deltaX) > Math.abs(deltaY) + 15) {
+            // Horizontal swipe detected - skip volume/brightness
+            return;
+        }
 
-        const percentChange = deltaY / sensitive;
+        // Must have moved at least 5px vertically to trigger gesture
+        if (Math.abs(deltaY) < 5) return;
+
+        // 150 pixels swipe = 100% change (smoother feel)
+        const percentChange = deltaY / 150;
 
         // Left side: Brightness
         if (touchStartRef.current.x < rect.width / 2) {
-            const newBrightness = Math.max(0.2, Math.min(1.5, brightness + percentChange * 0.05));
-            setBrightness(newBrightness);
-            setGestureFeedback({ type: 'brightness', value: newBrightness });
+            setBrightness(prev => {
+                const newBrightness = Math.max(0.2, Math.min(1.5, prev + percentChange));
+                setGestureFeedback({ type: 'brightness', value: newBrightness });
+                return newBrightness;
+            });
         }
         // Right side: Volume
         else {
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             if (isIOS) {
                 // iOS does not allow volume control via JS
-                // Show feedback but don't change volume
-                setGestureFeedback({ type: 'error', value: 0 }); // Error type for "Use Buttons"
+                setGestureFeedback({ type: 'error', value: 0 });
             } else if (videoRef.current) {
-                const newVolume = Math.max(0, Math.min(1, volume + percentChange * 0.05));
+                const newVolume = Math.max(0, Math.min(1, videoRef.current.volume + percentChange));
                 videoRef.current.volume = newVolume;
                 setVolume(newVolume);
                 setIsMuted(newVolume === 0);
                 setGestureFeedback({ type: 'volume', value: newVolume });
             }
         }
+
+        // Update the reference point for incremental tracking
+        touchStartRef.current.y = currentY;
     };
 
     const handleTouchEnd = (e: React.TouchEvent) => {
@@ -328,8 +335,8 @@ export default function VideoPlayer({
 
         // Check if touch moved significantly (swipe vs tap)
         const touchMoved = touchStartRef.current && (
-            Math.abs(x - touchStartRef.current.x) > 15 ||
-            Math.abs(y - touchStartRef.current.y) > 15
+            Math.abs(x - touchStartRef.current.x) > 20 ||
+            Math.abs(y - touchStartRef.current.y) > 20
         );
 
         if (container && wasTap && !touchMoved) {
@@ -781,6 +788,46 @@ export default function VideoPlayer({
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
     }, [onPrevEpisode, onNextEpisode]);
+
+    // Native touch handler with passive:false to allow preventDefault (stop page scroll during gesture)
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        // Track if swipe is vertical for scroll prevention
+        let startX = 0;
+        let startY = 0;
+        let isVerticalSwipe: boolean | null = null;
+
+        const onTouchStart = (e: TouchEvent) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            isVerticalSwipe = null;
+        };
+
+        const onTouchMove = (e: TouchEvent) => {
+            const deltaX = Math.abs(e.touches[0].clientX - startX);
+            const deltaY = Math.abs(e.touches[0].clientY - startY);
+
+            // Determine direction on first move
+            if (isVerticalSwipe === null && (deltaX > 5 || deltaY > 5)) {
+                isVerticalSwipe = deltaY > deltaX;
+            }
+
+            // Only prevent default for vertical swipes to stop page scroll
+            if (isVerticalSwipe) {
+                e.preventDefault();
+            }
+        };
+
+        container.addEventListener('touchstart', onTouchStart, { passive: true });
+        container.addEventListener('touchmove', onTouchMove, { passive: false });
+
+        return () => {
+            container.removeEventListener('touchstart', onTouchStart);
+            container.removeEventListener('touchmove', onTouchMove);
+        };
+    }, []);
 
 
     if (error || (useEmbed && embedUrl)) {

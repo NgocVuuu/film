@@ -37,7 +37,6 @@ export const customFetch = async (endpoint: string, options: FetchOptions = {}) 
         headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Ensure endpoint doesn't start with / if we are appending to base URL
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
 
     const response = await fetch(url, {
@@ -46,6 +45,13 @@ export const customFetch = async (endpoint: string, options: FetchOptions = {}) 
         ...options,
         headers
     });
+
+    // Intercept 401 (Unauthorized) & 403 (Forbidden) for global PWA handling
+    if (response.status === 401 || response.status === 403) {
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:expired'));
+        }
+    }
 
     return response;
 };

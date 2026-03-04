@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
 import { EmptyState } from '@/components/EmptyState';
 import { Clock, Trash2 } from 'lucide-react';
@@ -42,21 +42,25 @@ export default function HistoryPage() {
     const { user } = useAuth();
     const [movies, setMovies] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
+    const isInitialLoad = useRef(true);
 
     const fetchHistory = useCallback(async () => {
+        // Only show the full loading skeleton on the first load, not background re-fetches
+        if (isInitialLoad.current) {
+            setLoading(true);
+        }
+
         if (!user) {
             // If not logged in, use localStorage fallback
             const stored = JSON.parse(localStorage.getItem('history') || '[]');
             setMovies(stored);
             setLoading(false);
+            isInitialLoad.current = false;
             return;
         }
 
         // IMPORTANT: Clear localStorage for logged-in users to prevent mixing with backend data
         localStorage.removeItem('history');
-
-        // Force clear state to prevent rendering stale/empty objects
-        setMovies([]);
 
         try {
             const response = await customFetch(`/api/progress/continue-watching?limit=100`, {
@@ -102,11 +106,34 @@ export default function HistoryPage() {
             setMovies([]);
         } finally {
             setLoading(false);
+            isInitialLoad.current = false;
         }
     }, [user]);
 
     useEffect(() => {
         fetchHistory();
+    }, [fetchHistory]);
+
+    // Re-fetch when user returns to this tab/window from watching a movie
+    // This ensures progress and deletions are immediately reflected without a full page reload
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchHistory();
+            }
+        };
+
+        const handleFocus = () => {
+            fetchHistory();
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleFocus);
+        };
     }, [fetchHistory]);
 
     const removeHistory = async (slug: string, epSlug: string) => {
@@ -118,12 +145,19 @@ export default function HistoryPage() {
                 });
                 setMovies(prev => prev.filter(m => !(m.slug === slug && m.progress.episodeSlug === epSlug)));
                 toast.success('Đã xóa khỏi lịch sử');
-            } catch {
+
+                // Keep local cache in sync
+                const currentHistory = JSON.parse(localStorage.getItem('history') || '[]');
+                const newHistory = currentHistory.filter((m: Movie) => !(m.slug === slug && m.progress?.episodeSlug === epSlug));
+                localStorage.setItem('history', JSON.stringify(newHistory));
+
+            } catch (error) {
+                console.error(error);
                 toast.error('Có lỗi xảy ra');
             }
         } else {
             const currentHistory = JSON.parse(localStorage.getItem('history') || '[]');
-            const newHistory = currentHistory.filter((m: Movie) => !(m.slug === slug && m.progress.episodeSlug === epSlug));
+            const newHistory = currentHistory.filter((m: Movie) => !(m.slug === slug && m.progress?.episodeSlug === epSlug));
             setMovies(newHistory);
             localStorage.setItem('history', JSON.stringify(newHistory));
             toast.success('Đã xóa khỏi lịch sử');
@@ -140,8 +174,10 @@ export default function HistoryPage() {
                     credentials: 'include'
                 });
                 setMovies([]);
+                localStorage.setItem('history', JSON.stringify([])); // Sync cache
                 toast.success('Đã xóa toàn bộ lịch sử');
-            } catch {
+            } catch (error) {
+                console.error(error);
                 toast.error('Có lỗi xảy ra');
             }
         } else {

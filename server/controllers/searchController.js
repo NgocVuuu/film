@@ -12,7 +12,8 @@ exports.hybridSearch = async (req, res) => {
         let localMovies = await Movie.find({
             $or: [
                 { name: { $regex: keyword, $options: 'i' } },
-                { origin_name: { $regex: keyword, $options: 'i' } }
+                { origin_name: { $regex: keyword, $options: 'i' } },
+                { actor: { $regex: keyword, $options: 'i' } }
             ]
         }).limit(20).select('name slug thumb_url origin_name year type quality episode_current');
 
