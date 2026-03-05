@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const WatchProgress = require('../models/WatchProgress');
+const { getTmdbTrendingMovies } = require('./movieController');
 
 // Get all users with pagination and filters
 exports.getAllUsers = async (req, res) => {
@@ -271,11 +272,10 @@ exports.getDashboardStats = async (req, res) => {
         // Total watch progress
         const totalWatchProgress = await WatchProgress.countDocuments();
 
-        // Top 10 movies by views
-        const topMovies = await Movie.find({ isActive: { $ne: false } })
-            .sort({ view: -1 })
-            .limit(10)
-            .select('name slug thumb_url view type');
+        // Top 10 movies by TMDB trending (same as home page)
+        const topMovies = (await getTmdbTrendingMovies())
+            .slice(0, 10)
+            .map(m => ({ name: m.name, slug: m.slug, thumb_url: m.thumb_url, view: m.view || 0, type: m.type }));
 
         // View trends - last 30 days
         const thirtyDaysAgo = new Date();

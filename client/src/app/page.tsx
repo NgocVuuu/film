@@ -68,6 +68,7 @@ export default function Home() {
   const [vnMovies, setVnMovies] = useState<Movie[]>([]);
   const [hotAnimeMovies, setHotAnimeMovies] = useState<Movie[]>([]);
   const [legendaryAnimeMovies, setLegendaryAnimeMovies] = useState<Movie[]>([]);
+  const [xianxiaMovies, setXianxiaMovies] = useState<Movie[]>([]);
 
   useEffect(() => {
     // Fetch data from our Node.js server
@@ -106,7 +107,8 @@ export default function Home() {
             hkMovies,
             vnMovies,
             hotAnimeMovies,
-            legendaryAnimeMovies
+            legendaryAnimeMovies,
+            xianxiaMovies
           } = data.data;
 
           setTrendingMovies(trendingMovies || []);
@@ -184,6 +186,7 @@ export default function Home() {
           setVnMovies(vnMovies || []);
           setHotAnimeMovies(hotAnimeMovies || []);
           setLegendaryAnimeMovies(legendaryAnimeMovies || []);
+          setXianxiaMovies(xianxiaMovies || []);
         }
         setLoading(false);
       })
@@ -296,6 +299,13 @@ export default function Home() {
           title="Thế giới hoạt hình đa sắc màu"
           movies={cartoonMovies}
           viewAllLink="/hoat-hinh?category=gia-dinh&sort=newest"
+        />
+
+        {/* 4.3 Xianxia / Chinese Animation */}
+        <LazyMovieSection
+          title="Hoạt hình Tiên Hiệp Trung Quốc đỉnh nhất"
+          movies={xianxiaMovies}
+          viewAllLink="/hoat-hinh?country=trung-quoc&sort=newest"
         />
 
         {/* 5. China */}

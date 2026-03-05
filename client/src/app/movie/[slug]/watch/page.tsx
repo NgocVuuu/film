@@ -107,7 +107,7 @@ export default function WatchPage() {
         });
 
         // Priority Order
-        const sourceOrder = ['NguonC', 'KKPhim', 'Ophim', 'Khác'];
+        const sourceOrder = ['KKPhim', 'NguonC', 'Ophim', 'Khác'];
         const sortedSources = Array.from(sources).sort((a, b) => {
             return sourceOrder.indexOf(a) - sourceOrder.indexOf(b);
         });

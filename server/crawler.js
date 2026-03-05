@@ -549,6 +549,9 @@ async function syncSpecificMovie(slug, sourceName = null) {
                 return { success: false, error: `Nguồn '${sourceName}' không hợp lệ. Chọn: OPHIM, KKPHIM, NGUONC` };
             }
             const result = await processMovie(adapter, slug);
+            if (result.success) {
+                return { ...result, source: adapter.name };
+            }
             return result;
         }
 

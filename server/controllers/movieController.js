@@ -109,73 +109,117 @@ const multiSourceSearch = async (keyword) => {
 };
 
 // 1. Get Home Data (Aggregated)
+// Shared: Multi-region TMDB trending (Hàn + Trung + Âu Mỹ) matched to local DB
+const getTmdbTrendingMovies = async () => {
+    const TMDB_API_KEY = process.env.TMDB_API_KEY;
+    const currentYear = new Date().getFullYear();
+    const minYear = currentYear - 1; // chỉ lấy phim từ năm ngoái trở lại
+    const oneYearAgoStr = `${minYear}-01-01`;
+
+    // Helper: fetch TMDB and match to local DB
+    const fetchAndMatch = async (cacheKey, url, countrySlug, limit) => {
+        try {
+            let tmdbData = searchCache.get(cacheKey);
+            if (!tmdbData || tmdbData.length === 0) {
+                const res = await axios.get(url, { timeout: 8000 });
+                tmdbData = res.data.results || [];
+                if (tmdbData.length > 0) searchCache.set(cacheKey, tmdbData, 1800);
+            }
+            if (!tmdbData || tmdbData.length === 0) return [];
+
+            const tmdbTitles = tmdbData.map(m => m.title || m.name).filter(Boolean);
+            const tmdbOriginalTitles = tmdbData.map(m => m.original_title || m.original_name).filter(Boolean);
+
+            const query = {
+                isActive: { $ne: false },
+                year: { $gte: minYear }, // chỉ phim mới
+                $or: [
+                    { name: { $in: tmdbTitles } },
+                    { origin_name: { $in: tmdbOriginalTitles } }
+                ]
+            };
+            if (countrySlug) query['country.slug'] = countrySlug;
+
+            const localMatches = await Movie.find(query)
+                .select('-content -episodes -director -actor').lean();
+
+            // Sort by TMDB popularity order
+            const orderMap = new Map();
+            tmdbData.forEach((item, index) => {
+                if (item.title) orderMap.set(item.title.toLowerCase(), index);
+                if (item.name) orderMap.set(item.name.toLowerCase(), index);
+                if (item.original_title) orderMap.set(item.original_title.toLowerCase(), index);
+                if (item.original_name) orderMap.set(item.original_name.toLowerCase(), index);
+            });
+            return localMatches.sort((a, b) => {
+                const iA = orderMap.get((a.name || '').toLowerCase()) ?? orderMap.get((a.origin_name || '').toLowerCase()) ?? 999;
+                const iB = orderMap.get((b.name || '').toLowerCase()) ?? orderMap.get((b.origin_name || '').toLowerCase()) ?? 999;
+                return iA - iB;
+            }).slice(0, limit);
+        } catch (err) {
+            console.error(`[TMDB] ${cacheKey} error:`, err.message);
+            return [];
+        }
+    };
+
+    const base = `https://api.themoviedb.org/3`;
+    const key = `api_key=${TMDB_API_KEY}`;
+
+    const [koreaResults, chinaResults, usukResults] = await Promise.all([
+        // Hàn Quốc: TV trending theo ngôn ngữ ko
+        TMDB_API_KEY ? fetchAndMatch(
+            'tmdb_trending_ko',
+            `${base}/discover/tv?${key}&with_original_language=ko&sort_by=popularity.desc&first_air_date.gte=${oneYearAgoStr}&language=vi`,
+            'han-quoc', 4
+        ) : Promise.resolve([]),
+        // Trung Quốc: TV trending theo ngôn ngữ zh
+        TMDB_API_KEY ? fetchAndMatch(
+            'tmdb_trending_zh',
+            `${base}/discover/tv?${key}&with_original_language=zh&sort_by=popularity.desc&first_air_date.gte=${oneYearAgoStr}&language=vi`,
+            'trung-quoc', 3
+        ) : Promise.resolve([]),
+        // Âu Mỹ: global trending (phim lẻ EN)
+        TMDB_API_KEY ? fetchAndMatch(
+            'tmdb_trending_global',
+            `${base}/trending/movie/day?${key}&language=vi`,
+            null, 4
+        ) : Promise.resolve([]),
+    ]);
+
+    // Merge: Hàn → Trung → Âu Mỹ, dedup theo cả _id lẫn tên
+    const seenIds = new Set();
+    const seenNames = new Set();
+    const result = [];
+    for (const movie of [...koreaResults, ...chinaResults, ...usukResults]) {
+        const id = movie._id.toString();
+        const nameLower = (movie.name || '').toLowerCase();
+        if (!seenIds.has(id) && !seenNames.has(nameLower)) {
+            seenIds.add(id);
+            seenNames.add(nameLower);
+            result.push(movie);
+        }
+        if (result.length >= 10) break;
+    }
+
+    // Fallback nếu không đủ 10: phim mới trong 60 ngày
+    if (result.length < 10) {
+        const localFallback = await Movie.find({
+            isActive: { $ne: false },
+            year: { $gte: minYear },
+            _id: { $nin: [...seenIds] },
+            updatedAt: { $gte: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) }
+        }).sort({ view: -1 }).limit(10 - result.length).select('-content -episodes -director -actor').lean();
+        result.push(...localFallback);
+    }
+
+    return result;
+};
+
 const getHomeData = async (req, res) => {
     try {
         const start = Date.now();
         // 0. Trending Logic (TMDB + Local Fallback)
-        const getTrendingMoviesPromise = (async () => {
-            let trendingMovies = [];
-            try {
-                const TMDB_API_KEY = process.env.TMDB_API_KEY;
-                if (TMDB_API_KEY) {
-                    const cacheKey = 'tmdb_trending_day';
-                    let tmdbData = searchCache.get(cacheKey);
-
-                    if (!tmdbData) {
-                        try {
-                            const tmdbRes = await axios.get(`https://api.themoviedb.org/3/trending/all/day?api_key=${TMDB_API_KEY}&language=vi`, { timeout: 3000 });
-                            tmdbData = tmdbRes.data.results || [];
-                            searchCache.set(cacheKey, tmdbData, 3600);
-                        } catch (timeoutErr) {
-                            console.error('TMDB Fetch Timeout/Error:', timeoutErr.message);
-                        }
-                    }
-
-                    if (tmdbData && tmdbData.length > 0) {
-                        const tmdbTitles = tmdbData.map(m => m.title || m.name).filter(Boolean);
-                        const tmdbOriginalTitles = tmdbData.map(m => m.original_title || m.original_name).filter(Boolean);
-
-                        const localMatches = await Movie.find({
-                            isActive: { $ne: false },
-                            $or: [
-                                { name: { $in: tmdbTitles } },
-                                { origin_name: { $in: tmdbOriginalTitles } }
-                            ]
-                        }).select('-content -episodes -director -actor').lean();
-
-                        if (localMatches.length > 0) {
-                            const orderMap = new Map();
-                            tmdbData.forEach((item, index) => {
-                                if (item.title) orderMap.set(item.title.toLowerCase(), index);
-                                if (item.name) orderMap.set(item.name.toLowerCase(), index);
-                                if (item.original_title) orderMap.set(item.original_title.toLowerCase(), index);
-                                if (item.original_name) orderMap.set(item.original_name.toLowerCase(), index);
-                            });
-
-                            trendingMovies = localMatches.sort((a, b) => {
-                                const indexA = orderMap.get((a.name || '').toLowerCase()) ?? orderMap.get((a.origin_name || '').toLowerCase()) ?? 100;
-                                const indexB = orderMap.get((b.name || '').toLowerCase()) ?? orderMap.get((b.origin_name || '').toLowerCase()) ?? 100;
-                                return indexA - indexB;
-                            });
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error('Trending Logic Error:', err.message);
-            }
-
-            if (trendingMovies.length < 5) {
-                const localTrending = await Movie.find({
-                    isActive: { $ne: false },
-                    updatedAt: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 3)) }
-                }).sort({ view: -1 }).limit(10).select('-content -episodes -director -actor').lean();
-
-                const existingIds = new Set(trendingMovies.map(m => m._id.toString()));
-                const additional = localTrending.filter(m => !existingIds.has(m._id.toString()));
-                trendingMovies = [...trendingMovies, ...additional].slice(0, 10);
-            }
-            return trendingMovies;
-        })();
+        const getTrendingMoviesPromise = getTmdbTrendingMovies();
 
         // Execute all queries in parallel
         const [
@@ -209,7 +253,8 @@ const getHomeData = async (req, res) => {
             hkMovies,
             vnMovies,
             hotAnimeMovies,
-            legendaryAnimeMovies
+            legendaryAnimeMovies,
+            xianxiaMovies
         ] = await Promise.all([
             getTrendingMoviesPromise,
             // 2. Featured (Cinema - Exclude Trailer only)
@@ -271,7 +316,9 @@ const getHomeData = async (req, res) => {
             // 28. Hot Anime
             Movie.find({ type: 'hoathinh', isActive: { $ne: false } }).sort({ view: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
             // 29. Legendary Anime (Older than or equal to 2015)
-            Movie.find({ type: 'hoathinh', year: { $lte: 2015 }, isActive: { $ne: false } }).sort({ view: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean()
+            Movie.find({ type: 'hoathinh', year: { $lte: 2015 }, isActive: { $ne: false } }).sort({ view: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+            // 30. Xianxia / Chinese Animation
+            Movie.find({ type: 'hoathinh', 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean()
         ]);
 
         let responseData = {
@@ -280,7 +327,7 @@ const getHomeData = async (req, res) => {
             japanMovies, actionMovies, romanceMovies, comedyMovies, adventureMovies,
             scifiMovies, crimeMovies, historyDramaMovies, martialArtsMovies, shortDramaMovies,
             tvShows, warMovies, mysteryMovies, schoolMovies, documentaryMovies, fantasyMovies,
-            hkMovies, vnMovies, hotAnimeMovies, legendaryAnimeMovies
+            hkMovies, vnMovies, hotAnimeMovies, legendaryAnimeMovies, xianxiaMovies
         };
 
         if (req.user) {
@@ -294,7 +341,7 @@ const getHomeData = async (req, res) => {
                     ...japanMovies, ...actionMovies, ...romanceMovies, ...comedyMovies, ...adventureMovies,
                     ...scifiMovies, ...crimeMovies, ...historyDramaMovies, ...martialArtsMovies, ...shortDramaMovies,
                     ...tvShows, ...warMovies, ...mysteryMovies, ...schoolMovies, ...documentaryMovies, ...fantasyMovies,
-                    ...hkMovies, ...vnMovies, ...hotAnimeMovies, ...legendaryAnimeMovies
+                    ...hkMovies, ...vnMovies, ...hotAnimeMovies, ...legendaryAnimeMovies, ...xianxiaMovies
                 ];
 
                 const allSlugs = [...new Set(allMovies.map(m => m.slug))];
@@ -919,6 +966,14 @@ const getSadMovies = async (req, res) => {
             'chuyen-tinh-sau-nui',              // Chuyện Tình Sau Núi - Brokeback Mountain (2005)
             'khi-loi-thuoc-ve-nhung-vi-sao',    // Khi Lỗi Thuộc Về Những Vì Sao (2014)
             'nam-buoc-de-yeu',                  // Năm Bước Để Yêu - Five Feet Apart (2019)
+            // --- Thêm mới ---
+            'dong-cung',                        // Đông Cung (2019)
+            'hon-le-cua-em',                    // Hôn Lễ Của Em (2021)
+            'truong-an-nhu-co',                 // Trường An Như Cố (2021)
+            'dieu-ky-dieu-o-phong-giam-so-7',   // Điều Kỳ Diệu Ở Phòng Giam Số 7 (2013)
+            'nguoi-tinh-anh-trang',             // Người Tình Ánh Trăng (2016)
+            'khi-cuoc-doi-cho-ban-qua-quyt',    // Khi Cuộc Đời Cho Bạn Quá Quýt (2025)
+            'nu-hoang-nuoc-mat',                // Nữ Hoàng Nước Mắt - Queen of Tears (2024)
         ];
 
         const movies = await Movie.find({ slug: { $in: confirmedSlugs }, isActive: { $ne: false } })
@@ -935,11 +990,21 @@ const getSadMovies = async (req, res) => {
 };
 
 
+const clearTmdbCache = async (req, res) => {
+    searchCache.del('tmdb_trending_ko');
+    searchCache.del('tmdb_trending_zh');
+    searchCache.del('tmdb_trending_global');
+    console.log('[ADMIN] TMDB trending cache cleared manually');
+    res.json({ success: true, message: 'TMDB trending cache cleared. Next home page request will fetch fresh data from TMDB.' });
+};
+
 module.exports = {
     getHomeData,
     getMovies,
     getMovieDetail,
     getMarvelMovies,
+    clearTmdbCache,
+    getTmdbTrendingMovies,
     getDCUMovies,
     getStephenChowMovies,
     getKoreanDrama2016Movies,

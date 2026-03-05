@@ -71,7 +71,6 @@ export default function SadMoviesPage() {
                 </div>
 
                 <div className="relative container mx-auto px-4 py-14 flex flex-col items-center justify-center text-center">
-                    <div className="text-5xl mb-4">🩹</div>
                     <h1 className="text-white text-2xl md:text-4xl font-bold mb-3 leading-tight">
                         Phim Chữa Rách Vết Thương Lành
                     </h1>

@@ -15,7 +15,7 @@ const OPTIONS = [
     {
         label: 'Buy Me a Coffee',
         href: 'https://buymeacoffee.com/pchill_admin',
-        content: <Image src="/bmc-button.png" alt="Buy Me a Coffee" width={86} height={25} className="block" unoptimized />,
+        content: <Image src="/bmc-button.png" alt="Buy Me a Coffee" width={86} height={25} className="block" style={{ width: '86px', height: 'auto' }} unoptimized />,
         bg: 'bg-[#FFDD00]',
     },
     {

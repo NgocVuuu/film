@@ -75,6 +75,10 @@ router.get('/notifications/sent', adminNotificationController.getSentNotificatio
 const adminEmailController = require('../controllers/adminEmailController');
 router.post('/test-email', adminEmailController.testEmail);
 
+// Cache management
+const { clearTmdbCache } = require('../controllers/movieController');
+router.post('/cache/clear-tmdb', clearTmdbCache);
+
 // Crawler
 router.get('/crawler/status', adminController.getCrawlerStatus);
 router.get('/crawler/logs', adminController.getCrawlerLogs);

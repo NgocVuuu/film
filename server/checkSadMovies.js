@@ -27,6 +27,13 @@ const sadMovies = [
     { vi: ['Một Ngày', 'Mot Ngay', 'Một Ngày Của Chúng Ta'], en: ['One Day'], year: 2011 },
     { vi: ['Lỗi Của Những Vì Sao', 'Loi Cua Nhung Vi Sao'], en: ['The Fault in Our Stars', 'Fault in Our Stars'], year: 2014 },
     { vi: ['5 Bước Để Yêu', '5 Buoc De Yeu', 'Năm Bước Để Yêu'], en: ['Five Feet Apart'], year: 2019 },
+    // --- Thêm mới ---
+    { vi: ['Đông Cung', 'Dong Cung'], en: ['Ancient Love Poetry', 'East Palace'], year: 2019 },
+    { vi: ['Hôn Lễ Của Em', 'Hon Le Cua Em'], en: ['My Wedding Day'], year: 2021 },
+    { vi: ['Trường An Như Cố', 'Truong An Nhu Co'], en: ["I'll See You Soon", 'Chang An Ru Gu'], year: 2021 },
+    { vi: ['Điều Kỳ Diệu Ở Phòng Giam Số 7', 'Dieu Ky Dieu O Phong Giam So 7'], en: ['Miracle in Cell No. 7'], year: 2013 },
+    { vi: ['Người Tình Ánh Trăng', 'Nguoi Tinh Anh Trang'], en: ['Moon Lovers', 'Moon Lovers: Scarlet Heart Ryeo'], year: 2016 },
+    { vi: ['Khi Cuộc Đời Cho Bạn Quá Quýt', 'Khi Cuoc Doi Cho Ban Qua Quyt'], en: ['When Life Gives You Tangerines'], year: 2025 },
 ];
 
 const checkDB = async () => {

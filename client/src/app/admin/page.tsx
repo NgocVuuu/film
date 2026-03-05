@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Users, CreditCard, Film, TrendingUp, Loader2, Eye, UserPlus, Activity } from 'lucide-react';
+import { Users, CreditCard, Film, TrendingUp, Loader2, Eye, UserPlus, Activity, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
 
@@ -83,6 +83,17 @@ export default function AdminDashboardPage() {
 
     const formatNumber = (num: number) => {
         return new Intl.NumberFormat('vi-VN').format(num);
+    };
+
+    const clearTmdbCache = async () => {
+        try {
+            const res = await customFetch('/api/admin/cache/clear-tmdb', { method: 'POST', credentials: 'include' });
+            const data = await res.json();
+            if (data.success) toast.success('Đã xóa cache TMDB — trending sẽ cập nhật ngay!');
+            else toast.error(data.message || 'Lỗi xóa cache');
+        } catch {
+            toast.error('Lỗi kết nối server');
+        }
     };
 
     if (loading) {
@@ -282,7 +293,17 @@ export default function AdminDashboardPage() {
 
             {/* Top Movies List */}
             <div className="bg-surface-900 border border-white/10 rounded-xl p-6 mb-8">
-                <h2 className="text-xl font-bold text-white mb-6">Top 10 Phim Xem Nhiều Nhất</h2>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-white">Xếp Hạng Nổi Bật (TMDB)</h2>
+                    <button
+                        onClick={clearTmdbCache}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-xs font-medium transition-colors"
+                        title="Xóa cache TMDB trending để production cập nhật ngay"
+                    >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Làm mới TMDB
+                    </button>
+                </div>
                 <div className="space-y-4">
                     {stats?.topMovies.slice(0, 10).map((movie, index) => (
                         <div key={movie.slug}>

@@ -23,6 +23,7 @@ function HoatHinhContent() {
     const sort = searchParams.get('sort') || 'view';
     const maxYear = searchParams.get('maxYear') || '';
     const category = searchParams.get('category') || '';
+    const country = searchParams.get('country') || '';
     const [movies, setMovies] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
     const [totalPages, setTotalPages] = useState(1);
@@ -39,6 +40,7 @@ function HoatHinhContent() {
             if (maxYear) params.set('maxYear', maxYear);
             // Pass category but keep type=hoathinh (type param overrides category's type exclusion in API)
             if (category) params.set('category', category);
+            if (country) params.set('country', country);
 
             const res = await fetch(
                 `${API_URL}/api/movies?${params.toString()}`,
@@ -54,13 +56,13 @@ function HoatHinhContent() {
         } finally {
             setLoading(false);
         }
-    }, [page, sort, maxYear, category]);
+    }, [page, sort, maxYear, category, country]);
 
     useEffect(() => {
         fetchMovies();
     }, [fetchMovies]);
 
-    const extraParams = `${maxYear ? `&maxYear=${maxYear}` : ''}${category ? `&category=${category}` : ''}`;
+    const extraParams = `${maxYear ? `&maxYear=${maxYear}` : ''}${category ? `&category=${category}` : ''}${country ? `&country=${country}` : ''}`;
     const pageUrl = (p: number) => `/hoat-hinh?sort=${sort}${extraParams}&page=${p}`;
     const sortUrl = (s: string) => `/hoat-hinh?sort=${s}${extraParams}&page=1`;
 
@@ -72,7 +74,7 @@ function HoatHinhContent() {
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                     <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
                         <span className="w-1 h-8 bg-primary rounded-full"></span>
-                        {maxYear ? `Anime Huyền thoại (trước ${parseInt(maxYear) + 1})` : category === 'gia-dinh' ? 'Hoạt Hình Gia Đình' : 'Hoạt Hình & Anime'}
+                        {maxYear ? `Anime Huyền thoại (trước ${parseInt(maxYear) + 1})` : country === 'trung-quoc' ? 'Hoạt Hình Tiên Hiệp Trung Quốc' : category === 'gia-dinh' ? 'Hoạt Hình Gia Đình' : 'Hoạt Hình & Anime'}
                     </h1>
                     <div className="flex gap-2">
                         {[
