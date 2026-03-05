@@ -374,7 +374,9 @@ export function Navbar() {
                                             </Link>
                                         )}
 
-                                        <DonateButton />
+                                        <div className="flex justify-center px-2 py-1.5">
+                                            <DonateButton />
+                                        </div>
 
                                         <Link href="/feedback" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
                                             <MessageSquare className="w-4 h-4" /> Góp ý & Báo lỗi

@@ -406,28 +406,23 @@ const getMovies = async (req, res) => {
 
         if (category && category !== 'all') {
             query['category.slug'] = category;
-
-            // Match home slide filters exactly:
-            const excludeAnimationAndTv = ['vien-tuong', 'kinh-di', 'hanh-dong', 'hinh-su', 'chien-tranh', 'bi-an', 'hai-huoc', 'phieu-luu', 'vo-thuat', 'than-thoai'];
-            const excludeAnimation = ['tinh-cam', 'gia-dinh', 'tai-lieu'];
-
-            if (excludeAnimationAndTv.includes(category)) {
-                query.type = { $nin: ['hoathinh', 'tvshows'] };
-            }
-            if (excludeAnimation.includes(category)) {
-                query.type = { $ne: 'hoathinh' };
-            }
-            if (category === 'hoc-duong') {
-                query['country.slug'] = 'trung-quoc';
-                query.type = { $ne: 'hoathinh' };
-            }
-            // co-trang in home slide = co-trang + trung-quoc only
-            if (category === 'co-trang') {
-                query['country.slug'] = 'trung-quoc';
-            }
+            // Note: No forced country overrides here — let user's country filter take precedence
         }
         if (country) query['country.slug'] = country;
-        if (year) query.year = parseInt(year);
+        // Flexible year filter: specific year, range keywords, or maxYear
+        if (year) {
+            if (year === 'old') {
+                query.year = { $lt: 2020 };
+            } else if (year === '2010s') {
+                query.year = { $gte: 2010, $lte: 2019 };
+            } else if (year === '2000s') {
+                query.year = { $gte: 2000, $lte: 2009 };
+            } else if (year === '1990s') {
+                query.year = { $gte: 1990, $lte: 1999 };
+            } else {
+                query.year = parseInt(year);
+            }
+        }
         if (maxYear) query.year = { ...(query.year || {}), $lte: parseInt(maxYear) };
         if (status) query.status = status; // 'completed' | 'ongoing'
         if (type) query.type = type; // 'series' | 'single' | 'hoathinh' | 'tvshows'
@@ -435,10 +430,10 @@ const getMovies = async (req, res) => {
         if (actor) query.actor = actor; // Filter by actor name
 
         // Sorting
-        let sortOption = { year: -1, updatedAt: -1 }; // Default: Newest Release & Latest Update
+        let sortOption = { updatedAt: -1 }; // Default: Mới cập nhật
         if (sort === 'updated') sortOption = { updatedAt: -1 };
-        if (sort === 'newest') sortOption = { year: -1, updatedAt: -1 }; // Release year
-        if (sort === 'view') sortOption = { view: -1 };
+        if (sort === 'year' || sort === 'newest') sortOption = { year: -1, updatedAt: -1 };
+        if (sort === 'view') sortOption = { view: -1, updatedAt: -1 };
         if (sort === 'rating') sortOption = { rating_average: -1 };
 
         let movies = await Movie.find(query)
@@ -899,6 +894,47 @@ const getKoreanDrama2016Movies = async (req, res) => {
     }
 };
 
+const getSadMovies = async (req, res) => {
+    try {
+        // Only verified slugs from DB audit — name search was causing false positives
+        const confirmedSlugs = [
+            // --- Đã xác nhận từ trước ---
+            'dieu-ba-me-khong-ke',              // Điều Ba Mẹ Không Kể (Romang, 2019)
+            'bi-thuong-nguoc-dong-thanh-song',  // Bi Thương Ngược Dòng Sông (2018)
+            'ngay-em-dep-nhat',                 // Ngày Em Đẹp Nhất (On Your Wedding Day, 2018)
+            'goi-em-bang-ten-anh',              // Gọi Em Bằng Tên Anh (Call Me By Your Name, 2017)
+            'truoc-ngay-em-den',                // Trước Ngày Em Đến (Me Before You, 2016)
+            'mong-em-hanh-phuc',                // Mong Em Hạnh Phúc (More Than Blue, 2018)
+            'cuoc-doi-forrest-gump',            // Cuộc Đời Forrest Gump (1994)
+            'titanic',                          // Titanic (1997)
+            'mo-dom-dom',                       // Mộ Đom Đóm (Grave of the Fireflies, 1988)
+            'chuoc-loi-chuoc-toi',              // Chuộc Lỗi (Atonement, 2007)
+            // --- Slug xác nhận thêm ---
+            'josee-nang-tho-cua-toi',           // Josée, Nàng Thơ Của Tôi (2020)
+            'chung-ta-cua-sau-nay',             // Chúng Ta Của Sau Này - Us And Them (2018)
+            'vi-sao-vut-sang',                  // Vì Sao Vụt Sáng - A Star Is Born (2018)
+            'chuyen-tinh-cay-tao-gai',          // Chuyện Tình Cây Táo Gai (2010)
+            'buoc-ngoat-dang-nho',              // Bước Ngoặt Đáng Nhớ - A Walk to Remember (2002)
+            'con-trai-khong-khoc',              // Con Trai Không Khóc - Boys Don't Cry (1999)
+            'chuyen-tinh-sau-nui',              // Chuyện Tình Sau Núi - Brokeback Mountain (2005)
+            'khi-loi-thuoc-ve-nhung-vi-sao',    // Khi Lỗi Thuộc Về Những Vì Sao (2014)
+            'nam-buoc-de-yeu',                  // Năm Bước Để Yêu - Five Feet Apart (2019)
+        ];
+
+        const movies = await Movie.find({ slug: { $in: confirmedSlugs }, isActive: { $ne: false } })
+            .select('name slug thumb_url origin_name year type quality episode_current view')
+            .lean();
+
+        // Sort by year desc
+        movies.sort((a, b) => (b.year || 0) - (a.year || 0));
+
+        res.json({ success: true, data: movies, total: movies.length });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+
 module.exports = {
     getHomeData,
     getMovies,
@@ -907,4 +943,5 @@ module.exports = {
     getDCUMovies,
     getStephenChowMovies,
     getKoreanDrama2016Movies,
+    getSadMovies,
 };

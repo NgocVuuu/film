@@ -64,7 +64,7 @@ export function DonateButton({ className = '' }: { className?: string }) {
 
             {/* Brand buttons — absolutely overlay the trigger, no layout shift */}
             <div
-                className={`absolute inset-0 flex items-center gap-1.5 transition-opacity duration-200
+                className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200
                     ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
             >
                 {OPTIONS.map(({ label, href, content, bg }) => (

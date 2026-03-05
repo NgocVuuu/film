@@ -26,4 +26,7 @@ router.get('/movies/stephenchow', cacheMiddleware(600), movieController.getSteph
 // Korean Drama 2016 Collection
 router.get('/movies/korean-drama-2016', cacheMiddleware(600), movieController.getKoreanDrama2016Movies);
 
+// Sad / Healing Movies Collection
+router.get('/movies/sad-movies', cacheMiddleware(600), movieController.getSadMovies);
+
 module.exports = router;

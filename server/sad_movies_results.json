@@ -1,0 +1,115 @@
+{
+  "found": [
+    {
+      "slug": "money-my-love",
+      "name": "Money, My Love",
+      "year": 2026
+    },
+    {
+      "slug": "dieu-ba-me-khong-ke",
+      "name": "Điều Ba Mẹ Không Kể"
+    },
+    {
+      "slug": "bi-thuong-nguoc-dong-thanh-song",
+      "name": "Bi Thương Ngược Dòng Thành Sông",
+      "year": 2018
+    },
+    {
+      "slug": "ngay-em-dep-nhat",
+      "name": "Ngày Em Đẹp Nhất",
+      "year": 2018
+    },
+    {
+      "slug": "goi-em-bang-ten-anh",
+      "name": "Gọi Em Bằng Tên Anh",
+      "year": 2017
+    },
+    {
+      "slug": "truoc-ngay-em-den",
+      "name": "Trước Ngày Em Đến",
+      "year": 2016
+    },
+    {
+      "slug": "danh-cho-rieng-minh-em",
+      "name": "Dành Cho Riêng Mình Em",
+      "year": 2022
+    },
+    {
+      "slug": "mong-em-hanh-phuc",
+      "name": "Mong Em Hạnh Phúc",
+      "year": 2018
+    },
+    {
+      "slug": "dai-minh-am-anh-ba-tram-trung-hon",
+      "name": "Đại Minh Ám Ảnh: Ba Trăm Trung Hồn",
+      "year": 2026
+    },
+    {
+      "slug": "cuoc-doi-forrest-gump",
+      "name": "Cuộc Đời Forrest Gump",
+      "year": 1994
+    },
+    {
+      "slug": "titanic",
+      "name": "Titanic",
+      "year": 1997
+    },
+    {
+      "slug": "mo-dom-dom",
+      "name": "Mộ Đom Đóm",
+      "year": 1988
+    },
+    {
+      "slug": "chuoc-loi-chuoc-toi",
+      "name": "Chuộc Lỗi (Chuộc Tội)",
+      "year": 2007
+    },
+    {
+      "slug": "mac-ket-trong-cung-mot-ngay-suot-nghin-nam-short-drama",
+      "name": "Mắc Kẹt Trong Cùng Một Ngày Suốt Nghìn Năm",
+      "year": 2025
+    }
+  ],
+  "missing": [
+    {
+      "vi": "Josée, Nàng Thơ Của Tôi",
+      "en": "Josée, the Tiger and the Fish"
+    },
+    {
+      "vi": "Chúng Ta Sau Này",
+      "en": "Us and Them"
+    },
+    {
+      "vi": "Vì Sao Vụt Sáng",
+      "en": "A Star Is Born"
+    },
+    {
+      "vi": "Mẹ Ơi Đừng Khóc",
+      "en": "Don't Cry Mommy"
+    },
+    {
+      "vi": "Chuyện Tình Cây Táo Gai",
+      "en": "Under the Hawthorn Tree"
+    },
+    {
+      "vi": "Bước Ngoặt Đáng Nhớ",
+      "en": "A Walk to Remember"
+    },
+    {
+      "vi": "Con Trai Không Khóc",
+      "en": "Boys Don't Cry"
+    },
+    {
+      "vi": "Chuyện Tình Sau Núi",
+      "en": "Brokeback Mountain"
+    },
+    {
+      "vi": "Lỗi Của Những Vì Sao",
+      "en": "The Fault in Our Stars"
+    },
+    {
+      "vi": "5 Bước Để Yêu",
+      "en": "Five Feet Apart"
+    }
+  ]
+}

@@ -219,19 +219,10 @@ function ProfileContent() {
                             <div className="flex items-center gap-2">
                                 <Smartphone className="w-5 h-5 text-primary" />
                                 <h2 className="text-lg font-bold text-white">Ứng dụng di động</h2>
-                                {user.isPremium && (
-                                    <span className="bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">PREMIUM</span>
-                                )}
                             </div>
                             <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${showPwaSection ? 'rotate-90' : ''}`} />
                         </button>
-                        {showPwaSection && (
-                            user.isPremium ? (
-                                <PWASettings />
-                            ) : (
-                                <PWAInstallGuide />
-                            )
-                        )}
+                        {showPwaSection && <PWASettings />}
                     </div>
 
                     <Link href="/profile?mode=edit" className="block w-full bg-white hover:bg-gray-100 text-black font-bold py-3.5 text-center rounded-xl mb-4 shadow-lg transition-colors">
@@ -306,7 +297,7 @@ function ProfileContent() {
                                     </div>
                                 </div>
                             </div>
-                            <nav className="flex md:flex-col overflow-x-auto p-2 gap-2 md:gap-0 md:space-y-1 custom-scrollbar-hide">
+                            <nav className="grid grid-cols-2 md:flex md:flex-col p-2 gap-2 md:gap-0 md:space-y-1">
                                 {/* Desktop Sidebar Status Banner */}
                                 <div className={`hidden md:block mb-2 p-3 rounded-lg border relative overflow-hidden group ${user.isPremium ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-surface-800/50 border-white/5'}`}>
                                     <div className="absolute -top-1 -right-1 opacity-10 group-hover:opacity-15 transition-opacity">
@@ -324,18 +315,20 @@ function ProfileContent() {
                                     </div>
                                 </div>
 
-                                <DonateButton className="hidden md:inline-flex w-full justify-center mb-1.5" />
+                                <div className="hidden md:flex justify-center mb-1.5">
+                                    <DonateButton />
+                                </div>
 
                                 <button
                                     onClick={() => setActiveTab('profile')}
-                                    className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:px-3 md:py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                    className={`flex-1 md:flex-none md:w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-3 py-2 md:px-3 md:py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                                 >
                                     <User className="w-3.5 h-3.5" />
                                     <span className="whitespace-nowrap">Thông tin cá nhân</span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('security')}
-                                    className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:px-3 md:py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'security' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                    className={`flex-1 md:flex-none md:w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-3 py-2 md:px-3 md:py-2.5 text-xs font-medium rounded-lg transition-colors ${activeTab === 'security' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                                 >
                                     <Lock className="w-3.5 h-3.5" />
                                     <span className="whitespace-nowrap">Bảo mật & Mật khẩu</span>

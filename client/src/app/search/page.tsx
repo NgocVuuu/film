@@ -193,7 +193,7 @@ function SearchContent() {
                             />
                             <div className="relative w-80 max-w-[85vw] bg-surface-900 h-dvh border-l border-white/10 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col pointer-events-auto">
                                 {/* Header */}
-                                <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0 bg-surface-900 z-10">
+                                <div className="flex items-center justify-between px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-white/10 shrink-0 bg-surface-900 z-10">
                                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
                                         <Filter className="w-5 h-5 text-primary" />
                                         Bộ lọc tìm kiếm
