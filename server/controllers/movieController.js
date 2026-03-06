@@ -998,6 +998,44 @@ const clearTmdbCache = async (req, res) => {
     res.json({ success: true, message: 'TMDB trending cache cleared. Next home page request will fetch fresh data from TMDB.' });
 };
 
+// Debug endpoint: kiểm tra TMDB API key, raw results và DB matching
+const debugTmdb = async (req, res) => {
+    const TMDB_API_KEY = process.env.TMDB_API_KEY;
+    const currentYear = new Date().getFullYear();
+    const minYear = currentYear - 1;
+    const report = { apiKeyPresent: !!TMDB_API_KEY, minYear, endpoints: [] };
+
+    const endpoints = [
+        { name: 'Korea (TV)', url: `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_API_KEY}&with_original_language=ko&sort_by=popularity.desc&first_air_date.gte=${minYear}-01-01&language=vi` },
+        { name: 'China (TV)', url: `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_API_KEY}&with_original_language=zh&sort_by=popularity.desc&first_air_date.gte=${minYear}-01-01&language=vi` },
+        { name: 'Global (Movie)', url: `https://api.themoviedb.org/3/trending/movie/day?api_key=${TMDB_API_KEY}&language=vi` },
+    ];
+
+    for (const ep of endpoints) {
+        const info = { name: ep.name, tmdbTitles: [], dbMatches: 0, dbMatchTitles: [] };
+        try {
+            const res2 = await axios.get(ep.url, { timeout: 8000 });
+            const items = res2.data.results || [];
+            info.tmdbTitles = items.slice(0, 10).map(m => ({ title: m.title || m.name, original: m.original_title || m.original_name }));
+
+            const allTitles = items.map(m => m.title || m.name).filter(Boolean);
+            const allOriginals = items.map(m => m.original_title || m.original_name).filter(Boolean);
+            const matches = await Movie.find({
+                isActive: { $ne: false },
+                year: { $gte: minYear },
+                $or: [{ name: { $in: allTitles } }, { origin_name: { $in: allOriginals } }]
+            }).select('name origin_name year').lean();
+            info.dbMatches = matches.length;
+            info.dbMatchTitles = matches.map(m => `${m.name} (${m.year})`);
+        } catch (err) {
+            info.error = err.message;
+        }
+        report.endpoints.push(info);
+    }
+
+    res.json(report);
+};
+
 module.exports = {
     getHomeData,
     getMovies,
@@ -1005,6 +1043,7 @@ module.exports = {
     getMarvelMovies,
     clearTmdbCache,
     getTmdbTrendingMovies,
+    debugTmdb,
     getDCUMovies,
     getStephenChowMovies,
     getKoreanDrama2016Movies,
