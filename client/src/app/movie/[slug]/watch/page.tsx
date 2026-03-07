@@ -330,9 +330,8 @@ export default function WatchPage() {
     };
 
     // Resolve NC embed URL → real m3u8
-    // Gọi Cloudflare Worker trực tiếp (tránh Railway 502 + CORS issue)
-    // Worker URL: nc-resolver.ngocvu14-3-2001.workers.dev
-    const CF_WORKER_URL = 'https://nc-resolver.ngocvu14-3-2001.workers.dev';
+    // Browser fetch trực tiếp từ client (residential IP) → streamc.xyz không chặn
+    // Server/Cloudflare Worker đều bị 403 vì datacenter IP bị block
     useEffect(() => {
         const isNC = currentServerName.startsWith('NC -');
         if (!currentEpisode || !isNC || !currentEpisode.link_embed) {
@@ -343,21 +342,32 @@ export default function WatchPage() {
         let cancelled = false;
         setResolvingNc(true);
         setResolvedNcSrc(null);
-        // Gọi Worker trực tiếp → Worker trả m3u8Url thô → client tự wrap qua proxy Railway
-        fetch(`${CF_WORKER_URL}?embed=${encodeURIComponent(currentEpisode.link_embed)}`)
-            .then(r => r.json())
-            .then(data => {
-                if (!cancelled) {
-                    if (data.m3u8Url) {
-                        // Wrap qua proxy server để có CORS + bypass CDN block
-                        setResolvedNcSrc(`${API_URL}/api/proxy/m3u8?url=${encodeURIComponent(data.m3u8Url)}`);
-                    } else {
-                        setResolvedNcSrc('');
-                    }
-                }
-            })
-            .catch(() => { if (!cancelled) setResolvedNcSrc(''); })
-            .finally(() => { if (!cancelled) setResolvingNc(false); });
+
+        // Fetch embed page trực tiếp từ browser (không qua server/worker)
+        fetch(currentEpisode.link_embed, {
+            mode: 'cors',
+            credentials: 'omit',
+            headers: {
+                'Accept': 'text/html,*/*',
+                'Referer': 'https://phim.nguonc.com/',
+            }
+        })
+        .then(r => r.text())
+        .then(html => {
+            if (cancelled) return;
+            const obfMatch = html.match(/data-obf="([^"]+)"/);
+            if (!obfMatch) { setResolvedNcSrc(''); return; }
+            const outerDecoded = JSON.parse(atob(obfMatch[1]));
+            const sUb = outerDecoded.sUb;
+            if (!sUb) { setResolvedNcSrc(''); return; }
+            const embedHost = new URL(currentEpisode.link_embed).origin;
+            const m3u8Url = `${embedHost}/${sUb}.m3u8`;
+            // Wrap qua proxy server để có CORS header khi HLS player fetch segments
+            setResolvedNcSrc(`${API_URL}/api/proxy/m3u8?url=${encodeURIComponent(m3u8Url)}`);
+        })
+        .catch(() => { if (!cancelled) setResolvedNcSrc(''); })
+        .finally(() => { if (!cancelled) setResolvingNc(false); });
+
         return () => { cancelled = true; };
     }, [currentEpisode?.link_embed, currentServerName]);
 
