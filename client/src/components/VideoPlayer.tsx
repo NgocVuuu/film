@@ -851,22 +851,6 @@ export default function VideoPlayer({
     }, []);
 
 
-    // For NC source with embed URL: skip HLS entirely, use embed iframe directly
-    if (serverName?.startsWith('NC -') && embedUrl) {
-        return (
-            <div className="relative w-full h-full bg-black rounded-lg overflow-hidden border border-border">
-                <iframe
-                    src={`${embedUrl}${autoPlay ? (embedUrl.includes('?') ? '&autoplay=1' : '?autoplay=1') : ''}`}
-                    className="w-full h-full"
-                    frameBorder="0"
-                    allowFullScreen
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    referrerPolicy="no-referrer"
-                />
-            </div>
-        );
-    }
-
     if (error || (useEmbed && embedUrl)) {
         if (embedUrl) {
             return (

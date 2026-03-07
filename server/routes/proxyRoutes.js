@@ -13,7 +13,8 @@ router.use((req, res, next) => {
 // Whitelist of allowed upstream domains for proxy (SSRF prevention)
 const ALLOWED_HOSTS = [
     'phimmoi.net',      // covers hk.phimmoi.net, sing.phimmoi.net, etc.
-    'streamc.xyz',
+    'streamc.xyz',      // NC embed player domain
+    'hihihoho3.top',   // streamc.xyz CDN for video segments
     'phim.nguonc.com',
     'nguonc.com',
 ];
@@ -130,6 +131,57 @@ router.get('/segment', async (req, res) => {
         }
     } catch (err) {
         res.status(502).json({ error: 'Failed to fetch segment', detail: err.message });
+    }
+});
+
+/**
+ * GET /api/proxy/resolve-nc?embed=<encoded_embed_url>
+ * Resolves a streamc.xyz embed URL to a real HLS m3u8 URL (bypassing dead phimmoi CDN)
+ */
+router.get('/resolve-nc', async (req, res) => {
+    const embedUrl = req.query.embed;
+    if (!embedUrl) return res.status(400).json({ error: 'Missing embed parameter' });
+
+    // Only allow streamc.xyz embed URLs
+    let parsed;
+    try {
+        parsed = new URL(embedUrl);
+    } catch {
+        return res.status(400).json({ error: 'Invalid embed URL' });
+    }
+    if (!parsed.hostname.endsWith('streamc.xyz')) {
+        return res.status(403).json({ error: 'Only streamc.xyz embeds are supported' });
+    }
+
+    try {
+        const html = await axios.get(embedUrl, {
+            timeout: 10000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
+                'Referer': 'https://phim.nguonc.com/',
+                'Accept': 'text/html,*/*',
+            }
+        });
+
+        // Extract data-obf attribute from <div id="player" data-obf="...">
+        const obfMatch = html.data.match(/data-obf="([^"]+)"/);
+        if (!obfMatch) return res.status(502).json({ error: 'Could not find stream data in embed page' });
+
+        // Decode double base64: data-obf → {sUb, hD} → sUb is the base URL prefix
+        const outerDecoded = JSON.parse(Buffer.from(obfMatch[1], 'base64').toString('utf8'));
+        const sUb = outerDecoded.sUb;
+        if (!sUb) return res.status(502).json({ error: 'Could not extract stream URL from embed' });
+
+        // Construct the actual m3u8 URL: hosted on embed13.streamc.xyz
+        const embedHost = parsed.origin; // e.g. https://embed13.streamc.xyz
+        const m3u8Url = `${embedHost}/${sUb}.m3u8`;
+
+        // Optionally proxy through our server (adds CORS headers)
+        const proxyM3u8 = `${req.protocol}://${req.get('host')}/api/proxy/m3u8?url=${encodeURIComponent(m3u8Url)}`;
+
+        res.json({ m3u8: proxyM3u8, directM3u8: m3u8Url });
+    } catch (err) {
+        res.status(502).json({ error: 'Failed to resolve embed URL', detail: err.message });
     }
 });
 
