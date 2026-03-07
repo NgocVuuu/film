@@ -20,18 +20,26 @@ exports.hybridSearch = async (req, res) => {
         // If found in DB, return immediately
         if (localMovies.length > 0) {
             // Deduplicate by normalized origin_name (same movie from multiple sources)
-            const seen = new Map();
-            localMovies = localMovies.filter(m => {
+            const seenIdx = new Map(); // key → index in deduped array
+            const deduped = [];
+            for (const m of localMovies) {
                 const key = (m.origin_name || m.name).toLowerCase().replace(/[^a-z0-9]/g, '');
-                if (seen.has(key)) {
-                    // Keep the one with more data (has year, has episode_current)
-                    const existing = seen.get(key);
-                    if (!existing.year && m.year) { seen.set(key, m); return false; }
-                    return false;
+                if (seenIdx.has(key)) {
+                    // Replace existing entry if new one has more data (year, quality, episode_current)
+                    const idx = seenIdx.get(key);
+                    const existing = deduped[idx];
+                    const betterYear = !existing.year && m.year;
+                    const betterQuality = !existing.quality && m.quality;
+                    const betterEpisode = !existing.episode_current && m.episode_current;
+                    if (betterYear || betterQuality || betterEpisode) {
+                        deduped[idx] = m;
+                    }
+                } else {
+                    seenIdx.set(key, deduped.length);
+                    deduped.push(m);
                 }
-                seen.set(key, m);
-                return true;
-            });
+            }
+            localMovies = deduped;
 
             // Attach progress if logged in
             if (req.user) {
