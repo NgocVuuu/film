@@ -844,7 +844,7 @@ export default function VideoPlayer({
             return (
                 <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center border border-border rounded-lg gap-2 p-6 text-center">
                     <p className="text-yellow-400 font-semibold">Server này không khả dụng</p>
-                    <p className="text-gray-400 text-sm">Vui lòng chuyển sang server KKPhim hoặc Ophim.</p>
+                    <p className="text-gray-400 text-sm">Vui lòng chuyển sang server khác.</p>
                 </div>
             );
         }
