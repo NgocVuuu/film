@@ -851,20 +851,23 @@ export default function VideoPlayer({
     }, []);
 
 
+    // For NC source with embed URL: skip HLS entirely, use embed iframe directly
+    if (serverName?.startsWith('NC -') && embedUrl) {
+        return (
+            <div className="relative w-full h-full bg-black rounded-lg overflow-hidden border border-border">
+                <iframe
+                    src={`${embedUrl}${autoPlay ? (embedUrl.includes('?') ? '&autoplay=1' : '?autoplay=1') : ''}`}
+                    className="w-full h-full"
+                    frameBorder="0"
+                    allowFullScreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    referrerPolicy="no-referrer"
+                />
+            </div>
+        );
+    }
+
     if (error || (useEmbed && embedUrl)) {
-        const isNC = serverName?.startsWith('NC -');
-        if (isNC) {
-            // onError is called via useEffect (not during render) to avoid infinite loops
-            if (onError) {
-                return <div className="w-full h-full bg-black" />;
-            }
-            return (
-                <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center border border-border rounded-lg gap-2 p-6 text-center">
-                    <p className="text-yellow-400 font-semibold">Server này không khả dụng</p>
-                    <p className="text-gray-400 text-sm">Vui lòng chuyển sang server khác.</p>
-                </div>
-            );
-        }
         if (embedUrl) {
             return (
                 <div className="relative w-full h-full bg-black rounded-lg overflow-hidden border border-border">
