@@ -134,6 +134,10 @@ router.get('/segment', async (req, res) => {
     }
 });
 
+// In-memory cache for resolved NC embed URLs (avoids 429 rate limiting from streamc.xyz)
+const resolveCache = new Map(); // embed URL → { m3u8, expiry }
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
 /**
  * GET /api/proxy/resolve-nc?embed=<encoded_embed_url>
  * Resolves a streamc.xyz embed URL to a real HLS m3u8 URL (bypassing dead phimmoi CDN)
@@ -151,6 +155,12 @@ router.get('/resolve-nc', async (req, res) => {
     }
     if (!parsed.hostname.endsWith('streamc.xyz')) {
         return res.status(403).json({ error: 'Only streamc.xyz embeds are supported' });
+    }
+
+    // Return cached result if still fresh
+    const cached = resolveCache.get(embedUrl);
+    if (cached && cached.expiry > Date.now()) {
+        return res.json({ m3u8: cached.m3u8, directM3u8: cached.directM3u8 });
     }
 
     try {
@@ -178,6 +188,9 @@ router.get('/resolve-nc', async (req, res) => {
 
         // Optionally proxy through our server (adds CORS headers)
         const proxyM3u8 = `${req.protocol}://${req.get('host')}/api/proxy/m3u8?url=${encodeURIComponent(m3u8Url)}`;
+
+        // Cache the result to avoid 429 rate-limiting on repeated calls
+        resolveCache.set(embedUrl, { m3u8: proxyM3u8, directM3u8: m3u8Url, expiry: Date.now() + CACHE_TTL_MS });
 
         res.json({ m3u8: proxyM3u8, directM3u8: m3u8Url });
     } catch (err) {

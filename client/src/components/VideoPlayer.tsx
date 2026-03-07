@@ -852,19 +852,9 @@ export default function VideoPlayer({
 
 
     if (error || (useEmbed && embedUrl)) {
-        if (embedUrl) {
-            return (
-                <div className="relative w-full h-full bg-black rounded-lg overflow-hidden border border-border">
-                    <iframe
-                        src={`${embedUrl}${autoPlay ? (embedUrl.includes('?') ? '&autoplay=1' : '?autoplay=1') : ''}`}
-                        className="w-full h-full"
-                        frameBorder="0"
-                        allowFullScreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        referrerPolicy="no-referrer"
-                    />
-                </div>
-            );
+        // NC source: never iframe (X-Frame-Options blocks streamc.xyz) — onError handled via useEffect
+        if (serverName?.startsWith('NC -')) {
+            return <div className="w-full h-full bg-black" />;
         }
         return (
             <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center border border-border rounded-lg gap-4">
