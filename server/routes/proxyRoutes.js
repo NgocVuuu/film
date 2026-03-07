@@ -3,6 +3,13 @@ const router = express.Router();
 const axios = require('axios');
 const { URL } = require('url');
 
+// Always set CORS headers for all proxy responses (including errors)
+router.use((req, res, next) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+});
+
 // Whitelist of allowed upstream domains for proxy (SSRF prevention)
 const ALLOWED_HOSTS = [
     'phimmoi.net',      // covers hk.phimmoi.net, sing.phimmoi.net, etc.
@@ -59,11 +66,14 @@ router.get('/m3u8', async (req, res) => {
 
     try {
         const upstream = await axios.get(targetUrl, {
-            timeout: 10000,
+            timeout: 15000,
             responseType: 'text',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Referer': 'https://phim.nguonc.com/',
+                'Origin': 'https://phim.nguonc.com',
+                'Accept': '*/*',
+                'Accept-Language': 'vi-VN,vi;q=0.9,en;q=0.8',
             }
         });
 
@@ -72,8 +82,6 @@ router.get('/m3u8', async (req, res) => {
         const rewritten = rewriteM3u8(content, targetUrl, proxySegBase);
 
         res.set('Content-Type', 'application/vnd.apple.mpegurl');
-        res.set('Access-Control-Allow-Origin', '*');
-        res.set('Cross-Origin-Resource-Policy', 'cross-origin');
         res.set('Cache-Control', 'no-cache');
         res.send(rewritten);
     } catch (err) {
@@ -92,18 +100,19 @@ router.get('/segment', async (req, res) => {
 
     try {
         const upstream = await axios.get(targetUrl, {
-            timeout: 20000,
+            timeout: 25000,
             responseType: 'stream',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Referer': 'https://phim.nguonc.com/',
+                'Origin': 'https://phim.nguonc.com',
+                'Accept': '*/*',
+                'Accept-Language': 'vi-VN,vi;q=0.9,en;q=0.8',
             }
         });
 
         const contentType = upstream.headers['content-type'] || 'video/MP2T';
         res.set('Content-Type', contentType);
-        res.set('Access-Control-Allow-Origin', '*');
-        res.set('Cross-Origin-Resource-Policy', 'cross-origin');
         res.set('Cache-Control', 'public, max-age=3600');
 
         // If it's a sub-playlist (.m3u8), rewrite it too

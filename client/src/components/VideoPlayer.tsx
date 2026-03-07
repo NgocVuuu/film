@@ -667,7 +667,15 @@ export default function VideoPlayer({
                 if (data.fatal) {
                     switch (data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
-                            hls.startLoad();
+                            // Manifest load failure = CDN is dead, no point retrying
+                            if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR ||
+                                data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
+                                hls.destroy();
+                                setError(true);
+                            } else {
+                                // Segment-level error: try to resume
+                                hls.startLoad();
+                            }
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
                             hls.recoverMediaError();
