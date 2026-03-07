@@ -631,8 +631,8 @@ const getMovieDetail = async (req, res) => {
             }
         }
 
-        // Rewrite NC m3u8 links through server proxy
-        movieData = proxyNcEpisodes(movieData, req);
+        // Pass original NC m3u8 URLs directly to browser (let browser fetch CDN directly)
+        // movieData = proxyNcEpisodes(movieData, req); // disabled: server proxy blocked by CDN
 
         res.json({ success: true, data: movieData, related });
     } catch (err) {
