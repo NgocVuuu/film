@@ -173,31 +173,38 @@ router.get('/resolve-nc', async (req, res) => {
     }
 
     try {
-        const html = await axios.get(embedUrl, {
-            timeout: 7000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
-                'Referer': 'https://phim.nguonc.com/',
-                'Accept': 'text/html,*/*',
-            }
-        });
+        let m3u8Url;
 
-        // Extract data-obf attribute from <div id="player" data-obf="...">
-        const obfMatch = html.data.match(/data-obf="([^"]+)"/);
-        if (!obfMatch) return res.status(502).json({ error: 'Could not find stream data in embed page' });
+        if (process.env.CF_WORKER_URL) {
+            // Ưu tiên dùng Cloudflare Worker (IP phân tán, tránh rate-limit)
+            const workerRes = await axios.get(
+                `${process.env.CF_WORKER_URL}?embed=${encodeURIComponent(embedUrl)}`,
+                { timeout: 10000 }
+            );
+            m3u8Url = workerRes.data.m3u8Url;
+            if (!m3u8Url) return res.status(502).json({ error: 'Worker did not return m3u8Url' });
+        } else {
+            // Fallback: fetch trực tiếp từ server (có thể bị rate-limit)
+            const html = await axios.get(embedUrl, {
+                timeout: 7000,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
+                    'Referer': 'https://phim.nguonc.com/',
+                    'Accept': 'text/html,*/*',
+                }
+            });
+            const obfMatch = html.data.match(/data-obf="([^"]+)"/);
+            if (!obfMatch) return res.status(502).json({ error: 'Could not find stream data in embed page' });
 
-        // Decode double base64: data-obf → {sUb, hD} → sUb is the base URL prefix
-        const outerDecoded = JSON.parse(Buffer.from(obfMatch[1], 'base64').toString('utf8'));
-        const sUb = outerDecoded.sUb;
-        if (!sUb) return res.status(502).json({ error: 'Could not extract stream URL from embed' });
+            const outerDecoded = JSON.parse(Buffer.from(obfMatch[1], 'base64').toString('utf8'));
+            const sUb = outerDecoded.sUb;
+            if (!sUb) return res.status(502).json({ error: 'Could not extract stream URL from embed' });
 
-        // Construct the actual m3u8 URL: hosted on embed13.streamc.xyz
-        const embedHost = parsed.origin; // e.g. https://embed13.streamc.xyz
-        const m3u8Url = `${embedHost}/${sUb}.m3u8`;
+            m3u8Url = `${parsed.origin}/${sUb}.m3u8`;
+        }
 
         // Optionally proxy through our server (adds CORS headers)
         const proxyM3u8 = `${req.protocol}://${req.get('host')}/api/proxy/m3u8?url=${encodeURIComponent(m3u8Url)}`;
-
         // Cache the result to avoid 429 rate-limiting on repeated calls
         resolveCache.set(embedUrl, { m3u8: proxyM3u8, directM3u8: m3u8Url, expiry: Date.now() + CACHE_TTL_MS });
 
