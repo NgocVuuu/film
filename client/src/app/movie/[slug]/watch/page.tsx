@@ -7,6 +7,7 @@ import { ReportModal } from '@/components/ReportModal';
 import { CommentSection } from '@/components/CommentSection';
 import { DonateButton } from '@/components/DonateButton';
 import Link from 'next/link';
+import { API_URL } from '@/lib/config';
 
 export const runtime = 'edge';
 import { PWAAds } from '@/components/PWAAds';
@@ -60,7 +61,10 @@ export default function WatchPage() {
     const [startTime, setStartTime] = useState<number>(0);
     const [playerTime, setPlayerTime] = useState<number>(0);
 
-
+    // Resolved NC source (streamc.xyz → real m3u8 via proxy)
+    // null = not yet resolved (or resolving), string = resolved URL (empty string = resolution failed)
+    const [resolvedNcSrc, setResolvedNcSrc] = useState<string | null>(null);
+    const [resolvingNc, setResolvingNc] = useState(false);
 
     // Source State
     const [availableSources, setAvailableSources] = useState<string[]>([]);
@@ -307,6 +311,9 @@ export default function WatchPage() {
         setViewingServerName(serverName);
         setCurrentEpisode(episode);
         setShouldAutoPlay(true);
+        // Reset NC resolution state when switching episodes
+        setResolvedNcSrc(null);
+        setResolvingNc(false);
 
         // Restore time if switching versions of the same episode
         if (isSameEpisode) {
@@ -322,7 +329,24 @@ export default function WatchPage() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-
+    // Resolve NC embed URL → real m3u8 via server proxy (avoids dead phimmoi CDN)
+    useEffect(() => {
+        const isNC = currentServerName.startsWith('NC -');
+        if (!currentEpisode || !isNC || !currentEpisode.link_embed) {
+            setResolvedNcSrc(null);
+            setResolvingNc(false);
+            return;
+        }
+        let cancelled = false;
+        setResolvingNc(true);
+        setResolvedNcSrc(null);
+        fetch(`${API_URL}/api/proxy/resolve-nc?embed=${encodeURIComponent(currentEpisode.link_embed)}`)
+            .then(r => r.json())
+            .then(data => { if (!cancelled) setResolvedNcSrc(data.m3u8 || ''); })
+            .catch(() => { if (!cancelled) setResolvedNcSrc(''); })
+            .finally(() => { if (!cancelled) setResolvingNc(false); });
+        return () => { cancelled = true; };
+    }, [currentEpisode?.link_embed, currentServerName]);
 
     const handleSourceChange = (newSource: string) => {
         if (newSource === currentSource) return;
@@ -446,20 +470,14 @@ export default function WatchPage() {
 
                     <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (
-                            currentServerName.startsWith('NC -') && currentEpisode.link_embed ? (
-                                <iframe
-                                    key={`${currentEpisode.slug}-${currentServerName}`}
-                                    src={currentEpisode.link_embed}
-                                    className="w-full h-full"
-                                    allow="autoplay; fullscreen"
-                                    allowFullScreen
-                                    scrolling="no"
-                                    frameBorder="0"
-                                />
+                            resolvingNc ? (
+                                <div className="w-full h-full flex items-center justify-center bg-black rounded-xl">
+                                    <p className="text-gray-400 text-sm animate-pulse">Đang kết nối server...</p>
+                                </div>
                             ) : (
                             <VideoPlayer
                                 key={`${currentEpisode.slug}-${currentServerName}`}
-                                src={currentEpisode.link_m3u8}
+                                src={currentServerName.startsWith('NC -') ? (resolvedNcSrc || '') : currentEpisode.link_m3u8}
                                 poster={movie.poster_url}
                                 embedUrl={currentEpisode.link_embed}
                                 autoPlay={shouldAutoPlay}
@@ -497,6 +515,11 @@ export default function WatchPage() {
                                     const ep = server?.server_data.find((e: { slug: string }) => e.slug === episodeSlug);
                                     if (ep) handleEpisodeClick(serverName, ep);
                                 }}
+                                onError={currentSource === 'NguonC' ? () => {
+                                    // Auto-switch to next available source when NC fails
+                                    const fallback = availableSources.find(s => s !== 'NguonC');
+                                    if (fallback) handleSourceChange(fallback);
+                                } : undefined}
                             />
                             )
                         ) : (
