@@ -5,8 +5,7 @@ const { URL } = require('url');
 
 // Whitelist of allowed upstream domains for proxy (SSRF prevention)
 const ALLOWED_HOSTS = [
-    'sing.phimmoi.net',
-    'phimmoi.net',
+    'phimmoi.net',      // covers hk.phimmoi.net, sing.phimmoi.net, etc.
     'streamc.xyz',
     'phim.nguonc.com',
     'nguonc.com',

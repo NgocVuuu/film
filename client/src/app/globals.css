@@ -126,6 +126,9 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  /* Custom Font */
+  --font-heading: var(--font-dancing-script);
+
   /* Gold Palette mapping */
   --color-gold-300: var(--gold-300);
   --color-gold-400: var(--gold-400);

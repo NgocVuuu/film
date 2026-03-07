@@ -8,7 +8,11 @@ const { attachProgressToMovies } = require('../utils/movieUtils');
 const { syncSpecificMovie } = require('../crawler');
 
 // Rewrite NC (NguonC) m3u8 links to go through server proxy to bypass ISP blocking
-const NC_PROXY_DOMAINS = ['sing.phimmoi.net', 'streamc.xyz', 'phimmoi.net'];
+// Matches any subdomain of these blocked domains
+const NC_PROXY_DOMAINS = ['phimmoi.net', 'streamc.xyz', 'nguonc.com'];
+function isNcProxyDomain(hostname) {
+    return NC_PROXY_DOMAINS.some(d => hostname === d || hostname.endsWith('.' + d));
+}
 function proxyNcEpisodes(movie, req) {
     if (!movie || !movie.episodes) return movie;
     const host = `${req.protocol}://${req.get('host')}`;
@@ -16,23 +20,22 @@ function proxyNcEpisodes(movie, req) {
     const movieObj = movie.toObject ? movie.toObject() : (typeof movie === 'object' ? JSON.parse(JSON.stringify(movie)) : movie);
     const episodes = (movieObj.episodes || []).map(server => {
         const serverObj = server.toObject ? server.toObject() : { ...server };
-        if (!serverObj.server_name || !serverObj.server_name.startsWith('NC -')) return serverObj;
-        return {
-            ...serverObj,
-            server_data: (serverObj.server_data || []).map(ep => {
-                const epObj = ep.toObject ? ep.toObject() : { ...ep };
-                let m3u8 = epObj.link_m3u8;
-                if (m3u8) {
-                    try {
-                        const u = new URL(m3u8);
-                        if (NC_PROXY_DOMAINS.some(d => u.hostname === d || u.hostname.endsWith('.' + d))) {
-                            m3u8 = `${host}/api/proxy/m3u8?url=${encodeURIComponent(m3u8)}`;
-                        }
-                    } catch (_) {}
-                }
-                return { ...epObj, link_m3u8: m3u8 };
-            })
-        };
+        // Rewrite ALL servers whose link_m3u8 points to a blocked CDN domain
+        // (not just NC- prefixed ones, in case server_name format varies)
+        const newData = (serverObj.server_data || []).map(ep => {
+            const epObj = ep.toObject ? ep.toObject() : { ...ep };
+            let m3u8 = epObj.link_m3u8;
+            if (m3u8) {
+                try {
+                    const u = new URL(m3u8);
+                    if (isNcProxyDomain(u.hostname)) {
+                        m3u8 = `${host}/api/proxy/m3u8?url=${encodeURIComponent(m3u8)}`;
+                    }
+                } catch (_) {}
+            }
+            return { ...epObj, link_m3u8: m3u8 };
+        });
+        return { ...serverObj, server_data: newData };
     });
     return { ...movieObj, episodes };
 }

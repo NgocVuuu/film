@@ -165,13 +165,13 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                         #{currentIndex + 1} Phim Nổi Bật
                     </span>
 
-                    <h1 className="text-xl md:text-3xl lg:text-5xl font-black leading-tight text-white drop-shadow-2xl font-heading line-clamp-2">
+                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-black leading-snug font-heading line-clamp-3 text-balance bg-gradient-to-b from-white via-amber-100 to-amber-400 bg-clip-text text-transparent [filter:drop-shadow(0_2px_12px_rgba(0,0,0,1))_drop-shadow(0_0_30px_rgba(234,179,8,0.25))]">
                         {currentMovie.name}
                     </h1>
 
-                    <p className="text-lg md:text-2xl text-gray-200 font-light tracking-wide flex items-center gap-3">
+                    <p className="text-sm md:text-base text-gray-400 font-light tracking-wide flex items-center gap-3">
                         {currentMovie.origin_name}
-                        <span className="text-primary font-bold text-base md:text-xl">({currentMovie.year})</span>
+                        <span className="text-primary font-bold text-xs md:text-sm">({currentMovie.year})</span>
                         {currentMovie.episode_current && (
                             <span className="text-gold-400 font-bold text-sm md:text-lg border border-gold-500/30 px-3 py-1 rounded-lg whitespace-nowrap bg-black/40 backdrop-blur-sm shadow-sm">
                                 {currentMovie.episode_current}
