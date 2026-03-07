@@ -842,15 +842,9 @@ export default function VideoPlayer({
         const isNC = serverName?.startsWith('NC -');
         if (isNC) {
             return (
-                <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center border border-border rounded-lg gap-4 p-6 text-center">
-                    <p className="text-yellow-400 font-semibold">Nguồn NguonC không hỗ trợ xem trực tiếp</p>
-                    <p className="text-gray-400 text-sm">Server này chặn nhúng từ trang ngoài. Vui lòng chuyển sang nguồn KKPhim hoặc Ophim.</p>
-                    {embedUrl && (
-                        <a href={embedUrl} target="_blank" rel="noopener noreferrer"
-                            className="px-4 py-2 bg-primary text-black rounded font-medium text-sm hover:bg-primary/80">
-                            Mở trong tab mới
-                        </a>
-                    )}
+                <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center border border-border rounded-lg gap-2 p-6 text-center">
+                    <p className="text-yellow-400 font-semibold">Server này không khả dụng</p>
+                    <p className="text-gray-400 text-sm">Vui lòng chuyển sang server KKPhim hoặc Ophim.</p>
                 </div>
             );
         }
