@@ -7,7 +7,6 @@ import { ReportModal } from '@/components/ReportModal';
 import { CommentSection } from '@/components/CommentSection';
 import { DonateButton } from '@/components/DonateButton';
 import Link from 'next/link';
-import { API_URL } from '@/lib/config';
 
 export const runtime = 'edge';
 import { PWAAds } from '@/components/PWAAds';
@@ -61,10 +60,7 @@ export default function WatchPage() {
     const [startTime, setStartTime] = useState<number>(0);
     const [playerTime, setPlayerTime] = useState<number>(0);
 
-    // Resolved NC source (streamc.xyz → real m3u8 via proxy)
-    // null = not yet resolved (or resolving), string = resolved URL (empty string = resolution failed)
-    const [resolvedNcSrc, setResolvedNcSrc] = useState<string | null>(null);
-    const [resolvingNc, setResolvingNc] = useState(false);
+
 
     // Source State
     const [availableSources, setAvailableSources] = useState<string[]>([]);
@@ -311,9 +307,6 @@ export default function WatchPage() {
         setViewingServerName(serverName);
         setCurrentEpisode(episode);
         setShouldAutoPlay(true);
-        // Reset NC resolution state when switching episodes
-        setResolvedNcSrc(null);
-        setResolvingNc(false);
 
         // Restore time if switching versions of the same episode
         if (isSameEpisode) {
@@ -329,47 +322,7 @@ export default function WatchPage() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Resolve NC embed URL → real m3u8
-    // Browser fetch trực tiếp từ client (residential IP) → streamc.xyz không chặn
-    // Server/Cloudflare Worker đều bị 403 vì datacenter IP bị block
-    useEffect(() => {
-        const isNC = currentServerName.startsWith('NC -');
-        if (!currentEpisode || !isNC || !currentEpisode.link_embed) {
-            setResolvedNcSrc(null);
-            setResolvingNc(false);
-            return;
-        }
-        let cancelled = false;
-        setResolvingNc(true);
-        setResolvedNcSrc(null);
 
-        // Fetch embed page trực tiếp từ browser (không qua server/worker)
-        fetch(currentEpisode.link_embed, {
-            mode: 'cors',
-            credentials: 'omit',
-            headers: {
-                'Accept': 'text/html,*/*',
-                'Referer': 'https://phim.nguonc.com/',
-            }
-        })
-        .then(r => r.text())
-        .then(html => {
-            if (cancelled) return;
-            const obfMatch = html.match(/data-obf="([^"]+)"/);
-            if (!obfMatch) { setResolvedNcSrc(''); return; }
-            const outerDecoded = JSON.parse(atob(obfMatch[1]));
-            const sUb = outerDecoded.sUb;
-            if (!sUb) { setResolvedNcSrc(''); return; }
-            const embedHost = new URL(currentEpisode.link_embed).origin;
-            const m3u8Url = `${embedHost}/${sUb}.m3u8`;
-            // Wrap qua proxy server để có CORS header khi HLS player fetch segments
-            setResolvedNcSrc(`${API_URL}/api/proxy/m3u8?url=${encodeURIComponent(m3u8Url)}`);
-        })
-        .catch(() => { if (!cancelled) setResolvedNcSrc(''); })
-        .finally(() => { if (!cancelled) setResolvingNc(false); });
-
-        return () => { cancelled = true; };
-    }, [currentEpisode?.link_embed, currentServerName]);
 
     const handleSourceChange = (newSource: string) => {
         if (newSource === currentSource) return;
@@ -493,14 +446,20 @@ export default function WatchPage() {
 
                     <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (
-                            resolvingNc ? (
-                                <div className="w-full h-full flex items-center justify-center bg-black rounded-xl">
-                                    <p className="text-gray-400 text-sm animate-pulse">Đang kết nối server...</p>
-                                </div>
+                            currentServerName.startsWith('NC -') && currentEpisode.link_embed ? (
+                                <iframe
+                                    key={`${currentEpisode.slug}-${currentServerName}`}
+                                    src={currentEpisode.link_embed}
+                                    className="w-full h-full"
+                                    allow="autoplay; fullscreen"
+                                    allowFullScreen
+                                    scrolling="no"
+                                    frameBorder="0"
+                                />
                             ) : (
                             <VideoPlayer
                                 key={`${currentEpisode.slug}-${currentServerName}`}
-                                src={currentServerName.startsWith('NC -') ? (resolvedNcSrc || '') : currentEpisode.link_m3u8}
+                                src={currentEpisode.link_m3u8}
                                 poster={movie.poster_url}
                                 embedUrl={currentEpisode.link_embed}
                                 autoPlay={shouldAutoPlay}
@@ -538,11 +497,6 @@ export default function WatchPage() {
                                     const ep = server?.server_data.find((e: { slug: string }) => e.slug === episodeSlug);
                                     if (ep) handleEpisodeClick(serverName, ep);
                                 }}
-                                onError={currentSource === 'NguonC' ? () => {
-                                    // Auto-switch to next available source when NC fails
-                                    const fallback = availableSources.find(s => s !== 'NguonC');
-                                    if (fallback) handleSourceChange(fallback);
-                                } : undefined}
                             />
                             )
                         ) : (
