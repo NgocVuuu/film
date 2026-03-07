@@ -329,7 +329,10 @@ export default function WatchPage() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Resolve NC embed URL → real m3u8 via server proxy (avoids dead phimmoi CDN)
+    // Resolve NC embed URL → real m3u8
+    // Gọi Cloudflare Worker trực tiếp (tránh Railway 502 + CORS issue)
+    // Worker URL: nc-resolver.ngocvu14-3-2001.workers.dev
+    const CF_WORKER_URL = 'https://nc-resolver.ngocvu14-3-2001.workers.dev';
     useEffect(() => {
         const isNC = currentServerName.startsWith('NC -');
         if (!currentEpisode || !isNC || !currentEpisode.link_embed) {
@@ -340,9 +343,19 @@ export default function WatchPage() {
         let cancelled = false;
         setResolvingNc(true);
         setResolvedNcSrc(null);
-        fetch(`${API_URL}/api/proxy/resolve-nc?embed=${encodeURIComponent(currentEpisode.link_embed)}`)
+        // Gọi Worker trực tiếp → Worker trả m3u8Url thô → client tự wrap qua proxy Railway
+        fetch(`${CF_WORKER_URL}?embed=${encodeURIComponent(currentEpisode.link_embed)}`)
             .then(r => r.json())
-            .then(data => { if (!cancelled) setResolvedNcSrc(data.m3u8 || ''); })
+            .then(data => {
+                if (!cancelled) {
+                    if (data.m3u8Url) {
+                        // Wrap qua proxy server để có CORS + bypass CDN block
+                        setResolvedNcSrc(`${API_URL}/api/proxy/m3u8?url=${encodeURIComponent(data.m3u8Url)}`);
+                    } else {
+                        setResolvedNcSrc('');
+                    }
+                }
+            })
             .catch(() => { if (!cancelled) setResolvedNcSrc(''); })
             .finally(() => { if (!cancelled) setResolvingNc(false); });
         return () => { cancelled = true; };
