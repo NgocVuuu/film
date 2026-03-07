@@ -5,9 +5,37 @@ const NodeCache = require('node-cache');
 const searchCache = new NodeCache({ stdTTL: 1200 }); // 20 minutes search cache
 
 const { attachProgressToMovies } = require('../utils/movieUtils');
-// Delay import to avoid circular dependency if any, but since we only need syncSpecificMovie
-// it might be safer to define a simple helper or use it directly
 const { syncSpecificMovie } = require('../crawler');
+
+// Rewrite NC (NguonC) m3u8 links to go through server proxy to bypass ISP blocking
+const NC_PROXY_DOMAINS = ['sing.phimmoi.net', 'streamc.xyz', 'phimmoi.net'];
+function proxyNcEpisodes(movie, req) {
+    if (!movie || !movie.episodes) return movie;
+    const host = `${req.protocol}://${req.get('host')}`;
+    // Always convert to plain object first
+    const movieObj = movie.toObject ? movie.toObject() : (typeof movie === 'object' ? JSON.parse(JSON.stringify(movie)) : movie);
+    const episodes = (movieObj.episodes || []).map(server => {
+        const serverObj = server.toObject ? server.toObject() : { ...server };
+        if (!serverObj.server_name || !serverObj.server_name.startsWith('NC -')) return serverObj;
+        return {
+            ...serverObj,
+            server_data: (serverObj.server_data || []).map(ep => {
+                const epObj = ep.toObject ? ep.toObject() : { ...ep };
+                let m3u8 = epObj.link_m3u8;
+                if (m3u8) {
+                    try {
+                        const u = new URL(m3u8);
+                        if (NC_PROXY_DOMAINS.some(d => u.hostname === d || u.hostname.endsWith('.' + d))) {
+                            m3u8 = `${host}/api/proxy/m3u8?url=${encodeURIComponent(m3u8)}`;
+                        }
+                    } catch (_) {}
+                }
+                return { ...epObj, link_m3u8: m3u8 };
+            })
+        };
+    });
+    return { ...movieObj, episodes };
+}
 
 const multiSourceSearch = async (keyword) => {
     const cacheKey = `search_${keyword}`;
@@ -599,6 +627,9 @@ const getMovieDetail = async (req, res) => {
                 console.error('Error attaching progress in getMovieDetail:', error);
             }
         }
+
+        // Rewrite NC m3u8 links through server proxy
+        movieData = proxyNcEpisodes(movieData, req);
 
         res.json({ success: true, data: movieData, related });
     } catch (err) {

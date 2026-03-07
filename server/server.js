@@ -29,6 +29,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const movieListRoutes = require('./routes/movieListRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const proxyRoutes = require('./routes/proxyRoutes');
 const ChatConversation = require('./models/ChatConversation');
 const ChatMessage = require('./models/ChatMessage');
 const User = require('./models/User');
@@ -317,6 +318,7 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/proxy', proxyRoutes);
 
 // Error Handler (Last Middleware)
 app.use(errorHandler);

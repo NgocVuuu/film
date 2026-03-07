@@ -155,15 +155,47 @@ const ADAPTERS = {
                     }))
                 }));
 
-                // Extract year from category if top level is missing
+                // NGUONC category is an object with numeric keys, e.g.:
+                // { "0": { group: { name: "Thể loại" }, list: [{id, name, slug}] }, "1": { group: { name: "Năm" }, ... } }
+                // Normalize it to the standard array format: [{id, name, slug}]
                 let year = movie.year;
-                if (!year && movie.category) {
-                    // Category is an object with numeric keys or an array
-                    const catObj = movie.category;
-                    const yearGroup = Object.values(catObj).find(g => g.group && g.group.name === 'Năm');
-                    if (yearGroup && yearGroup.list && yearGroup.list.length > 0) {
-                        year = parseInt(yearGroup.list[0].name);
+                let normalizedCategory = [];
+                if (movie.category && typeof movie.category === 'object' && !Array.isArray(movie.category)) {
+                    const catValues = Object.values(movie.category);
+                    // Extract year from "Năm" group if missing
+                    if (!year) {
+                        const yearGroup = catValues.find(g => g.group && g.group.name === 'Năm');
+                        if (yearGroup && yearGroup.list && yearGroup.list.length > 0) {
+                            year = parseInt(yearGroup.list[0].name);
+                        }
                     }
+                    // Extract genres from "Thể loại" group
+                    const genreGroup = catValues.find(g => g.group && g.group.name === 'Thể loại');
+                    if (genreGroup && genreGroup.list) {
+                        normalizedCategory = genreGroup.list.map(item => {
+                            let slug = item.slug || null;
+                            // Infer slug from name if missing
+                            if (!slug && item.name) {
+                                const slugMap = {
+                                    'Hành Động': 'hanh-dong', 'Tình Cảm': 'tinh-cam', 'Hài Hước': 'hai-huoc',
+                                    'Phim Hài': 'hai-huoc', 'Hoạt Hình': 'hoat-hinh', 'Kinh Dị': 'kinh-di',
+                                    'Viễn Tưởng': 'vien-tuong', 'Khoa Học Viễn Tưởng': 'khoa-hoc-vien-tuong',
+                                    'Phiêu Lưu': 'phieu-luu', 'Bí Ẩn': 'bi-an', 'Gây Cấn': 'gay-can',
+                                    'Chính Kịch': 'chinh-kich', 'Tâm Lý': 'tam-ly', 'Cổ Trang': 'co-trang',
+                                    'Võ Thuật': 'vo-thuat', 'Lịch Sử': 'lich-su', 'Chiến Tranh': 'chien-tranh',
+                                    'Gia Đình': 'gia-dinh', 'Lãng Mạn': 'lang-man', 'Tài Liệu': 'tai-lieu',
+                                    'Hình Sự': 'hinh-su', 'Giả Tưởng': 'gia-tuong', 'Phim 18+': 'phim-18',
+                                    'Phim Nhạc': 'am-nhac', 'Âm Nhạc': 'am-nhac',
+                                };
+                                slug = slugMap[item.name] || item.name.toLowerCase()
+                                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                                    .replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                            }
+                            return { id: item.id, name: item.name, slug };
+                        });
+                    }
+                } else if (Array.isArray(movie.category)) {
+                    normalizedCategory = movie.category;
                 }
 
                 const normalizedMovie = {
@@ -171,6 +203,8 @@ const ADAPTERS = {
                     origin_name: movie.original_name,
                     thumb_url: movie.thumb_url,
                     poster_url: movie.poster_url,
+                    category: normalizedCategory,
+                    year: year || movie.year,
                 };
 
                 return { movie: normalizedMovie, episodes };
