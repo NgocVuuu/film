@@ -477,7 +477,7 @@ export default function WatchPage() {
                             ) : (
                             <VideoPlayer
                                 key={`${currentEpisode.slug}-${currentServerName}`}
-                                src={resolvedNcSrc || currentEpisode.link_m3u8}
+                                src={currentServerName.startsWith('NC -') ? (resolvedNcSrc || '') : currentEpisode.link_m3u8}
                                 poster={movie.poster_url}
                                 embedUrl={currentEpisode.link_embed}
                                 autoPlay={shouldAutoPlay}

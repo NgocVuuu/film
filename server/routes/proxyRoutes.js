@@ -143,6 +143,15 @@ const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
  * Resolves a streamc.xyz embed URL to a real HLS m3u8 URL (bypassing dead phimmoi CDN)
  */
 router.get('/resolve-nc', async (req, res) => {
+    // Belt-and-suspenders CORS: ensure headers are present even on error responses
+    // (Railway/Render proxy may return its own 502 without passing through cors() middleware)
+    const reqOrigin = req.get('origin');
+    const corsAllowed = ['https://pchill.online', 'https://film-xt3.pages.dev', 'http://localhost:3000'];
+    if (reqOrigin && corsAllowed.includes(reqOrigin)) {
+        res.header('Access-Control-Allow-Origin', reqOrigin);
+        res.header('Access-Control-Allow-Credentials', 'true');
+    }
+
     const embedUrl = req.query.embed;
     if (!embedUrl) return res.status(400).json({ error: 'Missing embed parameter' });
 
@@ -165,7 +174,7 @@ router.get('/resolve-nc', async (req, res) => {
 
     try {
         const html = await axios.get(embedUrl, {
-            timeout: 10000,
+            timeout: 7000,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
                 'Referer': 'https://phim.nguonc.com/',
