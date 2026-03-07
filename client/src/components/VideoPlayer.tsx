@@ -42,6 +42,7 @@ interface VideoPlayerProps {
     onNextEpisode?: () => void;
     onPrevEpisode?: () => void;
     onTimeUpdate?: (time: number) => void;
+    onError?: () => void;  // Callback when video fails to load (e.g. NC CDN blocked)
     // In-player episode panel
     episodeServers?: {
         server_name: string;
@@ -85,6 +86,7 @@ export default function VideoPlayer({
     onTimeUpdate,
     episodeServers,
     onEpisodeSelect,
+    onError,
 }: VideoPlayerProps) {
     const { user } = useAuth();
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -841,6 +843,12 @@ export default function VideoPlayer({
     if (error || (useEmbed && embedUrl)) {
         const isNC = serverName?.startsWith('NC -');
         if (isNC) {
+            // If parent provided a fallback handler, call it silently (auto-switch source)
+            if (onError) {
+                onError();
+                // Render nothing while parent switches
+                return <div className="w-full h-full bg-black" />;
+            }
             return (
                 <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center border border-border rounded-lg gap-2 p-6 text-center">
                     <p className="text-yellow-400 font-semibold">Server này không khả dụng</p>

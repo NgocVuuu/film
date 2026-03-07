@@ -483,6 +483,11 @@ export default function WatchPage() {
                                     const ep = server?.server_data.find((e: { slug: string }) => e.slug === episodeSlug);
                                     if (ep) handleEpisodeClick(serverName, ep);
                                 }}
+                                onError={currentSource === 'NguonC' ? () => {
+                                    // Auto-switch to next available source when NC fails
+                                    const fallback = availableSources.find(s => s !== 'NguonC');
+                                    if (fallback) handleSourceChange(fallback);
+                                } : undefined}
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-surface-900">
