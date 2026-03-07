@@ -96,6 +96,8 @@ export default function VideoPlayer({
     // Track previous episode/movie to detect changes
     const prevEpisodeRef = useRef<{ movie: string, episode: string } | null>(null);
     const savedTimeRef = useRef<number>(0);
+    // Prevent onError from firing multiple times for the same src
+    const onErrorFiredRef = useRef(false);
 
     // State
     const [isPlaying, setIsPlaying] = useState(false);
@@ -518,6 +520,14 @@ export default function VideoPlayer({
 
     // -- HLS & Init --
 
+    // Call onError safely after render (not during render) to avoid infinite re-render loops
+    useEffect(() => {
+        if (error && onError && serverName?.startsWith('NC -') && !onErrorFiredRef.current) {
+            onErrorFiredRef.current = true;
+            onError();
+        }
+    }, [error, onError, serverName]);
+
     // Track view for anonymous users
     useEffect(() => {
         if (!user && movieSlug && episodeSlug) {
@@ -556,6 +566,7 @@ export default function VideoPlayer({
         }
 
         setError(false);
+        onErrorFiredRef.current = false;
         setIsLoading(true);
         let hls: Hls;
 
@@ -843,10 +854,8 @@ export default function VideoPlayer({
     if (error || (useEmbed && embedUrl)) {
         const isNC = serverName?.startsWith('NC -');
         if (isNC) {
-            // If parent provided a fallback handler, call it silently (auto-switch source)
+            // onError is called via useEffect (not during render) to avoid infinite loops
             if (onError) {
-                onError();
-                // Render nothing while parent switches
                 return <div className="w-full h-full bg-black" />;
             }
             return (
