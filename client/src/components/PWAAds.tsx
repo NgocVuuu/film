@@ -27,11 +27,28 @@ export function PWAAds({ variant = 'home' }: PWAAdsProps) {
 
     const isPremium = user?.isPremium;
 
+    // Dimensions cho atOptions theo từng variant
+    const adDimensions =
+        variant === 'watch'  ? { width: 728, height: 90  } :
+        variant === 'inline' ? { width: 320, height: 50  } :
+                               { width: 300, height: 250 };
+
     // Chờ auth resolve xong mới inject — tránh inject cho premium user
     useEffect(() => {
         if (loading || isPremium || !scriptSrc || !containerRef.current || loaded) return;
         setLoaded(true);
 
+        // Extract key từ URL: //www.highperformanceformat.com/{key}/invoke.js
+        const key = scriptSrc.match(/\/([a-f0-9]{32})\//)?.[1];
+
+        // Script 1: atOptions config (bắt buộc với Adsterra Banner)
+        if (key) {
+            const optScript = document.createElement('script');
+            optScript.text = `atOptions = {'key':'${key}','format':'iframe','height':${adDimensions.height},'width':${adDimensions.width},'params':{}};`;
+            containerRef.current.appendChild(optScript);
+        }
+
+        // Script 2: invoke.js
         const script = document.createElement('script');
         script.src = scriptSrc;
         script.async = true;
