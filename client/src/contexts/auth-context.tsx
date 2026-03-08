@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { setAuthToken, removeAuthToken, customFetch } from '@/lib/api';
+import { setAuthToken, removeAuthToken, customFetch, getAuthToken } from '@/lib/api';
 
 interface User {
     id: string;
