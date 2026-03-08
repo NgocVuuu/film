@@ -46,9 +46,11 @@ export const customFetch = async (endpoint: string, options: FetchOptions = {}) 
         headers
     });
 
-    // Intercept 401 (Unauthorized) & 403 (Forbidden) for global PWA handling
+    // Intercept 401/403 — chỉ redirect khi user đang có token (session thực sự expired)
+    // Nếu không có token → guest bình thường, không redirect
     if (response.status === 401 || response.status === 403) {
-        if (typeof window !== 'undefined') {
+        const existingToken = getAuthToken();
+        if (existingToken && typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('auth:expired'));
         }
     }
