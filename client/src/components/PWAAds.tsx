@@ -1,60 +1,92 @@
 'use client';
 
-import { X, Crown, Sparkles } from 'lucide-react';
-import { useState } from 'react';
-import { Button } from './ui/button';
-import Link from 'next/link';
-
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 
-export function PWAAds() {
-    return null; // Banner removed as per request
-    const { user } = useAuth();
-    const [isVisible, setIsVisible] = useState(true);
+// ── Cấu hình qua env vars ─────────────────────────────────────────────────────
+// NEXT_PUBLIC_AD_WATCH_SCRIPT   — Adsterra script URL cho watch page (nhỏ, trên player)
+// NEXT_PUBLIC_AD_HOME_SCRIPT    — Adsterra script URL cho home page (dưới cùng)
+// NEXT_PUBLIC_AD_INLINE_SCRIPT  — Adsterra script URL cho các trang danh sách / chi tiết
+// ─────────────────────────────────────────────────────────────────────────────
 
-    if (!isVisible || user?.isPremium) return null;
+export type AdVariant = 'watch' | 'home' | 'inline';
 
-    return (
-        <div className="mx-4 mt-2 mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="relative overflow-hidden rounded-xl bg-linear-to-r from-surface-900 to-surface-800 border border-yellow-500/20 shadow-xl">
-                {/* Decorative background elements */}
-                <div className="absolute -top-4 -right-4 w-24 h-24 bg-yellow-500/10 rounded-full blur-2xl"></div>
+interface PWAAdsProps {
+    variant?: AdVariant;
+}
 
-                <button
-                    onClick={() => setIsVisible(false)}
-                    className="absolute top-2 right-2 p-1 text-gray-500 hover:text-white transition-colors z-10"
-                >
-                    <X className="w-4 h-4" />
-                </button>
+export function PWAAds({ variant = 'home' }: PWAAdsProps) {
+    const { user, loading } = useAuth();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [loaded, setLoaded] = useState(false);
 
-                <div className="p-4 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0 border border-yellow-500/30">
-                        <Crown className="w-6 h-6 text-yellow-500" />
-                    </div>
+    const scriptSrc =
+        variant === 'watch'  ? process.env.NEXT_PUBLIC_AD_WATCH_SCRIPT :
+        variant === 'inline' ? process.env.NEXT_PUBLIC_AD_INLINE_SCRIPT :
+                               process.env.NEXT_PUBLIC_AD_HOME_SCRIPT;
 
-                    <div className="flex-1 min-w-0 font-vietnamese">
-                        <h4 className="text-sm font-bold text-white flex items-center gap-1.5 leading-tight mb-0.5 font-vietnamese">
-                            Lên đời Premium, &apos;Buff&apos; App cực đỉnh! <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-                        </h4>
-                        <p className="text-[11px] text-gray-400 leading-tight font-vietnamese">
-                            Nâng cấp ngay để &apos;thay áo&apos; ánh kim sang trọng, xóa mọi quảng cáo và nhận tin phim hot tức thì sếp ơi!
-                        </p>
-                    </div>
+    const isPremium = user?.isPremium;
 
-                    {/* Hidden: Nâng cấp button */}
-                    {false && (
-                        <Link href="/pricing" className="shrink-0">
-                            <Button
-                                size="sm"
-                                className="bg-yellow-500 hover:bg-yellow-600 text-black text-xs font-bold h-8 px-3 rounded-lg shadow-lg shadow-yellow-500/20"
-                            >
-                                Nâng cấp
-                            </Button>
-                        </Link>
-                    )}
+    // Chờ auth resolve xong mới inject — tránh inject cho premium user
+    useEffect(() => {
+        if (loading || isPremium || !scriptSrc || !containerRef.current || loaded) return;
+        setLoaded(true);
 
-                </div>
+        const script = document.createElement('script');
+        script.src = scriptSrc;
+        script.async = true;
+        script.setAttribute('data-cfasync', 'false');
+        containerRef.current.appendChild(script);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading]);
+
+    // Placeholder: hiện khi đang load auth, khi Premium, hoặc chưa cấu hình script
+    const showPlaceholder = loading || isPremium || !scriptSrc;
+
+    if (variant === 'watch') {
+        return (
+            <div
+                ref={showPlaceholder ? undefined : containerRef}
+                className="w-full overflow-hidden rounded-lg bg-white/5 border border-dashed border-white/15 min-h-12.5 flex items-center justify-center"
+                aria-label="Advertisement"
+            >
+                {showPlaceholder && (
+                    <span className="text-[11px] font-semibold tracking-widest uppercase text-white/30 select-none">
+                        — AD · watch —
+                    </span>
+                )}
             </div>
+        );
+    }
+
+    if (variant === 'inline') {
+        return (
+            <div
+                ref={showPlaceholder ? undefined : containerRef}
+                className="w-full overflow-hidden rounded-xl border border-dashed border-white/15 bg-white/5 min-h-16 flex items-center justify-center my-4"
+                aria-label="Advertisement"
+            >
+                {showPlaceholder && (
+                    <span className="text-xs font-semibold tracking-widest uppercase text-white/30 select-none">
+                        — AD · inline —
+                    </span>
+                )}
+            </div>
+        );
+    }
+
+    // Home page bottom
+    return (
+        <div
+            ref={showPlaceholder ? undefined : containerRef}
+                className="w-full overflow-hidden rounded-xl border border-dashed border-white/15 bg-white/5 min-h-22.5 flex items-center justify-center mx-auto max-w-4xl"
+            aria-label="Advertisement"
+        >
+            {showPlaceholder && (
+                <span className="text-xs font-semibold tracking-widest uppercase text-white/30 select-none">
+                    — AD · home —
+                </span>
+            )}
         </div>
     );
 }

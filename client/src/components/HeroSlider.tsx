@@ -165,7 +165,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                         #{currentIndex + 1} Phim Nổi Bật
                     </span>
 
-                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-black leading-snug font-heading line-clamp-3 text-balance bg-gradient-to-b from-white via-amber-100 to-amber-400 bg-clip-text text-transparent [filter:drop-shadow(0_2px_12px_rgba(0,0,0,1))_drop-shadow(0_0_30px_rgba(234,179,8,0.25))]">
+                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-black leading-snug font-heading line-clamp-3 text-balance bg-linear-to-b from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter-[drop-shadow(0_2px_12px_rgba(0,0,0,1))_drop-shadow(0_0_30px_rgba(234,179,8,0.25))]">
                         {currentMovie.name}
                     </h1>
 

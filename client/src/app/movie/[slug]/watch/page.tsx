@@ -465,7 +465,7 @@ export default function WatchPage() {
 
                     {/* AD BANNER (Non-Premium) */}
                     <div className="mb-4">
-                        <PWAAds />
+                        <PWAAds variant="watch" />
                     </div>
 
                     <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
@@ -676,7 +676,7 @@ export default function WatchPage() {
 
             {/* Comments Section */}
             {movie && (
-                <div className="max-w-screen-xl mx-auto w-full px-4 md:px-6 pb-12">
+                <div className="max-w-7xl mx-auto w-full px-4 md:px-6 pb-12">
                     <CommentSection
                         movieSlug={movie.slug}
                         episodeName={currentEpisode?.name}

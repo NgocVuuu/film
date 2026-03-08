@@ -7,6 +7,7 @@ import MainLayout from "@/components/MainLayout";
 import { ToastProvider } from "@/components/toast-provider";
 import { AuthProvider } from "@/contexts/auth-context";
 import ChatWidget from "@/components/ChatWidget";
+import { AdInterstitial } from "@/components/AdInterstitial";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -109,6 +110,9 @@ export default function RootLayout({
           </MainLayout>
           <Suspense fallback={null}>
             <ChatWidget />
+          </Suspense>
+          <Suspense fallback={null}>
+            <AdInterstitial />
           </Suspense>
           <ToastProvider />
         </AuthProvider>

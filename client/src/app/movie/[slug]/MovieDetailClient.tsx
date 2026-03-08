@@ -2,14 +2,143 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Play, Calendar, Star, Clock, Info, ListPlus, Share2 } from 'lucide-react';
+import { Play, Calendar, Star, Clock, Info, ListPlus, Share2, Download, FolderOpen, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommentSection } from '@/components/CommentSection';
 import { AddToListModal } from '@/components/AddToListModal';
 import { useAuth } from '@/contexts/auth-context';
 import { usePWA } from '@/hooks/usePWA';
 import { API_URL } from '@/lib/config';
+import { PWAAds } from '@/components/PWAAds';
 import { getAuthToken } from '@/lib/api';
+
+// ── Download Section Component ─────────────────────────────────────────────────
+type DLFile = { filename?: string; size?: string; host: string; url: string };
+type DLGroup = { episode: string; quality: string; files: DLFile[] };
+
+const HOST_COLORS: Record<string, string> = {
+    'pixeldrain.com': 'bg-blue-600',
+    'gofile.io': 'bg-green-600',
+    'send.cm': 'bg-purple-600',
+    'send.now': 'bg-orange-600',
+};
+
+function DownloadSection({ slug, links }: { slug: string; links: DLGroup[] }) {
+    const episodes = Array.from(new Set(links.map(g => g.episode)));
+    const qualities = Array.from(new Set(links.map(g => g.quality)));
+
+    const [selEpisode, setSelEpisode] = useState<string>('all');
+    const [selQuality, setSelQuality] = useState<string>('all');
+    const [selHost, setSelHost] = useState<string>('all');
+
+    const filtered = links.filter(g =>
+        (selEpisode === 'all' || g.episode === selEpisode) &&
+        (selQuality === 'all' || g.quality === selQuality)
+    );
+
+    const allHosts = Array.from(new Set(filtered.flatMap(g => g.files.map(f => f.host))));
+
+    const groups = filtered.map(g => ({
+        ...g,
+        files: g.files.filter(f => selHost === 'all' || f.host === selHost)
+    })).filter(g => g.files.length > 0);
+
+    const buildUrl = (g: DLGroup, idx: number) =>
+        `${API_URL}/api/download/go?slug=${encodeURIComponent(slug)}&episode=${encodeURIComponent(g.episode)}&quality=${encodeURIComponent(g.quality)}&idx=${idx}`;
+
+    return (
+        <div>
+            <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                <Download className="w-6 h-6 text-primary" />
+                Link Tải Phim
+            </h3>
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4 mb-6">
+                {/* Episode filter */}
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold uppercase text-blue-400 tracking-widest">Filter by Episode</label>
+                    <select
+                        value={selEpisode}
+                        onChange={e => setSelEpisode(e.target.value)}
+                        className="bg-surface-800 border border-white/10 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary min-w-40"
+                    >
+                        <option value="all">All Episodes</option>
+                        {episodes.map(ep => <option key={ep} value={ep}>{ep}</option>)}
+                    </select>
+                </div>
+
+                {/* Host filter */}
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold uppercase text-blue-400 tracking-widest">Filter by Host</label>
+                    <select
+                        value={selHost}
+                        onChange={e => setSelHost(e.target.value)}
+                        className="bg-surface-800 border border-white/10 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary min-w-40"
+                    >
+                        <option value="all">All Hosts</option>
+                        {allHosts.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                </div>
+
+                {/* Quality filter */}
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold uppercase text-blue-400 tracking-widest">Filter by Quality</label>
+                    <select
+                        value={selQuality}
+                        onChange={e => setSelQuality(e.target.value)}
+                        className="bg-surface-800 border border-white/10 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary min-w-40"
+                    >
+                        <option value="all">All Quality</option>
+                        {qualities.map(q => <option key={q} value={q}>{q}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            {/* File Groups */}
+            <div className="space-y-3">
+                {groups.length === 0 && (
+                    <p className="text-gray-500 text-sm">Không có link phù hợp.</p>
+                )}
+                {groups.map((g, gi) => (
+                    <div key={gi} className="bg-surface-800 rounded-xl border border-white/10 overflow-hidden">
+                        <div className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border-b border-white/10">
+                            <FolderOpen className="w-4 h-4 text-blue-400" />
+                            <span className="text-sm font-bold text-blue-300">{g.episode}</span>
+                            <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-bold">{g.quality}</span>
+                        </div>
+                        <div className="divide-y divide-white/5">
+                            {g.files.map((f, fi) => (
+                                <div key={fi} className="flex items-center gap-3 px-4 py-3">
+                                    <Server className="w-4 h-4 text-gray-500 shrink-0" />
+                                    <span className="text-sm text-gray-300 flex-1 truncate">
+                                        {f.filename || `${g.episode} ${g.quality}`}
+                                    </span>
+                                    <span className={`text-[11px] px-2 py-0.5 rounded text-white font-medium shrink-0 ${HOST_COLORS[f.host] || 'bg-gray-600'}`}>
+                                        {f.host}
+                                    </span>
+                                    {f.size && (
+                                        <span className="text-xs text-gray-500 shrink-0">{f.size}</span>
+                                    )}
+                                    <a
+                                        href={buildUrl(g, fi)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-colors shrink-0"
+                                    >
+                                        Download
+                                    </a>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 
 // Types
 interface RelatedMovie {
@@ -52,6 +181,11 @@ interface MovieDetail {
     time?: string;
     rating_average?: number;
     rating_count?: number;
+    download_links?: {
+        episode: string;
+        quality: string;
+        files: { filename?: string; size?: string; host: string; url: string }[];
+    }[];
     progress?: {
         currentTime: number;
         duration: number;
@@ -343,43 +477,49 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex flex-wrap gap-4 pt-4 justify-center md:justify-start">
+                                <div className="flex flex-wrap gap-3 pt-4 justify-center md:justify-start">
+                                    {/* XEM NGAY */}
                                     <Button
                                         onClick={handleWatchNow}
-                                        className="h-10 md:h-12 px-6 bg-primary hover:bg-gold-400 text-black text-base md:text-lg font-bold rounded-full shadow-[0_0_30px_rgba(255,215,0,0.3)] hover:shadow-[0_0_50px_rgba(255,215,0,0.5)] transition-all transform hover:scale-105"
+                                        className="group relative h-11 md:h-13 px-8 bg-primary hover:bg-gold-400 text-black text-sm md:text-base font-extrabold rounded-xl shadow-[0_0_24px_rgba(234,179,8,0.45)] hover:shadow-[0_0_40px_rgba(234,179,8,0.65)] transition-all duration-300 hover:scale-[1.04] active:scale-95 overflow-hidden"
                                     >
-                                        <Play fill="black" className="mr-2 w-5 h-5 md:w-6 md:h-6" />
+                                        <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
+                                        <Play fill="black" className="mr-2 w-4 h-4 md:w-5 md:h-5 shrink-0" />
                                         {movie.progress && movie.progress.percentage > 0 && movie.progress.percentage < 100
-                                            ? `XEM TIẾP (Tập ${movie.progress.episodeName})`
+                                            ? `XEM TIẾP · Tập ${movie.progress.episodeName}`
                                             : 'XEM NGAY'}
                                     </Button>
+
+                                    {/* Yêu Thích */}
                                     <Button
                                         variant="outline"
                                         onClick={toggleFavorite}
-                                        className={`h-10 md:h-12 px-6 border-2 border-white/20 hover:bg-white/10 text-white text-base md:text-lg font-bold rounded-full backdrop-blur-sm transition-all ${isFavorite ? 'border-primary text-primary' : ''}`}
+                                        className={`h-11 md:h-13 px-5 border border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10 text-white text-sm md:text-base font-semibold rounded-xl backdrop-blur-sm transition-all duration-200 hover:scale-[1.03] active:scale-95 ${isFavorite ? '!border-primary/60 !text-primary bg-primary/10' : ''}`}
                                     >
-                                        <Star className={`mr-2 w-5 h-5 md:w-6 md:h-6 ${isFavorite ? 'fill-current' : ''}`} />
+                                        <Star className={`mr-2 w-4 h-4 md:w-5 md:h-5 shrink-0 transition-transform ${isFavorite ? 'fill-current scale-110' : ''}`} />
                                         {isFavorite ? 'Đã Thêm' : 'Yêu Thích'}
                                     </Button>
 
+                                    {/* Lưu danh sách */}
                                     {user && (
                                         <Button
                                             variant="outline"
                                             onClick={() => setShowListModal(true)}
-                                            className="h-10 md:h-12 px-6 border-2 border-white/20 hover:bg-white/10 text-white text-base md:text-lg font-bold rounded-full backdrop-blur-sm transition-all"
+                                            className="h-11 md:h-13 px-4 border border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10 text-white rounded-xl backdrop-blur-sm transition-all duration-200 hover:scale-[1.03] active:scale-95"
                                             title="Lưu vào danh sách"
                                         >
-                                            <ListPlus className="w-5 h-5 md:w-6 md:h-6" />
+                                            <ListPlus className="w-4 h-4 md:w-5 md:h-5" />
                                         </Button>
                                     )}
 
+                                    {/* Chia Sẻ */}
                                     <Button
                                         variant="outline"
                                         onClick={handleShare}
-                                        className="h-10 md:h-12 px-6 border-2 border-white/20 hover:bg-white/10 text-white text-base md:text-lg font-bold rounded-full backdrop-blur-sm transition-all"
+                                        className="h-11 md:h-13 px-5 border border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10 text-white text-sm md:text-base font-semibold rounded-xl backdrop-blur-sm transition-all duration-200 hover:scale-[1.03] active:scale-95"
                                         title="Chia sẻ phim"
                                     >
-                                        <Share2 className="mr-2 w-5 h-5 md:w-6 md:h-6" />
+                                        <Share2 className="mr-2 w-4 h-4 md:w-5 md:h-5 shrink-0" />
                                         Chia Sẻ
                                     </Button>
                                 </div>
@@ -398,6 +538,8 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
 
                         {/* Film Synopsis Full */}
                         <div className="lg:col-span-2 space-y-8">
+                            {/* Ad — dưới tiêu đề chi tiết */}
+                            <PWAAds variant="inline" />
                             <div>
                                 <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
                                     <Info className="w-6 h-6 text-primary" />
@@ -408,6 +550,11 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                     dangerouslySetInnerHTML={{ __html: movie.content }}
                                 />
                             </div>
+
+                            {/* ── DOWNLOAD SECTION ── */}
+                            {movie.download_links && movie.download_links.length > 0 && (
+                                <DownloadSection slug={movie.slug} links={movie.download_links} />
+                            )}
 
                             {/* Tags / Keywords placeholder */}
                             <div>
@@ -462,6 +609,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                 </div>
                             )}
 
+                            <PWAAds variant="inline" />
                             <div className="mt-12">
                                 <CommentSection movieSlug={slug as string} />
                             </div>

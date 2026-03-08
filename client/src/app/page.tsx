@@ -496,7 +496,7 @@ export default function Home() {
         />
 
         <div className="pb-8">
-          <PWAAds />
+          <PWAAds variant="home" />
         </div>
 
       </div>

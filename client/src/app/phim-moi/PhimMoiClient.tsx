@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
 import LoadingScreen from '@/components/LoadingScreen';
+import { PWAAds } from '@/components/PWAAds';
 import { API_URL } from '@/lib/config';
 
 interface Movie {
@@ -70,6 +71,7 @@ function PhimMoiContent() {
                                 <MovieCard key={movie._id} movie={movie} />
                             ))}
                         </div>
+                        <PWAAds variant="inline" />
                         {totalPages > 1 && (
                             <div className="flex justify-center gap-2 mt-8">
                                 {page > 1 && (

@@ -9,6 +9,7 @@ import { Pagination } from '@/components/Pagination';
 import { Search, Filter, X, Clock } from 'lucide-react';
 import { API_URL } from '@/lib/config';
 import { Button } from '@/components/ui/button';
+import { PWAAds } from '@/components/PWAAds';
 import Link from 'next/link';
 
 interface Movie {
@@ -185,7 +186,7 @@ function SearchContent() {
 
                     {/* Mobile Filters Drawer */}
                     {showMobileFilter && (
-                        <div className="fixed inset-0 z-[100] lg:hidden flex justify-end">
+                        <div className="fixed inset-0 z-100 lg:hidden flex justify-end">
                             <div
                                 className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                                 onClick={() => setShowMobileFilter(false)}
@@ -227,7 +228,7 @@ function SearchContent() {
                     {/* Main Content */}
                     <div className="flex-1">
                         {/* Search Input */}
-                        <form onSubmit={handleSearch} className="mb-6 md:mb-8 relative group z-[60]">
+                        <form onSubmit={handleSearch} className="mb-6 md:mb-8 relative group z-60">
                             <div className="relative flex items-center w-full">
                                 <input
                                     ref={searchInputRef}
@@ -238,7 +239,7 @@ function SearchContent() {
                                     // Timeout allows click on link to fire before hiding
                                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-surface-900/80 backdrop-blur-sm border border-white/10 rounded-xl py-3 md:py-3.5 pl-10 md:pl-12 pr-[70px] md:pr-32 text-sm md:text-base text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300 shadow-lg"
+                                    className="w-full bg-surface-900/80 backdrop-blur-sm border border-white/10 rounded-xl py-3 md:py-3.5 pl-10 md:pl-12 pr-17.5 md:pr-32 text-sm md:text-base text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300 shadow-lg"
                                 />
                                 <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 group-focus-within:text-primary transition-colors duration-300" />
                                 <div className="absolute right-1 md:right-1.5 top-1 md:top-1.5 bottom-1 md:bottom-1.5">
@@ -255,7 +256,7 @@ function SearchContent() {
 
                             {/* Recent Searches Dropdown */}
                             {showSuggestions && recentSearches.length > 0 && (
-                                <div className="absolute top-full mt-2 right-0 left-0 bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl z-[120] animate-in slide-in-from-top-2">
+                                <div className="absolute top-full mt-2 right-0 left-0 bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl z-120 animate-in slide-in-from-top-2">
                                     <div className="py-2">
                                         <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider flex justify-between items-center bg-white/5">
                                             <span>Lịch sử tìm kiếm</span>
@@ -301,7 +302,7 @@ function SearchContent() {
 
                         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                             <div className="flex items-start md:items-center justify-between gap-4 w-full md:w-auto">
-                                <h1 className="text-xl md:text-2xl font-bold text-white break-words flex-1">
+                                <h1 className="text-xl md:text-2xl font-bold text-white wrap-break-word flex-1">
                                     {queryKeyword ? (
                                         <>Kết quả tìm kiếm: <br className="md:hidden" /><span className="text-primary">&quot;{queryKeyword}&quot;</span></>
                                     ) : (
@@ -353,6 +354,9 @@ function SearchContent() {
                                         <RequestMovieButton movieName={queryKeyword || ''} />
                                     </div>
                                 )}
+
+                                {/* Ad — between results and pagination */}
+                                {movies.length > 0 && <PWAAds variant="inline" />}
 
                                 {/* Pagination */}
                                 {movies.length > 0 && (

@@ -1170,7 +1170,7 @@ export default function VideoPlayer({
 
                             {/* Settings Popup */}
                             {showSettings && (
-                                <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+                                <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-45 max-h-[70vh] overflow-y-auto text-white space-y-3 z-60 shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
                                     {/* Speed */}
                                     <div>
                                         <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tốc độ</p>
