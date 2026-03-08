@@ -1,13 +1,13 @@
 import Link from 'next/link';
 
-export function KoreanDrama2016Banner() {
+export function KoreanDrama2016Banner({ compact }: { compact?: boolean }) {
     return (
         <Link href="/phim-han-2016" className="block group">
             <div
-                className="relative w-full overflow-hidden rounded-2xl cursor-pointer select-none"
+                className="relative w-full overflow-hidden rounded-2xl cursor-pointer select-none flex items-center"
                 style={{
                     background: 'linear-gradient(135deg, #0d0a1a 0%, #1a0a2e 30%, #2d1b4e 60%, #9b4dca 100%)',
-                    minHeight: 140,
+                    minHeight: compact ? 80 : 140,
                 }}
             >
                 {/* Decorative blobs */}
@@ -39,25 +39,27 @@ export function KoreanDrama2016Banner() {
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 flex items-center gap-3 lg:gap-6 px-4 lg:px-10 py-6">
+                <div className={`relative z-10 flex items-center gap-3 lg:gap-4 px-4 lg:px-6 w-full ${compact ? '' : 'py-6'}`}>
                     {/* Badge */}
                     <div className="shrink-0">
                         <div
-                            className="flex flex-col items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 px-3 lg:px-4 py-1.5 rounded-lg shadow-lg shadow-purple-900/50"
+                            className={`flex flex-col items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 px-2 lg:px-3 rounded-lg shadow-lg shadow-purple-900/50 ${compact ? 'py-0.5' : 'py-1.5'}`}
                         >
-                            <span className="text-white font-black tracking-widest text-[10px] lg:text-xs leading-none opacity-80">K-DRAMA</span>
-                            <span className="text-white font-black text-xl lg:text-3xl leading-none" style={{ fontFamily: 'Impact, "Arial Black", sans-serif' }}>2016</span>
+                            <span className={`text-white font-black tracking-widest leading-none opacity-80 ${compact ? 'text-[8px]' : 'text-[10px] lg:text-xs'}`}>K-DRAMA</span>
+                            <span className={`text-white font-black leading-none ${compact ? 'text-base' : 'text-xl lg:text-3xl'}`} style={{ fontFamily: 'Impact, "Arial Black", sans-serif' }}>2016</span>
                         </div>
                     </div>
 
                     {/* Text */}
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-white font-bold text-sm lg:text-xl leading-tight group-hover:text-purple-300 transition-colors">
+                        <h2 className={`text-white font-bold leading-tight group-hover:text-purple-300 transition-colors ${compact ? 'text-xs lg:text-sm' : 'text-sm lg:text-xl'}`}>
                             Hoàng Kim K-Drama 2016
                         </h2>
-                        <p className="text-purple-200/70 text-xs md:text-sm mt-0.5 line-clamp-2">
-                            Năm 2016 — một năm không thể quên của những trái tim yêu phim Hàn. Yêu tinh, Hậu Duệ, Mây Họa Ánh Trăng... mỗi bộ phim là một ký ức đẹp.
-                        </p>
+                        {!compact && (
+                            <p className="text-purple-200/70 text-xs md:text-sm mt-0.5 line-clamp-2">
+                                Năm 2016 — một năm không thể quên của những trái tim yêu phim Hàn. Yêu tinh, Hậu Duệ, Mây Họa Ánh Trăng... mỗi bộ phim là một ký ức đẹp.
+                            </p>
+                        )}
                     </div>
 
                     {/* Arrow */}

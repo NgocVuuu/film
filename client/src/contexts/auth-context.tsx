@@ -81,6 +81,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (token) setAuthToken(token);
         setUser(userData);
         toast.success(`Chào mừng, ${userData.displayName}!`);
+        // Migrate any localStorage favorites up to the API (fire-and-forget)
+        try {
+            const localFavs: Array<{ slug?: string }> = JSON.parse(localStorage.getItem('favorites') || '[]');
+            if (localFavs.length > 0) {
+                const authToken = token || getAuthToken();
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/favorites/sync`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers,
+                    body: JSON.stringify({ items: localFavs }),
+                }).catch(() => { /* silent */ });
+            }
+        } catch { /* silent */ }
     };
 
     const logout = async () => {

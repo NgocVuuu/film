@@ -1,103 +1,21 @@
-'use client';
-import { Suspense } from 'react';
-import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { MovieCard } from '@/components/MovieCard';
-import LoadingScreen from '@/components/LoadingScreen';
-import { API_URL } from '@/lib/config';
+﻿import { Metadata } from 'next';
+import PhimLeClient from './PhimLeClient';
 
-interface Movie {
-    _id: string;
-    name: string;
-    origin_name: string;
-    slug: string;
-    thumb_url: string;
-    year: number;
-    episode_current?: string;
-    quality?: string;
-    progress?: {
-        currentTime: number;
-        duration: number;
-        percentage: number;
-        episodeSlug: string;
-        episodeName: string;
-    };
-}
-
-function PhimLeContent() {
-    const searchParams = useSearchParams();
-    const page = parseInt(searchParams.get('page') || '1');
-    const [movies, setMovies] = useState<Movie[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [totalPages, setTotalPages] = useState(1);
-
-    const fetchMovies = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await fetch(
-                `${API_URL}/api/movies?type=single&page=${page}&limit=30`,
-                { credentials: 'include' }
-            );
-            const data = await res.json();
-            if (data.success) {
-                setMovies(data.data);
-                setTotalPages(data.pagination?.totalPages || 1);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, [page]);
-
-    useEffect(() => {
-        fetchMovies();
-    }, [fetchMovies]);
-
-    if (loading) return <LoadingScreen />;
-
-    return (
-        <div className="min-h-screen bg-deep-black text-foreground pt-20 pb-20">
-            <div className="container mx-auto px-4">
-                <h1 className="text-2xl md:text-3xl font-bold text-white mb-6 flex items-center gap-2">
-                    <span className="w-1 h-8 bg-primary rounded-full"></span>
-                    Phim Lẻ
-                </h1>
-                {movies.length > 0 ? (
-                    <>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {movies.map((movie) => (
-                                <MovieCard key={movie._id} movie={movie} />
-                            ))}
-                        </div>
-                        {totalPages > 1 && (
-                            <div className="flex justify-center gap-2 mt-8">
-                                {page > 1 && (
-                                    <a href={`/phim-le?page=${page - 1}`} className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors">
-                                        Trang trước
-                                    </a>
-                                )}
-                                <span className="px-4 py-2 bg-primary text-black rounded font-bold">{page} / {totalPages}</span>
-                                {page < totalPages && (
-                                    <a href={`/phim-le?page=${page + 1}`} className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors">
-                                        Trang sau
-                                    </a>
-                                )}
-                            </div>
-                        )}
-                    </>
-                ) : (
-                    <p className="text-center text-gray-400 py-20">Không tìm thấy phim nào</p>
-                )}
-            </div>
-        </div>
-    );
-}
+export const metadata: Metadata = {
+    title: 'Phim Lẻ - Xem Phim Lẻ Hay Nhất Online | Pchill',
+    description: 'Xem phim lẻ hay nhất tại Pchill. Tổng hợp phim lẻ mới nhất từ Hàn Quốc, Mỹ, Trung Quốc, Châu Âu với chất lượng cao, phụ đề tiếng Việt đầy đủ.',
+    keywords: ['phim lẻ', 'phim lẻ hay', 'phim lẻ mới nhất', 'xem phim lẻ online', 'phim chiếu rạp'],
+    alternates: {
+        canonical: 'https://pchill.online/phim-le',
+    },
+    openGraph: {
+        title: 'Phim Lẻ - Xem Phim Lẻ Hay Nhất Online | Pchill',
+        description: 'Xem phim lẻ hay nhất tại Pchill. Tổng hợp phim lẻ mới nhất với chất lượng cao, phụ đề tiếng Việt.',
+        url: 'https://pchill.online/phim-le',
+        type: 'website',
+    },
+};
 
 export default function PhimLePage() {
-    return (
-        <Suspense fallback={<LoadingScreen />}>
-            <PhimLeContent />
-        </Suspense>
-    );
+    return <PhimLeClient />;
 }

@@ -1,12 +1,12 @@
 import Link from 'next/link';
 
-export function DCUBanner() {
+export function DCUBanner({ compact }: { compact?: boolean }) {
     return (
         <Link href="/dcu" className="block group">
-            <div className="relative w-full overflow-hidden rounded-2xl cursor-pointer select-none"
+            <div className="relative w-full overflow-hidden rounded-2xl cursor-pointer select-none flex items-center"
                 style={{
                     background: 'linear-gradient(135deg, #020b1a 0%, #0d1b2a 40%, #1b263b 70%, #415a77 100%)',
-                    minHeight: 140,
+                    minHeight: compact ? 80 : 140,
                 }}>
 
                 {/* Blob shapes */}
@@ -32,10 +32,10 @@ export function DCUBanner() {
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 flex items-center gap-3 lg:gap-6 px-4 lg:px-10 py-6">
+                <div className={`relative z-10 flex items-center gap-3 lg:gap-4 px-4 lg:px-6 w-full ${compact ? '' : 'py-6'}`}>
                     {/* DC logo pill */}
                     <div className="shrink-0">
-                        <div className="bg-[#005b96] border border-white/20 px-3 lg:px-5 py-1.5 rounded-full font-black text-white tracking-wider text-base lg:text-2xl shadow-lg shadow-blue-900/50 flex items-center justify-center w-12 h-12 md:w-14 md:h-14 lg:w-20 lg:h-20"
+                        <div className={`bg-[#005b96] border border-white/20 rounded-full font-black text-white tracking-wider shadow-lg shadow-blue-900/50 flex items-center justify-center ${compact ? 'w-9 h-9 md:w-10 md:h-10 text-sm' : 'w-12 h-12 md:w-14 md:h-14 lg:w-20 lg:h-20 text-base lg:text-2xl'}`}
                             style={{ fontFamily: 'Impact, "Arial Black", sans-serif' }}>
                             DC
                         </div>
@@ -43,12 +43,14 @@ export function DCUBanner() {
 
                     {/* Text */}
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-white font-bold text-sm lg:text-xl leading-tight group-hover:text-blue-300 transition-colors">
+                        <h2 className={`text-white font-bold leading-tight group-hover:text-blue-300 transition-colors ${compact ? 'text-xs lg:text-sm' : 'text-sm lg:text-xl'}`}>
                             Vũ Trụ Điện Ảnh DC
                         </h2>
-                        <p className="text-gray-400 text-xs md:text-sm mt-0.5">
-                            DCEU qua các năm...
-                        </p>
+                        {!compact && (
+                            <p className="text-gray-400 text-xs md:text-sm mt-0.5">
+                                DCEU qua các năm...
+                            </p>
+                        )}
                     </div>
 
                     {/* Arrow */}

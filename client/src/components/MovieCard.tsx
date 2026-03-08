@@ -33,7 +33,7 @@ export function MovieCard({ movie, isEditing }: MovieCardProps) {
                 <img
                     src={movie.thumb_url || '/logo.png'}
                     alt={movie.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"
                     onError={(e) => {
                         (e.target as HTMLImageElement).src = '/logo.png';

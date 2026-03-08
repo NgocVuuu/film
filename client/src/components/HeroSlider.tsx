@@ -208,14 +208,62 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                 <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
             </button>
 
-            {/* Pagination Dots */}
-            <div className="absolute bottom-18 md:bottom-20 right-8 md:right-12 z-30 flex gap-2">
-                {movies.map((_, idx) => (
+            {/* Thumbnail Pagination — trending-style skewed mini cards, max 10, bottom right */}
+            <div className="absolute bottom-4 md:bottom-6 right-3 md:right-8 z-30 hidden md:flex gap-1.5 items-end">
+                {movies.slice(0, 10).map((movie, idx) => {
+                    const isActive = idx === currentIndex;
+                    return (
+                        <button
+                            key={idx}
+                            onClick={() => setCurrentIndex(idx)}
+                            className={`relative shrink-0 -skew-x-6 rounded-lg overflow-hidden focus:outline-none transition-all duration-300 bg-black ${
+                                isActive ? 'scale-[1.08] -translate-y-2' : 'scale-100 hover:scale-[1.03] hover:-translate-y-1'
+                            }`}
+                            style={{
+                                width: '58px',
+                                height: '80px',
+                                borderWidth: '2px',
+                                borderStyle: 'solid',
+                                borderColor: isActive ? '#eab308' : 'rgba(255,255,255,0.25)',
+                                boxShadow: isActive ? '0 0 20px rgba(234,179,8,0.55)' : 'none',
+                                opacity: isActive ? 1 : 0.78,
+                            }}
+                        >
+                            {/* Counter-skewed image */}
+                            <div className="absolute inset-0 skew-x-6 scale-[1.15]">
+                                <Image
+                                    src={movie.poster_url || movie.thumb_url}
+                                    alt={movie.name}
+                                    fill
+                                    sizes="52px"
+                                    className="object-cover object-top"
+                                />
+                            </div>
+                            {/* Bottom gradient overlay */}
+                            <div className="absolute bottom-0 left-0 h-10 bg-linear-to-t from-black/90 to-transparent skew-x-6 w-[140%] -ml-3 z-10" />
+                            {/* Rank number */}
+                            <span
+                                className="absolute top-0.5 right-0 z-20 text-[9px] font-black italic text-yellow-400 skew-x-6 pr-0.5"
+                                style={{ WebkitTextStroke: '0.4px rgba(255,255,255,0.4)', filter: 'drop-shadow(0 0 3px rgba(234,179,8,0.5))' }}
+                            >
+                                #{idx + 1}
+                            </span>
+                            {/* Active yellow tint */}
+                            {isActive && <div className="absolute inset-0 bg-yellow-500/10 skew-x-6 z-10" />}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Mobile: simple dots */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 md:hidden">
+                {movies.slice(0, 10).map((_, idx) => (
                     <button
                         key={idx}
                         onClick={() => setCurrentIndex(idx)}
-                        className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'w-6 md:w-8 bg-primary' : 'w-1.5 md:w-2 bg-white/30 hover:bg-white/50'
-                            }`}
+                        className={`h-1 rounded-full transition-all duration-300 ${
+                            idx === currentIndex ? 'w-5 bg-primary' : 'w-1.5 bg-white/30'
+                        }`}
                     />
                 ))}
             </div>

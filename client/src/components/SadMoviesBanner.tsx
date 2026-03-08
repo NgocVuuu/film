@@ -1,13 +1,13 @@
 import Link from 'next/link';
 
-export function SadMoviesBanner() {
+export function SadMoviesBanner({ compact }: { compact?: boolean }) {
     return (
         <Link href="/sad-movies" className="block group">
             <div
-                className="relative w-full overflow-hidden rounded-2xl cursor-pointer select-none"
+                className="relative w-full overflow-hidden rounded-2xl cursor-pointer select-none flex items-center"
                 style={{
                     background: 'linear-gradient(135deg, #0a0a1a 0%, #0d1220 35%, #1a1030 60%, #2a1a4a 100%)',
-                    minHeight: 140,
+                    minHeight: compact ? 80 : 140,
                 }}
             >
                 {/* Decorative elements */}
@@ -39,15 +39,17 @@ export function SadMoviesBanner() {
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 flex items-center gap-3 lg:gap-6 px-4 lg:px-10 py-6">
+                <div className={`relative z-10 flex items-center gap-3 lg:gap-4 px-4 lg:px-6 w-full ${compact ? '' : 'py-6'}`}>
                     {/* Text */}
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-white font-bold text-sm lg:text-xl leading-tight group-hover:text-indigo-300 transition-colors">
+                        <h2 className={`text-white font-bold leading-tight group-hover:text-indigo-300 transition-colors ${compact ? 'text-xs lg:text-sm' : 'text-sm lg:text-xl'}`}>
                             Chữa Rách Vết Thương Lành
                         </h2>
-                        <p className="text-blue-200/60 text-xs md:text-sm mt-0.5 line-clamp-2">
-                            Muốn khóc mà không thể? Để những bộ phim này làm điều đó thay bạn.
-                        </p>
+                        {!compact && (
+                            <p className="text-blue-200/60 text-xs md:text-sm mt-0.5 line-clamp-2">
+                                Muốn khóc mà không thể? Để những bộ phim này làm điều đó thay bạn.
+                            </p>
+                        )}
                     </div>
 
                     {/* Arrow */}

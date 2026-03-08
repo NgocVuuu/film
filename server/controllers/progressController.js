@@ -4,6 +4,14 @@ const WatchProgress = require('../models/WatchProgress');
 exports.saveProgress = async (req, res) => {
     try {
         const userId = req.user._id;
+        // sendBeacon sends body as Blob with application/octet-stream; parse manually if needed
+        let body = req.body;
+        if (!body || !body.movieSlug) {
+            try {
+                const raw = req.rawBody || '';
+                if (raw) body = JSON.parse(raw);
+            } catch { /* ignore */ }
+        }
         const {
             movieId,
             movieSlug,
@@ -14,7 +22,7 @@ exports.saveProgress = async (req, res) => {
             serverName,
             currentTime,
             duration
-        } = req.body;
+        } = body;
 
         // Validate required fields
         if (!movieSlug || !episodeSlug || !serverName) {
@@ -37,16 +45,21 @@ exports.saveProgress = async (req, res) => {
         const completed = duration > 0 && currentTime >= duration * 0.9; // 90% completion
 
         if (progress) {
-            // Update existing progress
-            progress.currentTime = currentTime;
-            progress.duration = duration;
-            progress.completed = completed;
-            progress.lastWatched = new Date();
-            progress.movieName = movieName || progress.movieName;
-            progress.movieThumb = movieThumb || progress.movieThumb;
-            progress.episodeName = episodeName || progress.episodeName;
-            progress.serverName = serverName;
-            await progress.save();
+            // Only update if the incoming position is ahead of what's stored,
+            // OR if it was recently watched (within 10s) — avoids older-device overwrites
+            const incomingIsNewer = currentTime > progress.currentTime ||
+                (progress.lastWatched && (Date.now() - new Date(progress.lastWatched).getTime()) > 10000);
+            if (incomingIsNewer) {
+                progress.currentTime = currentTime;
+                progress.duration = duration;
+                progress.completed = completed;
+                progress.lastWatched = new Date();
+                progress.movieName = movieName || progress.movieName;
+                progress.movieThumb = movieThumb || progress.movieThumb;
+                progress.episodeName = episodeName || progress.episodeName;
+                progress.serverName = serverName;
+                await progress.save();
+            }
         } else {
             // Create new progress
 

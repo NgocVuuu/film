@@ -52,7 +52,7 @@ export default function DCUPage() {
                 </div>
                 <div className="relative container mx-auto px-4 py-12 flex flex-col items-center justify-center text-center">
                     {/* DC Logo text */}
-                    <div className="inline-block bg-[#005b96] border border-white/20 w-16 h-16 md:w-20 md:h-20 flex items-center justify-center rounded-full mb-4 tracking-wider font-black text-white text-3xl md:text-5xl"
+                    <div className="bg-[#005b96] border border-white/20 w-16 h-16 md:w-20 md:h-20 flex items-center justify-center rounded-full mb-4 tracking-wider font-black text-white text-3xl md:text-5xl"
                         style={{ fontFamily: 'Impact, "Arial Black", sans-serif' }}>
                         DC
                     </div>

@@ -51,9 +51,9 @@ export default function HistoryPage() {
         }
 
         if (!user) {
-            // If not logged in, use localStorage fallback
+            // If not logged in, use localStorage fallback — only keep items with progress data
             const stored = JSON.parse(localStorage.getItem('history') || '[]');
-            setMovies(stored);
+            setMovies(stored.filter((m: Movie) => m.progress));
             setLoading(false);
             isInitialLoad.current = false;
             return;

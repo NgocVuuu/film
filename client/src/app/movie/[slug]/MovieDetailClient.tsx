@@ -12,6 +12,15 @@ import { API_URL } from '@/lib/config';
 import { getAuthToken } from '@/lib/api';
 
 // Types
+interface RelatedMovie {
+    _id: string;
+    name: string;
+    slug: string;
+    thumb_url: string;
+    year: number;
+    episode_current?: string;
+}
+
 interface Episode {
     server_name: string;
     server_data: {
@@ -62,6 +71,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     const [loading, setLoading] = useState(!initialMovie);
     const [isFavorite, setIsFavorite] = useState(false);
     const [showListModal, setShowListModal] = useState(false);
+    const [relatedMovies, setRelatedMovies] = useState<RelatedMovie[]>([]);
 
     useEffect(() => {
         // If we have initial data (from server), we only need to sync favorites and history
@@ -80,6 +90,9 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                     if (data.success) {
                         setMovie(data.data);
                         processUserData(data.data);
+                        if (Array.isArray(data.related) && data.related.length > 0) {
+                            setRelatedMovies(data.related);
+                        }
                     }
                 } catch (e) {
                     console.error(e);
@@ -90,6 +103,14 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                 const data = movie || initialMovie;
                 if (data) {
                     processUserData(data);
+                    // Fetch related movies separately for SSR path
+                    try {
+                        const res = await fetch(`${API_URL}/api/movie/${slug}`, { credentials: 'include' });
+                        const json = await res.json();
+                        if (json.success && Array.isArray(json.related) && json.related.length > 0) {
+                            setRelatedMovies(json.related);
+                        }
+                    } catch (e) { /* silent */ }
                 }
             }
         };
@@ -395,10 +416,51 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                     <span className="bg-white/5 px-3 py-1 rounded text-xs text-gray-400">{movie.name}</span>
                                     <span className="bg-white/5 px-3 py-1 rounded text-xs text-gray-400">{movie.origin_name}</span>
                                     {movie.category?.map((c, index) => (
-                                        <span key={`${c.id}-${index}`} className="bg-white/5 px-3 py-1 rounded text-xs text-gray-400">{c.name}</span>
+                                        <Link
+                                            key={`${c.id}-${index}`}
+                                            href={`/the-loai/${c.id}`}
+                                            className="bg-white/5 px-3 py-1 rounded text-xs text-gray-400 hover:text-primary hover:bg-white/10 transition-colors"
+                                        >
+                                            {c.name}
+                                        </Link>
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Related Movies - Phim liên quan */}
+                            {relatedMovies.length > 0 && (
+                                <div>
+                                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                                        <Play className="w-5 h-5 text-primary fill-current" />
+                                        Phim liên quan
+                                    </h3>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {relatedMovies.map((rel) => (
+                                            <Link
+                                                key={rel._id}
+                                                href={`/movie/${rel.slug}`}
+                                                className="group flex gap-3 bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-colors border border-white/5"
+                                            >
+                                                <div className="w-16 h-20 shrink-0 overflow-hidden">
+                                                    <img
+                                                        src={rel.thumb_url}
+                                                        alt={rel.name}
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                        loading="lazy"
+                                                    />
+                                                </div>
+                                                <div className="flex-1 p-2 min-w-0">
+                                                    <p className="text-white text-xs font-medium line-clamp-2 group-hover:text-primary transition-colors">{rel.name}</p>
+                                                    <p className="text-gray-500 text-xs mt-1">{rel.year}</p>
+                                                    {rel.episode_current && (
+                                                        <p className="text-primary text-xs mt-0.5 truncate">{rel.episode_current}</p>
+                                                    )}
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="mt-12">
                                 <CommentSection movieSlug={slug as string} />

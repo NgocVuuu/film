@@ -439,6 +439,7 @@ const getHomeData = async (req, res) => {
                             episodeName: p.episodeName,
                             serverName: p.serverName
                         };
+                        movie.viewedAt = p.lastWatched instanceof Date ? p.lastWatched.toISOString() : new Date(p.lastWatched).toISOString();
                         return movie;
                     }).filter(Boolean);
                 } else {
@@ -469,7 +470,7 @@ const getMovies = async (req, res) => {
         const skip = (page - 1) * limit;
 
         // Filters
-        const { category, country, year, maxYear, status, sort, type, chieurap, q, actor } = req.query;
+        const { category, country, year, maxYear, status, sort, type, excludeType, chieurap, q, actor } = req.query;
         let query = { isActive: { $ne: false } };
 
         // Text search (if 'q' is present)
@@ -504,6 +505,7 @@ const getMovies = async (req, res) => {
         if (maxYear) query.year = { ...(query.year || {}), $lte: parseInt(maxYear) };
         if (status) query.status = status; // 'completed' | 'ongoing'
         if (type) query.type = type; // 'series' | 'single' | 'hoathinh' | 'tvshows'
+        if (excludeType) query.type = { $ne: excludeType }; // Exclude a specific type
         if (chieurap === 'true') query.chieurap = true;
         if (actor) query.actor = actor; // Filter by actor name
 
@@ -613,12 +615,41 @@ const getMovieDetail = async (req, res) => {
 
         if (!movie) return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
 
-        // Get related movies (same category)
-        let related = await Movie.find({
-            'category.slug': { $in: movie.category.map(c => c.slug) },
+        // Get related movies — smart matching: same type, prefer same country + category
+        const movieCategories = movie.category.map(c => c.slug);
+        const movieCountries = (movie.country || []).map(c => c.slug);
+        const isAnimation = movie.type === 'hoathinh';
+        const typeFilter = isAnimation
+            ? { type: 'hoathinh' }
+            : { type: { $ne: 'hoathinh' } };
+
+        const baseRelatedQuery = {
+            'category.slug': { $in: movieCategories },
             slug: { $ne: movie.slug },
-            isActive: { $ne: false }
-        }).limit(6).select('name slug thumb_url year episode_current');
+            isActive: { $ne: false },
+            ...typeFilter
+        };
+
+        // First attempt: same country + same category + same type
+        let related = movieCountries.length > 0
+            ? await Movie.find({ ...baseRelatedQuery, 'country.slug': { $in: movieCountries } })
+                .sort({ year: -1, updatedAt: -1 })
+                .limit(6)
+                .select('name slug thumb_url year episode_current')
+            : [];
+
+        // Fallback: fill remaining slots with same category + same type (any country)
+        if (related.length < 6) {
+            const existingSlugs = related.map(r => r.slug);
+            const extra = await Movie.find({
+                ...baseRelatedQuery,
+                slug: { $nin: [...existingSlugs, movie.slug] }
+            })
+                .sort({ updatedAt: -1 })
+                .limit(6 - related.length)
+                .select('name slug thumb_url year episode_current');
+            related = [...related, ...extra];
+        }
 
         // Attach progress if logged in
         let movieData = movie;
@@ -636,7 +667,22 @@ const getMovieDetail = async (req, res) => {
 
         res.json({ success: true, data: movieData, related });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        console.error('Get movie detail error:', err);
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ, vui lòng thử lại sau.' });
+    }
+};
+
+// Sitemap endpoint - trả về toàn bộ slugs + updatedAt cho SEO
+const getMoviesForSitemap = async (req, res) => {
+    try {
+        const movies = await Movie.find({ isActive: { $ne: false } })
+            .select('slug updatedAt createdAt')
+            .sort({ updatedAt: -1 })
+            .lean();
+        res.json({ success: true, data: movies });
+    } catch (err) {
+        console.error('Sitemap error:', err);
+        res.status(500).json({ success: false, data: [] });
     }
 };
 
@@ -1074,6 +1120,7 @@ module.exports = {
     getHomeData,
     getMovies,
     getMovieDetail,
+    getMoviesForSitemap,
     getMarvelMovies,
     clearTmdbCache,
     getTmdbTrendingMovies,

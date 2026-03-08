@@ -44,7 +44,7 @@ export function ContinueWatchingCard({ movie, onRemove }: ContinueWatchingCardPr
                 <img
                     src={movie.thumb_url}
                     alt={movie.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"
                 />
                 {/* Overlay Gradient */}

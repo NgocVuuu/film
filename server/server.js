@@ -180,6 +180,22 @@ app.use(cors({
     origin: allowedOrigins,
     credentials: true
 }));
+// Capture raw body for sendBeacon requests (Content-Type: application/octet-stream or text/plain)
+app.use((req, res, next) => {
+    const ct = req.headers['content-type'] || '';
+    if (ct.includes('octet-stream') || (ct.includes('text/plain') && req.path.includes('/api/progress'))) {
+        let data = '';
+        req.setEncoding('utf8');
+        req.on('data', chunk => { data += chunk; });
+        req.on('end', () => {
+            req.rawBody = data;
+            try { req.body = JSON.parse(data); } catch { req.body = {}; }
+            next();
+        });
+    } else {
+        next();
+    }
+});
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));

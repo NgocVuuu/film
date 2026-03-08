@@ -8,11 +8,40 @@ import { TrendingCarousel } from '@/components/TrendingCarousel';
 import { PWAAds } from '@/components/PWAAds';
 import LoadingScreen from '@/components/LoadingScreen';
 import { customFetch } from '@/lib/api';
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 import { MarvelBanner } from '@/components/MarvelBanner';
 import { DCUBanner } from '@/components/DCUBanner';
 import { StephenChowBanner } from '@/components/StephenChowBanner';
 import { KoreanDrama2016Banner } from '@/components/KoreanDrama2016Banner';
 import { SadMoviesBanner } from '@/components/SadMoviesBanner';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
+
+const UNIVERSE_BANNERS = [MarvelBanner, DCUBanner, StephenChowBanner, KoreanDrama2016Banner, SadMoviesBanner];
+
+function UniverseBannersCarousel() {
+  return (
+    <Carousel
+      opts={{ align: 'start', loop: true, dragFree: true }}
+      className="w-full relative group/banners md:px-8"
+    >
+      <CarouselContent className="-ml-3">
+        {UNIVERSE_BANNERS.map((Banner, i) => (
+          <CarouselItem key={i} className="pl-3 basis-[88vw] md:basis-1/2 lg:basis-1/3">
+            <Banner compact />
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+      <CarouselPrevious className="left-0 opacity-0 group-hover/banners:opacity-100 transition-opacity bg-black/70 border-white/10 hover:bg-primary hover:text-black hidden md:flex" />
+      <CarouselNext className="right-0 opacity-0 group-hover/banners:opacity-100 transition-opacity bg-black/70 border-white/10 hover:bg-primary hover:text-black hidden md:flex" />
+    </Carousel>
+  );
+}
 
 interface Movie {
   _id: string;
@@ -35,6 +64,7 @@ interface Movie {
 export default function Home() {
 
   const [loading, setLoading] = useState(true);
+  useScrollRestoration(!loading);
   const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]); // Array for Hero
   const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]); // New Upcoming Movies
   const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]); // New Trending
@@ -120,37 +150,42 @@ export default function Home() {
             if (localHistoryStr) {
               const localHistory = JSON.parse(localHistoryStr);
               if (Array.isArray(localHistory) && localHistory.length > 0) {
-                // Determine if local history is newer or has items not yet synced
-                const localMap = new Map(localHistory.map(item => [item.slug, item]));
+                // Build a map of API items by slug for O(1) lookup
                 const apiMap = new Map((continueWatching || []).map((item: any) => [item.slug, item]));
 
-                // Add or update items from local history
                 const finalHistory: any[] = [];
                 const processedSlugs = new Set();
 
-                // First pass: local history (which is assumed most recent)
+                // First pass: local items (may have most recent data from this device)
                 for (const localItem of localHistory) {
-                  if (localItem && localItem.slug) {
+                  if (!localItem?.slug || !localItem.progress) continue;
+                  const apiItem = apiMap.get(localItem.slug);
+                  if (apiItem) {
+                    // Both exist — keep the one with newer timestamp (cross-device sync)
+                    const localTime = localItem.viewedAt ? new Date(localItem.viewedAt).getTime() : 0;
+                    const apiTime = apiItem.viewedAt ? new Date(apiItem.viewedAt).getTime() : 0;
+                    finalHistory.push(localTime >= apiTime ? localItem : apiItem);
+                  } else {
                     finalHistory.push(localItem);
-                    processedSlugs.add(localItem.slug);
                   }
+                  processedSlugs.add(localItem.slug);
                 }
 
-                // Second pass: add API history items that aren't in local history
+                // Second pass: add API-only items (watched on another device)
                 for (const apiItem of (continueWatching || [])) {
-                  if (apiItem && apiItem.slug && !processedSlugs.has(apiItem.slug)) {
+                  if (apiItem?.slug && !processedSlugs.has(apiItem.slug)) {
                     finalHistory.push(apiItem);
                   }
                 }
 
-                // Sort by viewedAt if available, descending
+                // Sort by viewedAt descending
                 finalHistory.sort((a, b) => {
                   const timeA = a.viewedAt ? new Date(a.viewedAt).getTime() : 0;
                   const timeB = b.viewedAt ? new Date(b.viewedAt).getTime() : 0;
                   return timeB - timeA;
                 });
 
-                mergedHistory = finalHistory.slice(0, 10); // Keep max 10
+                mergedHistory = finalHistory.slice(0, 10);
               }
             }
           } catch (e) {
@@ -204,29 +239,13 @@ export default function Home() {
     <div className="min-h-screen bg-deep-black text-foreground pb-20">
 
       {/* Hero Slider Section */}
-      {featuredMovies.length > 0 && (
-        <HeroSlider movies={featuredMovies} />
+      {trendingMovies.length > 0 && (
+        <HeroSlider movies={trendingMovies} />
       )}
 
       {/* UNIVERSE BANNERS */}
-      <div className="container mx-auto px-4 -mt-4 relative z-20 mb-2">
-        <div className="flex overflow-x-auto gap-4 scrollbar-hide snap-x snap-mandatory pb-2">
-          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
-            <MarvelBanner />
-          </div>
-          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
-            <DCUBanner />
-          </div>
-          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
-            <StephenChowBanner />
-          </div>
-          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
-            <KoreanDrama2016Banner />
-          </div>
-          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
-            <SadMoviesBanner />
-          </div>
-        </div>
+      <div className="container mx-auto px-4 mt-10 md:mt-14 relative z-20 mb-2">
+        <UniverseBannersCarousel />
       </div>
 
       {/* Carousel Sections */}
@@ -262,11 +281,11 @@ export default function Home() {
         />
 
         {/* Continue Watching Section */}
-        {continueWatchingMovies.length > 0 && (
+        {continueWatchingMovies.filter(m => m.progress).length > 0 && (
           <div className="container mx-auto px-4 mt-8">
             <h2 className="text-xl md:text-2xl font-bold text-white mb-6 flex items-center gap-2">
               <span className="w-1 h-6 bg-primary rounded-full"></span>
-              Tiếp tục xem ({continueWatchingMovies.length})
+              Tiếp tục xem ({continueWatchingMovies.filter(m => m.progress).length})
             </h2>
             <div className="relative">
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">

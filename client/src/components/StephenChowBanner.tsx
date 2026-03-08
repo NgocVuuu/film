@@ -1,12 +1,12 @@
 import Link from 'next/link';
 
-export function StephenChowBanner() {
+export function StephenChowBanner({ compact }: { compact?: boolean }) {
     return (
         <Link href="/chau-tinh-tri" className="block group">
-            <div className="relative w-full overflow-hidden rounded-2xl cursor-pointer select-none"
+            <div className="relative w-full overflow-hidden rounded-2xl cursor-pointer select-none flex items-center"
                 style={{
                     background: 'linear-gradient(135deg, #2c1a01 0%, #593101 40%, #c47600 70%, #ffaa00 100%)',
-                    minHeight: 140,
+                    minHeight: compact ? 80 : 140,
                 }}>
 
                 {/* Blob shapes */}
@@ -32,10 +32,10 @@ export function StephenChowBanner() {
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 flex items-center gap-3 lg:gap-6 px-4 lg:px-10 py-6">
+                <div className={`relative z-10 flex items-center gap-3 lg:gap-4 px-4 lg:px-6 w-full ${compact ? '' : 'py-6'}`}>
                     {/* Text block logo for Stephen Chow */}
                     <div className="shrink-0 flex items-center justify-center">
-                        <div className="bg-[#fb8500] border-2 border-white/30 px-3 lg:px-4 py-1.5 lg:py-2 rounded font-black text-white tracking-widest text-sm md:text-base lg:text-2xl shadow-lg shadow-orange-900/50 flex flex-col items-center justify-center -rotate-3 hover:rotate-0 transition-transform"
+                        <div className={`bg-[#fb8500] border-2 border-white/30 px-2 lg:px-3 rounded font-black text-white tracking-widest shadow-lg shadow-orange-900/50 flex flex-col items-center justify-center -rotate-3 hover:rotate-0 transition-transform ${compact ? 'py-0.5 text-[9px] md:text-[10px]' : 'py-1.5 lg:py-2 text-sm md:text-base lg:text-2xl'}`}
                             style={{ fontFamily: '"Arial Black", sans-serif' }}>
                             <span>STEPHEN</span>
                             <span className="text-yellow-200">CHOW</span>
@@ -44,12 +44,14 @@ export function StephenChowBanner() {
 
                     {/* Text */}
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-white font-bold text-sm lg:text-xl leading-tight group-hover:text-amber-200 transition-colors">
+                        <h2 className={`text-white font-bold leading-tight group-hover:text-amber-200 transition-colors ${compact ? 'text-xs lg:text-sm' : 'text-sm lg:text-xl'}`}>
                             Hài Châu Tinh Trì
                         </h2>
-                        <p className="text-gray-300 text-xs md:text-sm mt-0.5 max-h-5 overflow-hidden text-ellipsis whitespace-nowrap">
-                            Tuyển tập 48+ siêu phẩm Vua Hài Kịch
-                        </p>
+                        {!compact && (
+                            <p className="text-gray-300 text-xs md:text-sm mt-0.5 max-h-5 overflow-hidden text-ellipsis whitespace-nowrap">
+                                Tuyển tập 48+ siêu phẩm Vua Hài Kịch
+                            </p>
+                        )}
                     </div>
 
                     {/* Arrow */}

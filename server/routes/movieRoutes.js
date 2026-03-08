@@ -5,6 +5,9 @@ const movieController = require('../controllers/movieController');
 const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 const { optionalAuthMiddleware } = require('../middleware/authMiddleware');
 
+// Sitemap Data - Cache for 1 hour (3600s) - returns all slugs for SEO
+router.get('/movies/sitemap', cacheMiddleware(3600), movieController.getMoviesForSitemap);
+
 // Home Data (New) - Auth first, then cache for 5 minutes (300s)
 router.get('/movies/home', optionalAuthMiddleware, cacheMiddleware(300), movieController.getHomeData);
 
