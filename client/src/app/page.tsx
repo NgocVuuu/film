@@ -151,7 +151,7 @@ export default function Home() {
               const localHistory = JSON.parse(localHistoryStr);
               if (Array.isArray(localHistory) && localHistory.length > 0) {
                 // Build a map of API items by slug for O(1) lookup
-                const apiMap = new Map((continueWatching || []).map((item: any) => [item.slug, item]));
+                const apiMap = new Map<string, any>((continueWatching || []).map((item: any) => [item.slug, item]));
 
                 const finalHistory: any[] = [];
                 const processedSlugs = new Set();
