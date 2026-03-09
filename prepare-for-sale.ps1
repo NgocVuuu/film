@@ -68,7 +68,10 @@ $RemovePaths = @(
     "$Dest\DEPLOY_GUIDE.md",
     "$Dest\weekly_backup.ps1",
     "$Dest\update-icons.ps1",
-    "$Dest\prepare-for-sale.ps1"
+    "$Dest\prepare-for-sale.ps1",
+    "$Dest\client\public\wescan-logo.png",   # Logo dich vu donate ca nhan
+    "$Dest\client\public\bmc-button.png",    # Anh nut Buy Me a Coffee
+    "$Dest\client\src\components\DonateButton.tsx"  # Component donate ca nhan
 )
 
 foreach ($p in $RemovePaths) {
@@ -98,8 +101,7 @@ $Replacements = @(
     @{ From = "vupaul2001@gmail.com";       To = "admin@$Domain" },
     @{ From = "ngocvu14.3.2001@gmail.com";  To = "admin@$Domain" },
     @{ From = "ngocvu1432001_db_user";      To = "your_db_user" },
-    @{ From = "buymeacoffee.com/pchill_admin"; To = "buymeacoffee.com/YOUR_USERNAME" },
-    @{ From = "wescan.vn/dngocvu14";        To = "YOUR_SUPPORT_LINK" }
+    @{ From = "buymeacoffee.com/pchill_admin"; To = "buymeacoffee.com/YOUR_USERNAME" }
 )
 
 $TextExtensions = @(
@@ -167,77 +169,6 @@ $outBytes = [System.Text.Encoding]::UTF8.GetBytes($makeAdminText)
 Write-Host "  Tao make_admin.js generic."
 
 # -----------------------------------------------------------
-# 6. Thay DonateButton.tsx chua link ca nhan bang placeholder
-# -----------------------------------------------------------
-$donateButtonDest = "$Dest\client\src\components\DonateButton.tsx"
-if (Test-Path $donateButtonDest) {
-    $donateText = @"
-'use client';
-import { useEffect, useRef, useState } from 'react';
-
-/**
- * DonateButton -- Thay cac URL ben duoi bang link ho tro cua ban
- *   href1: buymeacoffee.com/YOUR_USERNAME
- *   href2: link thanh toan / ung ho khac
- */
-const OPTIONS = [
-    { label: 'Buy Me a Coffee', href: 'https://buymeacoffee.com/YOUR_USERNAME', bg: 'bg-[#FFDD00]' },
-    { label: 'Support',         href: 'https://YOUR_SUPPORT_LINK',              bg: 'bg-white border border-gray-200' },
-];
-
-const AUTO_CLOSE_MS = 5000;
-
-export function DonateButton({ className = '' }: { className?: string }) {
-    const [open, setOpen] = useState(false);
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const openPanel = () => {
-        setOpen(true);
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => setOpen(false), AUTO_CLOSE_MS);
-    };
-    const close = () => {
-        setOpen(false);
-        if (timerRef.current) clearTimeout(timerRef.current);
-    };
-
-    useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
-
-    return (
-        <div className={"relative inline-flex items-center " + className}>
-            <button
-                onClick={openPanel}
-                className={"flex items-center gap-2 px-4 py-2 text-xs font-bold text-black " +
-                    "bg-linear-to-r from-yellow-500 via-orange-500 to-yellow-600 " +
-                    "rounded-full shadow-lg whitespace-nowrap transition-opacity duration-200 " +
-                    (open ? "opacity-0 pointer-events-none" : "opacity-100 hover:opacity-90")}
-            >
-                Ung ho admin
-            </button>
-            <div className={"absolute inset-0 flex items-center justify-center gap-1.5 " +
-                "transition-opacity duration-200 " +
-                (open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}
-            >
-                {OPTIONS.map(({ label, href, bg }) => (
-                    <a key={href} href={href} target="_blank" rel="noopener noreferrer"
-                        onClick={close} title={label}
-                        className={bg + " rounded-lg shadow-md px-3 py-1 text-xs font-bold " +
-                            "flex items-center justify-center h-full shrink-0 hover:scale-105 transition-transform"}
-                    >
-                        {label}
-                    </a>
-                ))}
-            </div>
-        </div>
-    );
-}
-"@
-    $outBytes = [System.Text.Encoding]::UTF8.GetBytes($donateText)
-    [System.IO.File]::WriteAllBytes($donateButtonDest, $outBytes)
-    Write-Host "  Thay DonateButton.tsx bang version placeholder."
-}
-
-# -----------------------------------------------------------
 # 7. Tao file ZIP
 # -----------------------------------------------------------
 $ZipPath = Join-Path $Root "film-source-sale.zip"
@@ -263,7 +194,7 @@ Write-Host " Nguoi mua can tu cau hinh:"
 Write-Host "  - client/.env.local  (copy tu client/.env.example)"
 Write-Host "  - server/.env        (copy tu server/.env.example)"
 Write-Host "  - Thay YOUR_DOMAIN trong cac metadata pages"
-Write-Host "  - Thay YOUR_USERNAME trong DonateButton.tsx"
+
 Write-Host "  - Doc SETUP_GUIDE.md de biet chi tiet"
 Write-Host ""
 Write-Host " Nhanh torrent KHONG duoc bao gom." -ForegroundColor Cyan

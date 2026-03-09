@@ -161,9 +161,15 @@ pm2 save && pm2 startup
 | `client/src/app/(static)/contact/page.tsx` | Email liên hệ |
 | `client/src/app/(static)/dmca/page.tsx` | Email DMCA |
 | `client/src/app/(static)/privacy/page.tsx` | Email privacy |
-| `client/src/components/DonateButton.tsx` | Link ủng hộ của bạn |
 | `client/public/manifest.json` | App name, icons |
-| `client/public/icons/` | Thay logo/icon |
+| `client/public/icons/` | **Thay toàn bộ icon** (icon-72 đến icon-512, PWA icons) |
+| `client/public/logo.png` + `logo.jpg` | **Thay logo chính** |
+| `client/public/favicon.ico` | **Thay favicon** |
+| `client/src/app/icon.png` | **Thay app icon** (dùng cho tab trình duyệt) |
+| `client/src/app/apple-icon.png` | **Thay icon iOS** |
+| `client/src/app/opengraph-image.png` | **Thay ảnh share OG** (hiện khi share link lên mạng XH) |
+
+> **Lưu ý:** Toàn bộ icon/logo mặc định là placeholder. Bạn cần thay bằng logo/icon thương hiệu của mình trước khi deploy.
 
 ---
 
