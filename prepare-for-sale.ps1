@@ -57,6 +57,7 @@ Write-Host "[...] Xoa du lieu nhay cam & thu muc noi bo..." -ForegroundColor Cya
 
 $RemovePaths = @(
     "$Dest\server\backups",
+    "$Dest\.github\workflows\backup.yml",   # Workflow backup noi bo, nguoi mua khong can
     "$Dest\server\scripts\make_admin.js",
     "$Dest\server\scripts\demote_user.js",
     "$Dest\server\scripts\marvel_check.json",
