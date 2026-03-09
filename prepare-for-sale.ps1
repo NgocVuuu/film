@@ -101,7 +101,8 @@ $Replacements = @(
     @{ From = "vupaul2001@gmail.com";       To = "admin@$Domain" },
     @{ From = "ngocvu14.3.2001@gmail.com";  To = "admin@$Domain" },
     @{ From = "ngocvu1432001_db_user";      To = "your_db_user" },
-    @{ From = "buymeacoffee.com/pchill_admin"; To = "buymeacoffee.com/YOUR_USERNAME" }
+    @{ From = "buymeacoffee.com/pchill_admin"; To = "buymeacoffee.com/YOUR_USERNAME" },
+    @{ From = "G-RNRM206SY8";               To = "G-XXXXXXXXXX" }   # Google Analytics ID ca nhan
 )
 
 $TextExtensions = @(
