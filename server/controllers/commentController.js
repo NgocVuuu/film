@@ -207,9 +207,42 @@ const toggleLike = async (req, res) => {
     }
 };
 
+// 5. Get recent comments across all movies (for home page showcase)
+const getRecentComments = async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit) || 12, 50);
+
+        const comments = await Comment.find({
+            parentId: null,
+            content: { $exists: true, $ne: '' }
+        })
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .populate('user', 'displayName avatar role')
+            .lean();
+
+        // Batch-fetch movie info
+        const slugs = [...new Set(comments.map(c => c.movieSlug))];
+        const movies = await Movie.find({ slug: { $in: slugs } })
+            .select('slug name thumb_url poster_url')
+            .lean();
+        const movieMap = Object.fromEntries(movies.map(m => [m.slug, m]));
+
+        const data = comments.map(c => ({
+            ...c,
+            movie: movieMap[c.movieSlug] || { slug: c.movieSlug, name: c.movieSlug }
+        }));
+
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getComments,
     addComment,
     deleteComment,
-    toggleLike
+    toggleLike,
+    getRecentComments
 };

@@ -6,6 +6,7 @@ import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
 import { LazyMovieSection } from '@/components/LazyMovieSection';
 import { TrendingCarousel } from '@/components/TrendingCarousel';
 import { PWAAds } from '@/components/PWAAds';
+import { RecentComments } from '@/components/RecentComments';
 import LoadingScreen from '@/components/LoadingScreen';
 import { customFetch } from '@/lib/api';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
@@ -298,6 +299,11 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Recent Comments */}
+        <div className="mt-8">
+          <RecentComments />
+        </div>
 
         {/* 4. Hot Anime */}
         <LazyMovieSection

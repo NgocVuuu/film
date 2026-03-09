@@ -220,8 +220,8 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                                 isActive ? 'scale-[1.08] -translate-y-2' : 'scale-100 hover:scale-[1.03] hover:-translate-y-1'
                             }`}
                             style={{
-                                width: '58px',
-                                height: '80px',
+                                width: '72px',
+                                height: '96px',
                                 borderWidth: '2px',
                                 borderStyle: 'solid',
                                 borderColor: isActive ? '#eab308' : 'rgba(255,255,255,0.25)',
@@ -230,24 +230,17 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                             }}
                         >
                             {/* Counter-skewed image */}
-                            <div className="absolute inset-0 skew-x-6 scale-[1.15]">
+                            <div className="absolute inset-0 skew-x-6 scale-[1.12]">
                                 <Image
                                     src={movie.poster_url || movie.thumb_url}
                                     alt={movie.name}
                                     fill
-                                    sizes="52px"
+                                    sizes="90px"
                                     className="object-cover object-top"
                                 />
                             </div>
                             {/* Bottom gradient overlay */}
                             <div className="absolute bottom-0 left-0 h-10 bg-linear-to-t from-black/90 to-transparent skew-x-6 w-[140%] -ml-3 z-10" />
-                            {/* Rank number */}
-                            <span
-                                className="absolute top-0.5 right-0 z-20 text-[9px] font-black italic text-yellow-400 skew-x-6 pr-0.5"
-                                style={{ WebkitTextStroke: '0.4px rgba(255,255,255,0.4)', filter: 'drop-shadow(0 0 3px rgba(234,179,8,0.5))' }}
-                            >
-                                #{idx + 1}
-                            </span>
                             {/* Active yellow tint */}
                             {isActive && <div className="absolute inset-0 bg-yellow-500/10 skew-x-6 z-10" />}
                         </button>

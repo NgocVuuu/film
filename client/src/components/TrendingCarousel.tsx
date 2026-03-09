@@ -60,17 +60,20 @@ export function TrendingCarousel({ movies }: TrendingCarouselProps) {
                 <CarouselContent className="-ml-4">
                     {movies.map((movie, index) => (
                         <CarouselItem key={movie._id} className="pl-4 basis-[65%] sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-                            <Link href={`/movie/${movie.slug}`} className="block relative w-full aspect-[2/3] overflow-hidden group/item border-2 border-yellow-500/80 hover:border-yellow-400 transition-all duration-300 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] hover:scale-[1.02] hover:-translate-y-1 -skew-x-6 rounded-2xl md:rounded-3xl transform bg-black">
-                                <div className="absolute inset-0 border-[1px] border-white/10 z-10 pointer-events-none rounded-2xl md:rounded-3xl"></div>
-
+                            <Link href={`/movie/${movie.slug}`} className="block relative w-full aspect-[2/3] group/item border-2 border-yellow-500/80 hover:border-yellow-400 transition-all duration-300 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] hover:scale-[1.02] hover:-translate-y-2 -skew-x-6 rounded-2xl md:rounded-3xl transform bg-black">
+                                {/* Inner clip — separates overflow from the moving card */}
+                                <div className="absolute inset-0 overflow-hidden rounded-2xl md:rounded-3xl">
                                 <img
                                     src={movie.poster_url || movie.thumb_url}
                                     alt={movie.name}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-125 scale-[1.15] skew-x-6"
+                                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover/item:scale-110 scale-[1.15] skew-x-6"
                                 />
 
                                 {/* Gradient Overlay */}
                                 <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black via-black/80 to-transparent opacity-90 group-hover/item:opacity-95 transition-opacity skew-x-6 -ml-4 w-[120%]" />
+                                </div>
+
+                                <div className="absolute inset-0 border-[1px] border-white/10 z-10 pointer-events-none rounded-2xl md:rounded-3xl"></div>
 
                                 {/* Rank Number */}
                                 <div className="absolute top-0 right-0 p-2 z-20 skew-x-6">

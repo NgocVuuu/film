@@ -370,8 +370,8 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
         try {
             if (navigator.share) {
                 await navigator.share({
-                    title: `Xem phim ${movie.name} - ${movie.origin_name}`,
-                    text: `Cùng xem phim ${movie.name} (${movie.year}) siêu hay trên PhimChill nhé!`,
+                    title: `${movie.name} (${movie.year}) - Pchill`,
+                    text: `Cùng xem phim ${movie.name} (${movie.year}) trên Pchill nhé! 🎬`,
                     url: url
                 });
             } else {
@@ -609,7 +609,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                 </div>
                             )}
 
-                            <PWAAds variant="inline" />
+                            <PWAAds variant="inline2" />
                             <div className="mt-12">
                                 <CommentSection movieSlug={slug as string} />
                             </div>

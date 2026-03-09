@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/auth-context';
 // NEXT_PUBLIC_AD_INLINE_SCRIPT  — Adsterra script URL cho các trang danh sách / chi tiết
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type AdVariant = 'watch' | 'home' | 'inline';
+export type AdVariant = 'watch' | 'home' | 'inline' | 'inline2';
 
 interface PWAAdsProps {
     variant?: AdVariant;
@@ -21,17 +21,19 @@ export function PWAAds({ variant = 'home' }: PWAAdsProps) {
     const [loaded, setLoaded] = useState(false);
 
     const scriptSrc =
-        variant === 'watch'  ? process.env.NEXT_PUBLIC_AD_WATCH_SCRIPT :
-        variant === 'inline' ? process.env.NEXT_PUBLIC_AD_INLINE_SCRIPT :
-                               process.env.NEXT_PUBLIC_AD_HOME_SCRIPT;
+        variant === 'watch'   ? process.env.NEXT_PUBLIC_AD_WATCH_SCRIPT :
+        variant === 'inline'  ? process.env.NEXT_PUBLIC_AD_INLINE_SCRIPT :
+        variant === 'inline2' ? process.env.NEXT_PUBLIC_AD_INLINE2_SCRIPT :
+                                process.env.NEXT_PUBLIC_AD_HOME_SCRIPT;
 
     const isPremium = user?.isPremium;
 
     // Dimensions cho atOptions theo từng variant
     const adDimensions =
-        variant === 'watch'  ? { width: 728, height: 90  } :
-        variant === 'inline' ? { width: 320, height: 50  } :
-                               { width: 300, height: 250 };
+        variant === 'watch'   ? { width: 728, height: 90  } :
+        variant === 'inline'  ? { width: 320, height: 50  } :
+        variant === 'inline2' ? { width: 468, height: 60  } :
+                                { width: 300, height: 250 };
 
     // Chờ auth resolve xong mới inject — tránh inject cho premium user
     useEffect(() => {
@@ -40,25 +42,30 @@ export function PWAAds({ variant = 'home' }: PWAAdsProps) {
 
         // Extract key từ URL: //www.highperformanceformat.com/{key}/invoke.js
         const key = scriptSrc.match(/\/([a-f0-9]{32})\//)?.[1];
+        if (!key) return;
 
-        // Script 1: atOptions config (bắt buộc với Adsterra Banner)
-        if (key) {
-            const optScript = document.createElement('script');
-            optScript.text = `atOptions = {'key':'${key}','format':'iframe','height':${adDimensions.height},'width':${adDimensions.width},'params':{}};`;
-            containerRef.current.appendChild(optScript);
-        }
+        // Dùng iframe riêng để cô lập atOptions — tránh bị ghi đè bởi banner khác cùng trang
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = `border:none;width:${adDimensions.width}px;height:${adDimensions.height}px;display:block;`;
+        iframe.setAttribute('scrolling', 'no');
+        containerRef.current.appendChild(iframe);
 
-        // Script 2: invoke.js
-        const script = document.createElement('script');
-        script.src = scriptSrc;
-        script.async = true;
-        script.setAttribute('data-cfasync', 'false');
-        containerRef.current.appendChild(script);
+        const doc = iframe.contentDocument;
+        if (!doc) return;
+        doc.open();
+        doc.write(
+            `<script>atOptions={'key':'${key}','format':'iframe','height':${adDimensions.height},'width':${adDimensions.width},'params':{}};` +
+            `\x3C/script><script src="${scriptSrc}" data-cfasync="false">\x3C/script>`
+        );
+        doc.close();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loading]);
 
-    // Placeholder: hiện khi đang load auth, khi Premium, hoặc chưa cấu hình script
-    const showPlaceholder = loading || isPremium || !scriptSrc;
+    // Ẩn hoàn toàn với premium users và khi chưa cấu hình script
+    if (!loading && (isPremium || !scriptSrc)) return null;
+
+    // Placeholder khi đang resolve auth
+    const showPlaceholder = loading;
 
     if (variant === 'watch') {
         return (
@@ -76,7 +83,7 @@ export function PWAAds({ variant = 'home' }: PWAAdsProps) {
         );
     }
 
-    if (variant === 'inline') {
+    if (variant === 'inline' || variant === 'inline2') {
         return (
             <div
                 ref={showPlaceholder ? undefined : containerRef}
@@ -85,7 +92,7 @@ export function PWAAds({ variant = 'home' }: PWAAdsProps) {
             >
                 {showPlaceholder && (
                     <span className="text-xs font-semibold tracking-widest uppercase text-white/30 select-none">
-                        — AD · inline —
+                        — AD · {variant} —
                     </span>
                 )}
             </div>
