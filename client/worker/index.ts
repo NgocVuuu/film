@@ -7,7 +7,7 @@ declare const self: ServiceWorkerGlobalScope;
 // Handle messages from the page (Workbox, SKIP_WAITING, etc.)
 // Without this, Workbox's MessageChannel requests accumulate and never get a response,
 // causing "message channel closed before a response was received" to grow over time.
-self.addEventListener('message', (event: MessageEvent) => {
+self.addEventListener('message', (event: ExtendableMessageEvent) => {
     if (event.data?.type === 'SKIP_WAITING') {
         self.skipWaiting();
         // Respond to close the MessageChannel port cleanly
