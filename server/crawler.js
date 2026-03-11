@@ -796,6 +796,7 @@ module.exports = {
     addToBlacklist,
     removeFromBlacklist,
     getBlacklist,
+    getStatus,
     stopSync,
     getLogs,
     startCrawl,
