@@ -638,13 +638,16 @@ export default function VideoPlayer({
                 // === Performance & Seeking ===
                 progressive: true, // Crucial: start playing before fragment is fully loaded
                 // === Memory Management (critical for long sessions / PWA) ===
-                maxBufferLength: 45,
-                backBufferLength: 10,
-                maxMaxBufferLength: 90,
-                maxBufferSize: 30 * 1024 * 1024,
-                fragLoadingTimeOut: 15000,
-                fragLoadingMaxRetry: 5,
-                appendErrorMaxRetry: 3,
+                maxBufferLength: 60,           // Tăng từ 45→60s: ít bị stall hơn khi CDN chậm
+                backBufferLength: 30,          // 30s: đủ để tua lại mà không nặng RAM mobile
+                maxMaxBufferLength: 120,       // Tăng từ 90→120s: cho phép buffer tối đa 2 phút
+                maxBufferSize: 50 * 1024 * 1024, // 50MB: cân bằng giữa HD quality và RAM mobile
+                fragLoadingTimeOut: 20000,     // Tăng từ 15→20s: CDN chậm có thêm thời gian
+                fragLoadingMaxRetry: 6,        // Tăng từ 5→6 lần retry khi segment lỗi
+                fragLoadingRetryDelay: 1000,   // Thêm: chờ 1s giữa các lần retry
+                appendErrorMaxRetry: 5,        // Tăng từ 3→5
+                levelLoadingTimeOut: 20000,    // Thêm: timeout cho manifest/level
+                manifestLoadingTimeOut: 20000, // Thêm: timeout cho manifest load
             });
             hlsRef.current = hls;
 

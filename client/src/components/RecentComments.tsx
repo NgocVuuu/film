@@ -114,7 +114,17 @@ export function RecentComments() {
     useEffect(() => {
         fetch(`${API_URL}/api/comments/recent?limit=50`)
             .then(r => r.json())
-            .then(d => { if (d.success) setComments(d.data); })
+            .then(d => {
+                if (d.success) {
+                    // Fisher-Yates shuffle — phân phối đều, không bị lệch như sort(random)
+                    const shuffled = [...d.data];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+                    setComments(shuffled);
+                }
+            })
             .catch(() => {})
             .finally(() => setLoading(false));
     }, []);

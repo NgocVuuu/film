@@ -99,6 +99,7 @@ export default function RootLayout({
             gtag('config', 'G-RNRM206SY8');
           `}
         </Script>
+
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${dancingScript.variable} antialiased min-h-screen flex flex-col bg-deep-black text-foreground overflow-x-hidden`}

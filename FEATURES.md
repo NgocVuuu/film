@@ -1,9 +1,5 @@
 # Báo cáo tính năng — Web xem phim Full-stack
 
-> Source code nhánh `main`. Nhánh `torrent` đang phát triển, không nằm trong gói này.
-
----
-
 ## Tổng quan kỹ thuật
 
 | Thành phần | Công nghệ |
