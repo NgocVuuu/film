@@ -68,7 +68,9 @@ export default function Home() {
   useScrollRestoration(!loading);
   const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]); // Array for Hero
   const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]); // New Upcoming Movies
-  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]); // New Trending
+  const [allTrending, setAllTrending] = useState<Movie[]>([]);
+  const [seriesTrending, setSeriesTrending] = useState<Movie[]>([]);
+  const [movieTrending, setMovieTrending] = useState<Movie[]>([]);
   const [continueWatchingMovies, setContinueWatchingMovies] = useState<Movie[]>([]); // New Continue Watching
 
   // Categories State
@@ -108,7 +110,9 @@ export default function Home() {
       .then((data) => {
         if (data.success && data.data) {
           const {
-            trendingMovies,
+            allTrending,
+            seriesTrending,
+            movieTrending,
             featuredMovies,
             upcomingMovies,
             latestMovies,
@@ -142,7 +146,9 @@ export default function Home() {
             xianxiaMovies
           } = data.data;
 
-          setTrendingMovies(trendingMovies || []);
+          setAllTrending(allTrending || []);
+          setSeriesTrending(seriesTrending || []);
+          setMovieTrending(movieTrending || []);
           setFeaturedMovies(featuredMovies || []);
           // Merge local history with API history for instant sync
           let mergedHistory = continueWatching || [];
@@ -240,17 +246,21 @@ export default function Home() {
     <div className="min-h-screen bg-deep-black text-foreground pb-20">
 
       {/* Hero Slider Section */}
-      {trendingMovies.length > 0 && (
-        <HeroSlider movies={trendingMovies} />
+      {allTrending.length > 0 && (
+        <HeroSlider movies={allTrending} />
       )}
 
       {/* UNIVERSE BANNERS */}
-      <div className="container mx-auto px-4 mt-10 md:mt-14 relative z-20 mb-2">
+      <div className="container mx-auto px-4 mt-4 md:mt-10 relative z-20 mb-2">
+        <h2 className="text-lg md:text-2xl font-bold text-white mb-1 flex items-center gap-2">
+          <span className="w-1 h-6 bg-primary rounded-full"></span>
+          Chủ đề đang hot
+        </h2>
         <UniverseBannersCarousel />
       </div>
 
       {/* Carousel Sections */}
-      <div className="container mx-auto px-4 space-y-12 mt-4 relative z-20">
+      <div className="container mx-auto px-4 space-y-0.5 mt-1 relative z-20">
 
         {/* 1. Cinema / Featured */}
         {featuredMovies.length > 0 && (
@@ -270,28 +280,36 @@ export default function Home() {
           />
         )}
 
-        {/* 2. Trending Section */}
-        {trendingMovies.length > 0 && (
-          <TrendingCarousel movies={trendingMovies} />
+        {/* 2. Trending Sections - Separated with Darker Themed Background */}
+        {seriesTrending.length > 0 && (
+          <div className="mt-12 mb-6 relative overflow-hidden rounded-t-[40px] bg-linear-to-b from-primary/20 via-primary/5 to-transparent pt-10 pb-4 px-1 border-t border-primary/20">
+            <TrendingCarousel title="Phim bộ nổi bật" movies={seriesTrending} />
+          </div>
+        )}
+
+        {movieTrending.length > 0 && (
+          <div className="mt-4 mb-10 relative overflow-hidden rounded-t-[40px] bg-linear-to-b from-primary/20 via-primary/5 to-transparent pt-10 pb-4 px-1 border-t border-primary/20">
+            <TrendingCarousel title="Phim lẻ nổi bật" movies={movieTrending} />
+          </div>
         )}
 
         {/* 3. Recommended */}
         <MovieCarousel
           title="Phim nổi bật đề cử cho bạn"
-          movies={trendingMovies.slice().reverse()}
+          movies={[...allTrending].reverse()}
         />
 
         {/* Continue Watching Section */}
         {continueWatchingMovies.filter(m => m.progress).length > 0 && (
-          <div className="container mx-auto px-4 mt-8">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-6 flex items-center gap-2">
+          <div className="container mx-auto px-4 mt-6">
+            <h2 className="text-lg md:text-2xl font-bold text-white mb-3 flex items-center gap-2">
               <span className="w-1 h-6 bg-primary rounded-full"></span>
               Tiếp tục xem ({continueWatchingMovies.filter(m => m.progress).length})
             </h2>
             <div className="relative">
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
                 {continueWatchingMovies.filter(m => m.progress).map((movie) => (
-                  <div key={movie._id} className="shrink-0 w-40 snap-start">
+                  <div key={movie._id} className="shrink-0 w-32 snap-start">
                     <ContinueWatchingCard movie={movie as typeof movie & { progress: NonNullable<typeof movie.progress> }} />
                   </div>
                 ))}

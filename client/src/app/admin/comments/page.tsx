@@ -126,12 +126,10 @@ export default function AdminCommentsPage() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
                                             <div className="relative w-8 h-8 shrink-0">
-                                                <Image
+                                                <img
                                                     src={comment.user.avatar || '/default-avatar.png'}
                                                     alt={comment.user.displayName}
-                                                    fill
-                                                    sizes="32px"
-                                                    className="rounded-full object-cover border border-white/10"
+                                                    className="w-8 h-8 rounded-full object-cover border border-white/10"
                                                 />
                                             </div>
                                             <div>

@@ -268,7 +268,7 @@ export default function AdminChatPage() {
                                     className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-white/5 hover:bg-white/5 ${selected?._id === conv._id ? 'bg-primary/10 border-l-2 border-l-primary' : ''}`}
                                 >
                                     {conv.userId?.avatar ? (
-                                        <Image src={conv.userId.avatar} alt={conv.userId.displayName} width={38} height={38} className="rounded-full w-10 h-10 object-cover flex-shrink-0" />
+                                        <img src={conv.userId.avatar} alt={conv.userId.displayName} className="rounded-full w-10 h-10 object-cover flex-shrink-0" />
                                     ) : (
                                         <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
                                             <User className="w-4 h-4 text-gray-400" />
@@ -309,7 +309,7 @@ export default function AdminChatPage() {
                             {/* Chat Header */}
                             <div className="flex items-center gap-3 px-5 py-3 border-b border-white/10 bg-black/20">
                                 {selected.userId?.avatar ? (
-                                    <Image src={selected.userId.avatar} alt={selected.userId.displayName} width={36} height={36} className="rounded-full w-9 h-9 object-cover" />
+                                    <img src={selected.userId.avatar} alt={selected.userId.displayName} className="rounded-full w-9 h-9 object-cover" />
                                 ) : (
                                     <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
                                         <User className="w-4 h-4 text-gray-400" />
@@ -340,7 +340,7 @@ export default function AdminChatPage() {
                                         return (
                                             <div key={msg._id} className={`flex items-end gap-2 ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}>
                                                 {!isAdmin && selected.userId?.avatar && (
-                                                    <Image src={selected.userId.avatar} alt={selected.userId.displayName} width={28} height={28} className="rounded-full w-7 h-7 object-cover flex-shrink-0" />
+                                                    <img src={selected.userId.avatar} alt={selected.userId.displayName} className="rounded-full w-7 h-7 object-cover flex-shrink-0" />
                                                 )}
                                                 {isAdmin && (
                                                     <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">

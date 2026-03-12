@@ -396,10 +396,17 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
 
                 {/* Backdrop Image */}
                 <div className="absolute inset-0">
+                    {/* Mobile: ảnh dọc (poster) */}
                     <img
                         src={movie.poster_url || movie.thumb_url}
                         alt={movie.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover object-top md:hidden"
+                    />
+                    {/* Desktop: ảnh ngang (thumb) để tránh zoom quá mức */}
+                    <img
+                        src={movie.thumb_url}
+                        alt={movie.name}
+                        className="w-full h-full object-cover object-center hidden md:block"
                     />
                     {/* Gradient Overlays for readability */}
                     <div className="absolute inset-0 bg-linear-to-t from-[#050505] via-[#050505]/60 to-transparent"></div>
@@ -494,7 +501,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                     <Button
                                         variant="outline"
                                         onClick={toggleFavorite}
-                                        className={`h-11 md:h-13 px-5 border border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10 text-white text-sm md:text-base font-semibold rounded-xl backdrop-blur-sm transition-all duration-200 hover:scale-[1.03] active:scale-95 ${isFavorite ? '!border-primary/60 !text-primary bg-primary/10' : ''}`}
+                                        className={`h-11 md:h-13 px-5 border border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10 text-white text-sm md:text-base font-semibold rounded-xl backdrop-blur-sm transition-all duration-200 hover:scale-[1.03] active:scale-95 ${isFavorite ? 'border-primary/60! text-primary! bg-primary/10' : ''}`}
                                     >
                                         <Star className={`mr-2 w-4 h-4 md:w-5 md:h-5 shrink-0 transition-transform ${isFavorite ? 'fill-current scale-110' : ''}`} />
                                         {isFavorite ? 'Đã Thêm' : 'Yêu Thích'}

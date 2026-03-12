@@ -8,6 +8,7 @@ import { ToastProvider } from "@/components/toast-provider";
 import { AuthProvider } from "@/contexts/auth-context";
 import ChatWidget from "@/components/ChatWidget";
 import { AdInterstitial } from "@/components/AdInterstitial";
+import { QuickViewProvider } from "@/contexts/QuickViewContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -106,16 +107,18 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <AuthProvider>
-          <MainLayout>
-            {children}
-          </MainLayout>
-          <Suspense fallback={null}>
-            <ChatWidget />
-          </Suspense>
-          <Suspense fallback={null}>
-            <AdInterstitial />
-          </Suspense>
-          <ToastProvider />
+          <QuickViewProvider>
+            <MainLayout>
+              {children}
+            </MainLayout>
+            <Suspense fallback={null}>
+              <ChatWidget />
+            </Suspense>
+            <Suspense fallback={null}>
+              <AdInterstitial />
+            </Suspense>
+            <ToastProvider />
+          </QuickViewProvider>
         </AuthProvider>
       </body>
     </html>

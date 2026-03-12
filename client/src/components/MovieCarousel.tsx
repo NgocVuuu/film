@@ -2,6 +2,8 @@
 import { useRef } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { useLongPress } from '@/hooks/useLongPress';
+import { useQuickView } from '@/contexts/QuickViewContext';
 
 interface Movie {
     _id: string;
@@ -32,6 +34,7 @@ interface MovieCarouselProps {
 
 export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouselProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const { showQuickView } = useQuickView();
 
     const scroll = (direction: 'left' | 'right') => {
         if (scrollRef.current) {
@@ -44,12 +47,51 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
         }
     };
 
+    const getBadges = (quality?: string, episode?: string, lang?: string) => {
+        const q = quality?.toLowerCase() || '';
+        const l = lang?.toLowerCase() || '';
+        const epClean = episode?.replace(/Tập\s*/i, '').replace(/\s*Hoàn\s*tất/i, '').trim() || '';
+        
+        const checkString = (l + ' ' + q);
+        const badges: { display: string; classes: string }[] = [];
+
+        if (checkString.includes('vietsub')) {
+            badges.push({
+                display: epClean ? `VS ${epClean}` : 'VS',
+                classes: 'bg-yellow-500 text-black border-yellow-400/50'
+            });
+        }
+
+        if (checkString.includes('thuyết minh')) {
+            badges.push({
+                display: epClean ? `TM ${epClean}` : 'TM',
+                classes: 'bg-orange-500 text-white border-orange-400/50'
+            });
+        }
+
+        if (checkString.includes('lồng tiếng')) {
+            badges.push({
+                display: epClean ? `LT ${epClean}` : 'LT',
+                classes: 'bg-[#8B4513] text-white border-orange-900/50'
+            });
+        }
+
+        if (badges.length === 0 && (l || q)) {
+            badges.push({
+                display: epClean ? `VS ${epClean}` : 'VS',
+                classes: 'bg-yellow-500 text-black border-yellow-400/50'
+            });
+        }
+
+        return badges;
+    };
+
     if (!movies || movies.length === 0) return null;
 
     return (
-        <div className="py-8 space-y-4">
+        <div className="py-1 md:py-2 space-y-1">
             <div className="flex items-center justify-between px-4">
-                <h2 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-linear-to-r from-primary to-yellow-200 flex items-center gap-3">
+                <h2 className="text-lg md:text-3xl font-bold bg-clip-text text-transparent bg-linear-to-r from-primary to-yellow-200 flex items-center gap-3">
                     {icon && <span className="text-primary">{icon}</span>}
                     {title}
                 </h2>
@@ -75,54 +117,68 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
                     <ChevronRight className="w-6 h-6" />
                 </button>
 
-                {/* Carousel Container */}
                 <div
                     ref={scrollRef}
                     className="flex overflow-x-auto gap-4 px-4 pb-4 scrollbar-hide snap-x snap-mandatory"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
-                    {movies.map((movie) => (
-                        <Link
-                            key={movie._id}
-                            href={`/movie/${movie.slug}`}
-                            className="bg-surface-800 rounded-lg overflow-hidden border border-border/50 shadow-lg relative snap-start w-[40vw] md:w-50 shrink-0 group hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 will-change-transform"
-                        >
-                            {/* Image */}
-                            <div className="aspect-2/3 w-full relative overflow-hidden">
-                                <img
-                                    src={movie.thumb_url}
-                                    alt={movie.name}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                    loading="lazy"
-                                />
-                                <div className="absolute inset-0 bg-linear-to-t from-black via-transparent to-transparent opacity-80" />
+                    {movies.map((movie) => {
+                        const longPressHandlers = useLongPress(() => {
+                            showQuickView(movie as any);
+                        });
+                        const movieBadges = getBadges(movie.quality, movie.episode_current, movie.lang);
 
-                                {/* Badge */}
-                                <div className="absolute top-2 left-2 bg-primary text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
-                                    {movie.episode_current || movie.quality || 'HD'}
-                                </div>
+                        return (
+                            <Link
+                                key={movie._id}
+                                href={`/movie/${movie.slug}`}
+                                {...longPressHandlers}
+                                className="bg-surface-800 rounded-lg overflow-hidden border border-border/50 shadow-lg relative snap-start w-[31vw] md:w-50 shrink-0 group transition-all duration-300 hover:scale-[1.03] hover:shadow-primary/20"
+                            >
+                                {/* Image */}
+                                <div className="aspect-2/3 w-full relative overflow-hidden">
+                                    <img
+                                        src={movie.thumb_url}
+                                        alt={movie.name}
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                        loading="lazy"
+                                    />
+                                    <div className="absolute inset-0 bg-linear-to-t from-black via-transparent to-transparent opacity-60 transition-opacity group-hover:opacity-40" />
 
-                                {/* Hover Play */}
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <div className="w-10 h-10 rounded-full bg-primary text-black flex items-center justify-center shadow-lg shadow-primary/50">
-                                        <Play className="w-5 h-5 fill-current ml-0.5" />
+                                    {/* Unified Badges (Bottom Right) */}
+                                    <div className="absolute bottom-1 right-1 z-20 pointer-events-none flex flex-col items-end gap-0.5 max-w-[90%]">
+                                        {movieBadges.map((b, idx) => (
+                                            <div key={idx} className={`backdrop-blur-md text-[6.5px] font-bold px-1 py-0.5 rounded-[2px] border shadow-sm transition-colors ${b.classes}`}>
+                                                {b.display}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Hover Play */}
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <div className="w-10 h-10 rounded-full bg-primary text-black flex items-center justify-center shadow-lg shadow-primary/50 transform group-hover:scale-110 transition-transform">
+                                            <Play className="w-5 h-5 fill-current ml-0.5" />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Info */}
-                            <div className="p-3">
-                                <div className="truncate marquee-container">
-                                    <h3 className="text-sm font-bold text-white group-hover:text-primary transition-colors hover-marquee">{movie.name}</h3>
+                                 {/* Title Below Image */}
+                                <div className="p-1.5 pt-1 bg-surface-900/40">
+                                    <div className="truncate">
+                                        <h3 className="text-[10.5px] font-medium text-white group-hover:text-primary transition-colors leading-tight truncate">{movie.name}</h3>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-0.5">
+                                        <p className="text-[9px] text-gray-500 truncate max-w-[75%] font-normal italic opacity-80">
+                                            {movie.origin_name}
+                                        </p>
+                                        <span className="text-[9px] text-gray-400 font-normal shrink-0">
+                                            {movie.year}
+                                        </span>
+                                    </div>
                                 </div>
-                                <p className="text-xs text-gray-400 truncate">{movie.origin_name}</p>
-                                <div className="flex items-center justify-between mt-2 text-[10px] text-gray-500 uppercase font-medium">
-                                    <span>{movie.year}</span>
-                                    <span className="border border-white/10 px-1 rounded">{movie.lang || 'Vietsub'}</span>
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        );
+                    })}
                 </div>
             </div>
         </div>

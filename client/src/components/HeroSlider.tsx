@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import Link from 'next/link';
 import { Play, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ interface Movie {
     poster_url?: string;
     episode_current?: string;
     quality?: string;
+    content?: string; // short description
     progress?: {
         currentTime: number;
         duration: number;
@@ -28,90 +29,366 @@ interface HeroSliderProps {
     movies: Movie[];
 }
 
+const BackgroundSlide = memo(({ movie }: { movie: Movie }) => (
+    <div
+        className="absolute inset-0 will-change-opacity z-0"
+        style={{
+            opacity: 0,
+            visibility: 'hidden',
+        }}
+    >
+        <Image
+            src={movie.poster_url || movie.thumb_url}
+            alt={movie.name}
+            className="w-full h-full object-cover object-top md:hidden"
+            fill
+            sizes="100vw"
+            style={{ filter: 'blur(4px) brightness(0.7)' }} // Added subtle blur back for better depth balance
+        />
+        <Image
+            src={movie.thumb_url}
+            alt={movie.name}
+            className="w-full h-full object-cover object-center hidden md:block"
+            fill
+            sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-linear-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-[#050505]/90 via-[#050505]/50 to-transparent"></div>
+        {movie.progress && movie.progress.percentage > 0 && (
+            <div className="absolute bottom-0 left-0 w-full h-1.5 bg-gray-700/30 z-20">
+                <div
+                    className="h-full bg-primary shadow-[0_0_15px_rgba(234,179,8,0.8)]"
+                    style={{ width: `${Math.min(movie.progress.percentage, 100)}%` }}
+                />
+            </div>
+        )}
+    </div>
+));
+BackgroundSlide.displayName = 'BackgroundSlide';
+
 export function HeroSlider({ movies }: HeroSliderProps) {
+    const SLOT_PX = 250; // Increased spacing to ultra-wide (was 210)
+    const moviesCount = movies.length;
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [dragOffset, setDragOffset] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
+    const [isJumping, setIsJumping] = useState(false);
+    const sliderRef = useRef<HTMLDivElement>(null);
+    const jumpTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const rafRef = useRef<number | null>(null);
+    const dragOffsetRef = useRef(0);
+    const currentIndexRef = useRef(0);
+    const isDraggingRef = useRef(false);
+
+    // DOM Refs for high-performance direct manipulation
+    const posterRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const backgroundRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const mobileTextRef = useRef<HTMLDivElement>(null);
+    const mobileDescRef = useRef<HTMLDivElement>(null);
+    const desktopTextRef = useRef<HTMLDivElement>(null);
+    const slidesContainerRef = useRef<HTMLDivElement>(null);
+
+    // Movies ref to access current data in raf loop
+    const moviesRef = useRef(movies);
+    useEffect(() => {
+        moviesRef.current = movies;
+    }, [movies]);
 
     // Use refs for touch coordinates to avoid re-renders during swipe
     const touchStartX = useRef<number | null>(null);
-    const touchEndX = useRef<number | null>(null);
+    const touchStartTime = useRef<number>(0);
 
-    // Minimum swipe distance (in px)
-    const minSwipeDistance = 50;
+    const updatePosterStyles = (offset: number) => {
+        dragOffsetRef.current = offset;
+        const moviesCount = moviesRef.current.length;
+        if (moviesCount === 0) return;
+        if (!slidesContainerRef.current) return;
 
-    const onTouchStart = (e: React.TouchEvent) => {
-        touchEndX.current = null;
-        touchStartX.current = e.targetTouches[0].clientX;
+        // Content Wrapper opacity fade stays (only for text)
+        const textOpacity = Math.max(0, 1 - (Math.abs(offset) / 400)).toString();
+        if (mobileTextRef.current) mobileTextRef.current.style.opacity = textOpacity;
+        if (mobileDescRef.current) mobileDescRef.current.style.opacity = textOpacity;
+        if (desktopTextRef.current) desktopTextRef.current.style.opacity = textOpacity;
+
+        const fullTrackWidth = moviesCount * SLOT_PX;
+        const halfTrack = fullTrackWidth / 2;
+        const viewportWidth = sliderRef.current?.offsetWidth || 500;
+
+        // 1. Process Posters
+        moviesRef.current.forEach((_, i) => {
+            const ref = posterRefs.current[i];
+            if (!ref) return;
+
+            // Raw position relative to the "current" center
+            let rawP = (i - currentIndexRef.current) * SLOT_PX + offset;
+            
+            // Seamless Looping Wrap:
+            // Standardize into [-halfTrack, halfTrack]
+            let wrappedP = ((rawP + halfTrack) % fullTrackWidth + fullTrackWidth) % fullTrackWidth - halfTrack;
+
+            const dist = Math.abs(wrappedP);
+            
+            const isMobile = window.innerWidth < 768;
+            const cullingDist = isMobile ? viewportWidth * 2 : viewportWidth;
+            
+            // Visibility Culling for performance - increased for mobile to prevent disappearing on fast flicks
+            if (dist > cullingDist) {
+                ref.style.visibility = 'hidden';
+                return;
+            }
+            ref.style.visibility = 'visible';
+
+            // Enhanced Continuous Scaling & Rotation
+            const progress = Math.pow(Math.max(0, 1 - dist / (SLOT_PX * 2.5)), 1.5);
+            
+            // --- Interactive Scaling Refinement ---
+            // On mobile, shrink posters by 10% while dragging to provide tactile feedback
+            const dragScaleMultiplier = (isMobile && isDraggingRef.current) ? 0.9 : 1.0;
+            const scale = (1 + progress * 0.25) * dragScaleMultiplier; 
+            
+            // Refined Rotation: Use a Sin curve to cap max rotation and keep it natural
+            const rotate = Math.sin(wrappedP / (SLOT_PX * 2)) * 22; 
+            
+            // Imperative Style Orchestration:
+            // 1. Transition: None during dragging (instant feedback), Smooth during snapping (GPU accelerated)
+            ref.style.transition = isDraggingRef.current ? 'none' : 'all 700ms cubic-bezier(0.16, 1, 0.3, 1)';
+            
+            // 2. Transform & Depth
+            ref.style.transform = `translate3d(-50%, -50%, 0) translateX(${wrappedP}px) rotate(${rotate}deg) scale(${scale})`;
+            ref.style.zIndex = Math.round(100 - dist / 5).toString();
+            
+            // 3. 3D Opacity Fade
+            ref.style.opacity = Math.max(0.4, progress).toString();
+        });
+
+        // 2. Process Background Slides (Imperative sync)
+        const children = slidesContainerRef.current.children;
+        const globalProgress = -offset / SLOT_PX;
+        
+        for (let i = 0; i < moviesCount; i++) {
+            const slide = children[i] as HTMLElement;
+            if (!slide) continue;
+
+            let diff = i - currentIndexRef.current;
+            if (diff > moviesCount / 2) diff -= moviesCount;
+            if (diff < -moviesCount / 2) diff += moviesCount;
+            
+            const distance = Math.abs(globalProgress - diff);
+            const opacity = Math.pow(Math.max(0, 1 - distance), 2); // Sharper transition
+            
+            slide.style.transition = isDraggingRef.current ? 'none' : 'opacity 700ms cubic-bezier(0.16, 1, 0.3, 1)';
+            slide.style.opacity = opacity.toString();
+            slide.style.visibility = opacity > 0.01 ? 'visible' : 'hidden';
+        }
     };
 
-    const onTouchMove = (e: React.TouchEvent) => {
-        touchEndX.current = e.targetTouches[0].clientX;
+    const onTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.targetTouches[0].clientX;
+        touchStartTime.current = Date.now();
+        dragOffsetRef.current = 0;
+        isDraggingRef.current = true;
+        setIsDragging(true);
+    };
+
+    const nativeTouchMove = (e: TouchEvent) => {
+        if (touchStartX.current === null) return;
+        const currentX = e.targetTouches[0].clientX;
+        const diff = currentX - touchStartX.current;
+        
+        // Strictly block browser navigation/scroll if horizontal swipe is detected
+        if (Math.abs(diff) > 5) {
+            if (e.cancelable) e.preventDefault();
+        }
+        
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+            updatePosterStyles(diff);
+        });
     };
 
     const onTouchEnd = () => {
-        if (!touchStartX.current || !touchEndX.current) return;
-
-        const distance = touchStartX.current - touchEndX.current;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-
-        if (isLeftSwipe) {
-            handleNext();
-        } else if (isRightSwipe) {
-            handlePrev();
-        }
+        if (touchStartX.current === null) return;
+        handleDragEnd();
     };
 
     const onMouseDown = (e: React.MouseEvent) => {
+        // Prevent default to stop browser from starting native drag or text selection
+        e.preventDefault();
+        isDraggingRef.current = true;
         setIsDragging(true);
         touchStartX.current = e.clientX;
+        touchStartTime.current = Date.now();
+        dragOffsetRef.current = 0;
     };
 
     const onMouseMove = (e: React.MouseEvent) => {
-        if (!isDragging) return;
-        touchEndX.current = e.clientX;
+        if (!isDraggingRef.current || touchStartX.current === null) return;
+        const currentX = e.clientX;
+        const diff = currentX - touchStartX.current;
+        
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+            updatePosterStyles(diff);
+        });
     };
 
-    const onMouseUp = (e: React.MouseEvent) => {
-        if (!isDragging) return;
-        setIsDragging(false);
-        const endX = e.clientX;
-
-        if (!touchStartX.current) return;
-
-        const distance = touchStartX.current - endX;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-
-        if (isLeftSwipe) {
-            handleNext();
-        } else if (isRightSwipe) {
-            handlePrev();
-        }
-
-        touchStartX.current = null;
-        touchEndX.current = null;
+    const onMouseUp = () => {
+        if (isDraggingRef.current) handleDragEnd();
     };
 
     const onMouseLeave = () => {
-        if (isDragging) setIsDragging(false);
+        if (isDraggingRef.current) handleDragEnd();
+    };
+
+    const handleDragEnd = (velocityX?: number) => {
+        if (!isDraggingRef.current) return;
+        
+        const offset = dragOffsetRef.current;
+        const threshold = SLOT_PX / 3;
+        let snapOffset = 0;
+
+        // Use window.innerWidth for device detection
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        
+        // velocityX is passed from touch events, velocity is calculated from mouse events
+        const v = velocityX !== undefined ? velocityX : (offset / Math.max(Date.now() - touchStartTime.current, 1));
+
+        if (isMobile) {
+            // Adaptive kinetic drift for mobile
+            const drift = v * 250; 
+            const totalOffset = offset + drift;
+            snapOffset = Math.round(totalOffset / SLOT_PX) * SLOT_PX;
+        } else {
+            // Limited momentum for desktop (max 1 slide jump)
+            if (offset > threshold || v > 0.5) {
+                snapOffset = SLOT_PX;
+            } else if (offset < -threshold || v < -0.5) {
+                snapOffset = -SLOT_PX;
+            } else {
+                snapOffset = 0;
+            }
+        }
+
+        const jumps = -snapOffset / SLOT_PX;
+        let nextIndex = (currentIndexRef.current + jumps + moviesCount) % moviesCount;
+
+        // Cleanup dragging state IMMEDIATELY
+        isDraggingRef.current = false;
+        setIsDragging(false);
+        touchStartX.current = null;
+        
+        // --- GPU ACCELERATION TRIGGER ---
+        // 1. Update state indices
+        setCurrentIndex(nextIndex);
+        currentIndexRef.current = nextIndex;
+        
+        // 2. Clear drag offset
+        dragOffsetRef.current = 0;
+        setDragOffset(0);
+
+        // 3. Final visual sync - Browser will transition from current 'offset' transform 
+        // to '0' transform using the CSS transition we set in updatePosterStyles
+        requestAnimationFrame(() => {
+            updatePosterStyles(0);
+        });
     };
 
     // Auto-play
     useEffect(() => {
+        if (isDragging) return;
         const timer = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % movies.length);
+            const next = (currentIndexRef.current + 1) % movies.length;
+            currentIndexRef.current = next;
+            setCurrentIndex(next);
         }, 6000); // 6 seconds per slide
         return () => clearInterval(timer);
-    }, [movies.length]);
+    }, [movies.length, isDragging]);
 
-    const handlePrev = () => {
-        setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length);
+    // Sync DOM with state on mount or change
+    useEffect(() => {
+        currentIndexRef.current = currentIndex;
+        updatePosterStyles(0);
+    }, [currentIndex, movies.length]);
+
+    // Native Touch Event Handling to bypass "passive" issues
+    useEffect(() => {
+        const slider = sliderRef.current;
+        if (!slider) return;
+
+        const options = { passive: false } as AddEventListenerOptions;
+        slider.addEventListener('touchmove', nativeTouchMove, options);
+        
+        return () => {
+            slider.removeEventListener('touchmove', nativeTouchMove);
+        };
+    }, []);
+
+    const handlePrev = (step: number = 1) => {
+        if (step <= 0) {
+            setIsJumping(false);
+            return;
+        }
+
+        if (step > 1) {
+            setIsJumping(true);
+            const next = (currentIndexRef.current - 1 + movies.length) % movies.length;
+            currentIndexRef.current = next;
+            setCurrentIndex(next);
+            jumpTimerRef.current = setTimeout(() => handlePrev(step - 1), 300);
+        } else {
+            // Last or single step: GPU-accelerated sync
+            const next = (currentIndexRef.current - 1 + movies.length) % movies.length;
+            currentIndexRef.current = next;
+            setCurrentIndex(next);
+            setDragOffset(0);
+            dragOffsetRef.current = 0;
+            
+            requestAnimationFrame(() => {
+                updatePosterStyles(0);
+            });
+
+            if (isJumping) {
+                jumpTimerRef.current = setTimeout(() => setIsJumping(false), 300);
+            }
+        }
     };
 
-    const handleNext = () => {
-        setCurrentIndex((prev) => (prev + 1) % movies.length);
+    const handleNext = (step: number = 1) => {
+        if (step <= 0) {
+            setIsJumping(false);
+            return;
+        }
+
+        if (step > 1) {
+            setIsJumping(true);
+            const next = (currentIndexRef.current + 1) % movies.length;
+            currentIndexRef.current = next;
+            setCurrentIndex(next);
+            jumpTimerRef.current = setTimeout(() => handleNext(step - 1), 300);
+        } else {
+            // Last or single step: GPU-accelerated sync
+            const next = (currentIndexRef.current + 1) % movies.length;
+            currentIndexRef.current = next;
+            setCurrentIndex(next);
+            setDragOffset(0);
+            dragOffsetRef.current = 0;
+
+            requestAnimationFrame(() => {
+                updatePosterStyles(0);
+            });
+
+            if (isJumping) {
+                jumpTimerRef.current = setTimeout(() => setIsJumping(false), 300);
+            }
+        }
     };
+
+    // Cleanup timers
+    useEffect(() => {
+        return () => {
+            if (jumpTimerRef.current) clearTimeout(jumpTimerRef.current);
+        };
+    }, []);
 
     if (!movies || movies.length === 0) return null;
 
@@ -119,56 +396,137 @@ export function HeroSlider({ movies }: HeroSliderProps) {
 
     return (
         <div
-            className="relative w-full h-[85vh] md:h-screen -mt-[calc(3.5rem+env(safe-area-inset-top))] md:-mt-16 group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing"
+            ref={sliderRef}
+            className="relative w-full h-[85vh] md:h-screen -mt-[calc(3.5rem+env(safe-area-inset-top))] md:-mt-16 group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing touch-none"
+            style={{ overscrollBehaviorX: 'none' }}
             onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
+            onTouchCancel={onTouchEnd}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
             onMouseLeave={onMouseLeave}
         >
-            {/* Background Slider */}
-            {movies.map((movie, index) => (
-                <div
-                    key={movie._id}
-                    className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                        }`}
-                >
-                    <Image
-                        src={movie.poster_url || movie.thumb_url}
-                        alt={movie.name}
-                        className="w-full h-full object-cover object-center opacity-90"
-                        fill
-                        sizes="100vw"
-                        priority={index === 0}
+            <div ref={slidesContainerRef} className="absolute inset-0">
+                {movies.map((movie, index) => (
+                    <BackgroundSlide 
+                        key={movie._id}
+                        movie={movie}
+                        // No reactive props here to avoid fighting with imperative styles
                     />
-                    <div className="absolute inset-0 bg-linear-to-t from-[#050505] via-[#050505]/20 to-transparent"></div>
-                    <div className="absolute inset-0 bg-linear-to-r from-[#050505]/80 via-[#050505]/30 to-transparent"></div>
-
-                    {/* Progress Bar for Hero */}
-                    {movie.progress && movie.progress.percentage > 0 && (
-                        <div className="absolute bottom-0 left-0 w-full h-1.5 bg-gray-700/30 z-20">
-                            <div
-                                className="h-full bg-primary shadow-[0_0_15px_rgba(234,179,8,0.8)]"
-                                style={{ width: `${Math.min(movie.progress.percentage, 100)}%` }}
-                            />
-                        </div>
-                    )}
-                </div>
-            ))}
+                ))}
+            </div>
 
             {/* Content */}
-            <div className="absolute inset-0 z-20 container mx-auto px-4 flex flex-col justify-center pt-24 md:pt-40 pb-12 md:pb-32">
-                <div className="max-w-2xl space-y-4 md:space-y-6 animate-fade-in-up">
+            {/* Mobile layout: poster overlay, info below, centered, with short description */}
+            <div 
+                className="absolute inset-0 z-20 container mx-auto px-4 flex flex-col justify-center pt-24 md:pt-40 pb-8 md:pb-32"
+                style={{
+                    opacity: 1,
+                    transition: isDragging ? 'none' : (isJumping ? 'all 300ms ease-out' : 'all 700ms cubic-bezier(0.16, 1, 0.3, 1)'),
+                    willChange: 'opacity'
+                }}
+            >
+                {/* Mobile: poster overlay */}
+                <div 
+                    className="flex flex-col items-center md:hidden animate-fade-in-up px-4"
+                >
+                    {/* The Full Static Poster Track - OUTSIDE text ref to fix 1s blur */}
+                    <div 
+                        className="relative w-40 h-60 mb-5 flex items-center justify-center"
+                        style={{
+                            transition: isDragging ? 'none' : (isJumping ? 'all 300ms ease-out' : 'all 700ms cubic-bezier(0.16, 1, 0.3, 1)')
+                        }}
+                    >
+                        {movies.map((movie, idx) => (
+                            <div 
+                                key={movie._id}
+                                ref={el => { posterRefs.current[idx] = el; }}
+                                className="absolute" 
+                                style={{ 
+                                    width: '140px', 
+                                    height: '210px',
+                                    left: '50%',
+                                    top: '50%',
+                                    willChange: 'transform, opacity',
+                                    // NO reactive transform/opacity/transition here to prevent React flicker
+                                }}
+                            >
+                                <div className={`relative w-full h-full rounded-2xl overflow-hidden shadow-xl ${idx === currentIndex ? 'border-2 border-yellow-300/60 shadow-yellow-200/20' : 'bg-gray-900/50'}`}>
+                                    <img
+                                        src={movie.poster_url || movie.thumb_url}
+                                        alt={movie.name}
+                                        className="w-full h-full object-cover object-top rounded-2xl"
+                                        draggable={false}
+                                        onDragStart={(e) => e.preventDefault()}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    {/* Text Section - Fading portion (Title/Tags) */}
+                    <div 
+                        ref={mobileTextRef}
+                        className="flex flex-col items-center w-full"
+                    >
+                        <h1
+                            className="font-extrabold leading-tight font-heading text-center text-balance bg-linear-to-b from-yellow-100 via-yellow-300 to-yellow-500 bg-clip-text text-transparent mb-2 drop-shadow-[0_2px_8px_rgba(234,179,8,0.25)] line-clamp-1 overflow-hidden text-ellipsis max-w-[80%] mx-auto px-0 text-[1.8rem]"
+                        >
+                            {currentMovie.name}
+                        </h1>
+                        <div className="w-full flex justify-center">
+                            <p className="text-xs text-gray-300 font-normal tracking-wide flex items-center gap-2 justify-center mb-1 max-w-full overflow-hidden whitespace-nowrap text-ellipsis text-center">
+                                {currentMovie.origin_name}
+                                <span className="text-primary font-bold">({currentMovie.year})</span>
+                                {currentMovie.episode_current && (
+                                    <span className="text-gold-400 font-bold text-xs border border-gold-500/30 px-2 py-0.5 rounded-lg whitespace-nowrap bg-black/40 backdrop-blur-sm shadow-sm">
+                                        {currentMovie.episode_current}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Static Action Buttons - Do not fade on swipe */}
+                    <div className="flex flex-wrap gap-4 justify-center pt-1 mb-4 z-30">
+                        <Link href={`/movie/${currentMovie.slug}/watch`}>
+                            <Button size="sm" className="bg-primary text-black hover:bg-gold-400 font-bold text-sm px-4 py-2 rounded-lg shadow-md shadow-primary/20 flex items-center gap-2 transform hover:scale-105 transition-all duration-300 min-w-28">
+                                <Play fill="black" className="w-4 h-4" />
+                                XEM NGAY
+                            </Button>
+                        </Link>
+                        <Link href={`/movie/${currentMovie.slug}`}>
+                            <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10 text-sm px-4 py-2 rounded-lg backdrop-blur-sm flex items-center gap-2 transition-all min-w-24">
+                                <Info className="w-4 h-4" />
+                                Chi Tiết
+                            </Button>
+                        </Link>
+                    </div>
+
+                    {/* Fading Description Section */}
+                    <div 
+                        ref={mobileDescRef}
+                        className="text-xs text-gray-300 text-center font-normal mb-1 px-4 py-1 bg-black/30 rounded-lg max-w-full"
+                    >
+                        <div className="line-clamp-2 overflow-hidden">
+                            {currentMovie.content
+                                ? currentMovie.content.replace(/<[^>]*>/g, '')
+                                : 'Không có mô tả.'}
+                        </div>
+                    </div>
+                </div>
+                {/* Desktop: original layout */}
+                <div 
+                    ref={desktopTextRef}
+                    className="max-w-2xl space-y-4 md:space-y-6 animate-fade-in-up hidden md:block"
+                >
                     <span className="text-gold-500 font-bold tracking-widest text-xs md:text-sm uppercase border border-gold-500/50 px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-black/40 backdrop-blur-md shadow-glow inline-block">
                         #{currentIndex + 1} Phim Nổi Bật
                     </span>
-
-                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-black leading-snug font-heading line-clamp-3 text-balance bg-linear-to-b from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter-[drop-shadow(0_2px_12px_rgba(0,0,0,1))_drop-shadow(0_0_30px_rgba(234,179,8,0.25))]">
+                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-black leading-snug font-heading line-clamp-1 bg-linear-to-b from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter-[drop-shadow(0_2px_12px_rgba(0,0,0,1))_drop-shadow(0_0_30px_rgba(234,179,8,0.25))]">
                         {currentMovie.name}
                     </h1>
-
                     <p className="text-sm md:text-base text-gray-400 font-light tracking-wide flex items-center gap-3">
                         {currentMovie.origin_name}
                         <span className="text-primary font-bold text-xs md:text-sm">({currentMovie.year})</span>
@@ -178,31 +536,40 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                             </span>
                         )}
                     </p>
-
+                    {/* Short description for desktop */}
+                    {currentMovie.content && (
+                        <div className="text-sm text-gray-400 font-normal mb-2 bg-black/30 rounded-lg px-4 py-2 backdrop-blur-sm">
+                            <div className="line-clamp-2 overflow-hidden">
+                                {currentMovie.content.replace(/<[^>]*>/g, '')}
+                            </div>
+                        </div>
+                    )}
                     <div className="flex flex-wrap gap-3 pt-4">
-                        <Link href={`/movie/${currentMovie.slug}`}>
-                            <Button size="lg" className="bg-primary text-black hover:bg-gold-400 font-bold text-base md:text-lg px-6 md:px-8 py-6 rounded-full shadow-lg shadow-primary/30 flex items-center gap-2 transform hover:scale-105 transition-all duration-300">
+                        <Link href={`/movie/${currentMovie.slug}/watch`}>
+                            <Button size="lg" className="bg-primary text-black hover:bg-gold-400 font-bold text-base md:text-lg px-6 md:px-8 py-6 rounded-xl shadow-lg shadow-primary/30 flex items-center gap-2 transform hover:scale-105 transition-all duration-300">
                                 <Play fill="black" className="w-5 h-5" />
                                 XEM NGAY
                             </Button>
                         </Link>
-                        <Button variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 text-base md:text-lg px-6 md:px-8 py-6 rounded-full backdrop-blur-sm flex items-center gap-2 transition-all">
-                            <Info className="w-5 h-5" />
-                            Chi Tiết
-                        </Button>
+                        <Link href={`/movie/${currentMovie.slug}`}>
+                            <Button variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 text-base md:text-lg px-6 md:px-8 py-6 rounded-xl backdrop-blur-sm flex items-center gap-2 transition-all">
+                                <Info className="w-5 h-5" />
+                                Chi Tiết
+                            </Button>
+                        </Link>
                     </div>
                 </div>
             </div>
 
             {/* Navigation Arrows */}
             <button
-                onClick={handlePrev}
+                onClick={() => handlePrev()}
                 className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-2 md:p-3 bg-black/20 hover:bg-primary text-white hover:text-black rounded-full backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 hidden md:block"
             >
                 <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
             </button>
             <button
-                onClick={handleNext}
+                onClick={() => handleNext()}
                 className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-2 md:p-3 bg-black/20 hover:bg-primary text-white hover:text-black rounded-full backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 hidden md:block"
             >
                 <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
@@ -249,7 +616,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             </div>
 
             {/* Mobile: simple dots */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 md:hidden">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 md:hidden">
                 {movies.slice(0, 10).map((_, idx) => (
                     <button
                         key={idx}

@@ -52,11 +52,9 @@ function CommentChip({ comment }: { comment: RecentComment }) {
             {/* User row */}
             <div className="flex items-center gap-2">
                 {comment.user.avatar ? (
-                    <Image
+                    <img
                         src={comment.user.avatar}
                         alt={comment.user.displayName}
-                        width={24}
-                        height={24}
                         className="rounded-full object-cover w-6 h-6 shrink-0"
                     />
                 ) : (

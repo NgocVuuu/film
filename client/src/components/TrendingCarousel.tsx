@@ -21,6 +21,9 @@ interface Movie {
     year: number;
     poster_url?: string;
     view?: number;
+    quality?: string;
+    lang?: string;
+    episode_current?: string;
     progress?: {
         currentTime: number;
         duration: number;
@@ -32,16 +35,56 @@ interface Movie {
 
 interface TrendingCarouselProps {
     movies: Movie[];
+    title?: string;
 }
 
-export function TrendingCarousel({ movies }: TrendingCarouselProps) {
+export function TrendingCarousel({ movies, title = "Xếp Hạng Nổi Bật" }: TrendingCarouselProps) {
     if (!movies || movies.length === 0) return null;
 
+    const getBadges = (quality?: string, episode?: string, lang?: string) => {
+        const q = quality?.toLowerCase() || '';
+        const l = lang?.toLowerCase() || '';
+        const epClean = episode?.replace(/Tập\s*/i, '').replace(/\s*Hoàn\s*tất/i, '').trim() || '';
+        
+        const checkString = (l + ' ' + q);
+        const badges: { display: string; classes: string }[] = [];
+
+        if (checkString.includes('vietsub')) {
+            badges.push({
+                display: epClean ? `VS ${epClean}` : 'VS',
+                classes: 'bg-yellow-500 text-black border-yellow-400/50'
+            });
+        }
+
+        if (checkString.includes('thuyết minh')) {
+            badges.push({
+                display: epClean ? `TM ${epClean}` : 'TM',
+                classes: 'bg-orange-500 text-white border-orange-400/50'
+            });
+        }
+
+        if (checkString.includes('lồng tiếng')) {
+            badges.push({
+                display: epClean ? `LT ${epClean}` : 'LT',
+                classes: 'bg-[#8B4513] text-white border-orange-900/50'
+            });
+        }
+
+        if (badges.length === 0 && (l || q)) {
+            badges.push({
+                display: epClean ? `VS ${epClean}` : 'VS',
+                classes: 'bg-yellow-500 text-black border-yellow-400/50'
+            });
+        }
+
+        return badges;
+    };
+
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-3 mb-2">
+        <div className="space-y-1">
+            <div className="flex items-center gap-3 mb-1">
                 <h2 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gold-gradient" style={{ textShadow: "0 0 20px rgba(234,179,8,0.3)" }}>
-                    Xếp Hạng Nổi Bật
+                    {title}
                 </h2>
             </div>
 
@@ -55,76 +98,72 @@ export function TrendingCarousel({ movies }: TrendingCarouselProps) {
                         delay: 3500,
                     }),
                 ]}
-                className="w-full relative group"
+                className="w-full relative group/trending"
             >
                 <CarouselContent className="-ml-4">
-                    {movies.map((movie, index) => (
-                        <CarouselItem key={movie._id} className="pl-4 basis-[65%] sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-                            <Link href={`/movie/${movie.slug}`} className="block relative w-full aspect-[2/3] group/item border-2 border-yellow-500/80 hover:border-yellow-400 transition-all duration-300 hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] hover:scale-[1.02] hover:-translate-y-2 -skew-x-6 rounded-2xl md:rounded-3xl transform bg-black">
-                                {/* Inner clip — separates overflow from the moving card */}
-                                <div className="absolute inset-0 overflow-hidden rounded-2xl md:rounded-3xl">
-                                <img
-                                    src={movie.poster_url || movie.thumb_url}
-                                    alt={movie.name}
-                                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover/item:scale-110 scale-[1.15] skew-x-6"
-                                />
+                    {movies.map((movie, index) => {
+                        const movieBadges = getBadges(movie.quality, movie.episode_current, movie.lang);
+                        return (
+                            <CarouselItem key={movie._id} className="pl-4 basis-[48%] sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
+                                <Link href={`/movie/${movie.slug}`} className="block group transition-all duration-300">
+                                    {/* Skewed Poster Card */}
+                                    <div className="relative w-full aspect-[2/3] border-2 border-yellow-500/50 hover:border-yellow-400 transition-all duration-300 hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] hover:scale-[1.03] -skew-x-6 rounded-2xl md:rounded-3xl transform bg-black overflow-hidden">
+                                        <img
+                                            src={movie.poster_url || movie.thumb_url}
+                                            alt={movie.name}
+                                            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-110 scale-[1.15] skew-x-6"
+                                        />
 
-                                {/* Gradient Overlay */}
-                                <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black via-black/80 to-transparent opacity-90 group-hover/item:opacity-95 transition-opacity skew-x-6 -ml-4 w-[120%]" />
-                                </div>
+                                        {/* Overlay */}
+                                        <div className="absolute inset-0 bg-linear-to-t from-black via-transparent to-transparent opacity-60" />
 
-                                <div className="absolute inset-0 border-[1px] border-white/10 z-10 pointer-events-none rounded-2xl md:rounded-3xl"></div>
-
-                                {/* Rank Number */}
-                                <div className="absolute top-0 right-0 p-2 z-20 skew-x-6">
-                                    <span
-                                        className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-yellow-500 to-yellow-700 drop-shadow-[0_2px_10px_rgba(234,179,8,0.5)] opacity-80 group-hover/item:opacity-100 transition-opacity select-none italic"
-                                        style={{
-                                            WebkitTextStroke: '1px rgba(255,255,255,0.5)',
-                                            filter: 'drop-shadow(0 0 5px rgba(234,179,8,0.3))'
-                                        }}
-                                    >
-                                        #{index + 1}
-                                    </span>
-                                </div>
-
-                                {/* Content */}
-                                <div className="absolute inset-x-0 bottom-0 p-4 z-20 translate-y-2 group-hover/item:translate-y-0 transition-transform duration-300 skew-x-6">
-                                    {/* Progress Bar (if any) */}
-                                    {movie.progress && movie.progress.percentage > 0 && (
-                                        <div className="w-full h-1 bg-white/20 rounded-full mb-3 overflow-hidden">
-                                            <div
-                                                className="h-full bg-primary"
-                                                style={{ width: `${Math.min(movie.progress.percentage, 100)}%` }}
-                                            />
+                                        {/* Rank Number */}
+                                        <div className="absolute top-0 right-0 p-2 z-20 skew-x-6">
+                                            <span
+                                                className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-yellow-500 to-yellow-700 drop-shadow-[0_2px_10px_rgba(234,179,8,0.5)] opacity-80 select-none italic"
+                                                style={{ WebkitTextStroke: '0.5px rgba(255,255,255,0.3)' }}
+                                            >
+                                                #{index + 1}
+                                            </span>
                                         </div>
-                                    )}
 
-                                    <h3 className="text-lg font-bold text-white line-clamp-1 group-hover/item:text-primary transition-colors">
-                                        {movie.name}
-                                    </h3>
-                                    <div className="flex items-center justify-between text-xs text-gray-300 mt-1">
-                                        <span className="flex items-center gap-1">
-                                            {movie.year}
-                                        </span>
-                                        <span className="text-gold-400 font-medium">
-                                            {(movie.view || 0).toLocaleString()} views
-                                        </span>
+                                        {/* Unified Badges (Bottom Right) - Inside Poster */}
+                                        <div className="absolute bottom-3 right-4 z-20 skew-x-6 pointer-events-none flex flex-col items-end gap-0.5 max-w-[80%]">
+                                            {movieBadges.map((b, idx) => (
+                                                <div key={idx} className={`backdrop-blur-md text-[6.5px] font-bold px-1 py-0.5 rounded-[2px] border shadow-sm transition-colors ${b.classes}`}>
+                                                    {b.display}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                            <div className="w-10 h-10 rounded-full bg-primary/90 text-black flex items-center justify-center shadow-lg shadow-primary/50 skew-x-6 transform group-hover:scale-110 transition-transform">
+                                                <Play fill="currentColor" className="ml-1 w-5 h-5" />
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="mt-3 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                                        <Button size="sm" className="w-full bg-white/10 hover:bg-primary hover:text-black backdrop-blur-sm border border-white/10 rounded-full text-xs font-bold gap-2">
-                                            <Play fill="currentColor" className="w-3 h-3" />
-                                            XEM NGAY
-                                        </Button>
+                                    {/* Content Below Poster */}
+                                    <div className="mt-2 px-1">
+                                        <h3 className="text-[11px] font-medium text-white group-hover:text-primary transition-colors leading-tight truncate">
+                                            {movie.name}
+                                        </h3>
+                                        <div className="flex items-center justify-between mt-0.5 text-[9px] text-gray-400">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="italic opacity-70">{movie.origin_name}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-primary font-bold opacity-80">{(movie.view || 0).toLocaleString()} view</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </Link>
-                        </CarouselItem>
-                    ))}
+                                </Link>
+                            </CarouselItem>
+                        );
+                    })}
                 </CarouselContent>
-                <CarouselPrevious className="left-0 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex bg-black/50 border-white/10 hover:bg-primary hover:text-black" />
-                <CarouselNext className="right-0 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex bg-black/50 border-white/10 hover:bg-primary hover:text-black" />
+                <CarouselPrevious className="left-0 opacity-0 group-hover/trending:opacity-100 transition-opacity hidden md:flex bg-black/50 border-white/10 hover:bg-primary hover:text-black" />
+                <CarouselNext className="right-0 opacity-0 group-hover/trending:opacity-100 transition-opacity hidden md:flex bg-black/50 border-white/10 hover:bg-primary hover:text-black" />
             </Carousel>
         </div>
     );
