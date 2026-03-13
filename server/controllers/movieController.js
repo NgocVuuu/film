@@ -713,20 +713,20 @@ const getMovieDetail = async (req, res) => {
         let related = movieCountries.length > 0
             ? await Movie.find({ ...baseRelatedQuery, 'country.slug': { $in: movieCountries } })
                 .sort({ year: -1, updatedAt: -1 })
-                .limit(6)
-                .select('name slug thumb_url year episode_current lang')
+                .limit(9)
+                .select('name origin_name slug thumb_url year episode_current lang')
             : [];
 
         // Fallback: fill remaining slots with same category + same type (any country)
-        if (related.length < 6) {
+        if (related.length < 9) {
             const existingSlugs = related.map(r => r.slug);
             const extra = await Movie.find({
                 ...baseRelatedQuery,
                 slug: { $nin: [...existingSlugs, movie.slug] }
             })
                 .sort({ updatedAt: -1 })
-                .limit(6 - related.length)
-                .select('name slug thumb_url year episode_current lang');
+                .limit(9 - related.length)
+                .select('name origin_name slug thumb_url year episode_current lang');
             related = [...related, ...extra];
         }
 

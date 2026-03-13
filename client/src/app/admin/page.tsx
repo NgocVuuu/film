@@ -227,8 +227,8 @@ export default function AdminDashboardPage() {
                 {/* View Trends Chart */}
                 <div className="bg-surface-900 border border-white/10 rounded-xl p-6">
                     <h2 className="text-xl font-bold text-white mb-6">Lượt xem (30 ngày qua)</h2>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-[300px] w-full min-h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <AreaChart data={stats?.viewTrends.slice(-30)}>
                                 <defs>
                                     <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
@@ -264,8 +264,8 @@ export default function AdminDashboardPage() {
                 {/* User Registration Trends */}
                 <div className="bg-surface-900 border border-white/10 rounded-xl p-6">
                     <h2 className="text-xl font-bold text-white mb-6">Người dùng mới (30 ngày qua)</h2>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-[300px] w-full min-h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <BarChart data={stats?.userTrends.slice(-30)}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                 <XAxis

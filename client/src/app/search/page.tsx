@@ -322,15 +322,15 @@ function SearchContent() {
                         </div>
 
                         {loading ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                {[...Array(12)].map((_, i) => (
-                                    <div key={i} className="animate-pulse bg-surface-800 rounded-lg aspect-2/3"></div>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6">
+                                {movies.map((movie) => (
+                                    <MovieCard key={movie._id} movie={movie} />
                                 ))}
                             </div>
                         ) : (
                             <>
                                 {movies.length > 0 ? (
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6">
                                         {movies.map((movie) => (
                                             <MovieCard key={movie._id} movie={movie} />
                                         ))}

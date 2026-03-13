@@ -22,7 +22,7 @@ const movieSchema = new mongoose.Schema({
   showtimes: { type: String },
   year: { type: Number },
   view: { type: Number, default: 0 },
-  rating_average: { type: Number, default: 0 }, // 0-10 scale
+  rating_average: { type: Number, default: 0 }, // 0-5 scale
   rating_count: { type: Number, default: 0 },
 
   // Array types
@@ -48,6 +48,12 @@ const movieSchema = new mongoose.Schema({
           name: String,
           slug: String,
           filename: String,
+          rating: {
+            type: Number,
+            min: 1,
+            max: 5,
+            required: false // Made optional
+          },
           link_embed: String,
           link_m3u8: String,
           time_intro: [{ type: Number }], // [start, end] in seconds

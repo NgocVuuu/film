@@ -273,7 +273,8 @@ exports.getDashboardStats = async (req, res) => {
         const totalWatchProgress = await WatchProgress.countDocuments();
 
         // Top 10 movies by TMDB trending (same as home page)
-        const topMovies = (await getTmdbTrendingMovies())
+        const { allTrending, seriesTrending, movieTrending } = await getTmdbTrendingMovies();
+        const topMovies = allTrending
             .slice(0, 10)
             .map(m => ({ name: m.name, slug: m.slug, thumb_url: m.thumb_url, view: m.view || 0, type: m.type }));
 

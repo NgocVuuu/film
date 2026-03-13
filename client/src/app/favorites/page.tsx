@@ -133,7 +133,7 @@ export default function FavoritesPage() {
                         actionLink="/phim-moi"
                     />
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 md:gap-6">
                         {favorites.map((movie) => (
                             <div key={movie.slug} className="relative group">
                                 <MovieCard movie={movie} isEditing={isEdit} />

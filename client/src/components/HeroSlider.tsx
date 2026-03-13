@@ -87,6 +87,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
     const mobileDescRef = useRef<HTMLDivElement>(null);
     const desktopTextRef = useRef<HTMLDivElement>(null);
     const slidesContainerRef = useRef<HTMLDivElement>(null);
+    const contentWrapperRef = useRef<HTMLDivElement>(null);
 
     // Movies ref to access current data in raf loop
     const moviesRef = useRef(movies);
@@ -96,6 +97,8 @@ export function HeroSlider({ movies }: HeroSliderProps) {
 
     // Use refs for touch coordinates to avoid re-renders during swipe
     const touchStartX = useRef<number | null>(null);
+    const touchStartY = useRef<number | null>(null);
+    const isHorizontalRef = useRef<boolean | null>(null);
     const touchStartTime = useRef<number>(0);
 
     const updatePosterStyles = (offset: number) => {
@@ -113,6 +116,14 @@ export function HeroSlider({ movies }: HeroSliderProps) {
         const fullTrackWidth = moviesCount * SLOT_PX;
         const halfTrack = fullTrackWidth / 2;
         const viewportWidth = sliderRef.current?.offsetWidth || 500;
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        const cullingDist = isMobile ? viewportWidth * 2 : viewportWidth;
+        const isDragging = isDraggingRef.current;
+
+        // Content Wrapper imperative transition control
+        if (contentWrapperRef.current) {
+            contentWrapperRef.current.style.transition = isDragging ? 'none' : (isJumping ? 'all 300ms ease-out' : 'all 700ms cubic-bezier(0.16, 1, 0.3, 1)');
+        }
 
         // 1. Process Posters
         moviesRef.current.forEach((_, i) => {
@@ -128,9 +139,6 @@ export function HeroSlider({ movies }: HeroSliderProps) {
 
             const dist = Math.abs(wrappedP);
             
-            const isMobile = window.innerWidth < 768;
-            const cullingDist = isMobile ? viewportWidth * 2 : viewportWidth;
-            
             // Visibility Culling for performance - increased for mobile to prevent disappearing on fast flicks
             if (dist > cullingDist) {
                 ref.style.visibility = 'hidden';
@@ -143,7 +151,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             
             // --- Interactive Scaling Refinement ---
             // On mobile, shrink posters by 10% while dragging to provide tactile feedback
-            const dragScaleMultiplier = (isMobile && isDraggingRef.current) ? 0.9 : 1.0;
+            const dragScaleMultiplier = (isMobile && isDragging) ? 0.9 : 1.0;
             const scale = (1 + progress * 0.25) * dragScaleMultiplier; 
             
             // Refined Rotation: Use a Sin curve to cap max rotation and keep it natural
@@ -151,7 +159,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             
             // Imperative Style Orchestration:
             // 1. Transition: None during dragging (instant feedback), Smooth during snapping (GPU accelerated)
-            ref.style.transition = isDraggingRef.current ? 'none' : 'all 700ms cubic-bezier(0.16, 1, 0.3, 1)';
+            ref.style.transition = isDragging ? 'none' : 'all 700ms cubic-bezier(0.16, 1, 0.3, 1)';
             
             // 2. Transform & Depth
             ref.style.transform = `translate3d(-50%, -50%, 0) translateX(${wrappedP}px) rotate(${rotate}deg) scale(${scale})`;
@@ -183,27 +191,52 @@ export function HeroSlider({ movies }: HeroSliderProps) {
     };
 
     const onTouchStart = (e: React.TouchEvent) => {
-        touchStartX.current = e.targetTouches[0].clientX;
+        const touch = e.targetTouches[0];
+        touchStartX.current = touch.clientX;
+        touchStartY.current = touch.clientY;
+        isHorizontalRef.current = null;
         touchStartTime.current = Date.now();
         dragOffsetRef.current = 0;
         isDraggingRef.current = true;
-        setIsDragging(true);
+        // Skip React state update for zero-render start
     };
 
     const nativeTouchMove = (e: TouchEvent) => {
-        if (touchStartX.current === null) return;
-        const currentX = e.targetTouches[0].clientX;
-        const diff = currentX - touchStartX.current;
+        if (touchStartX.current === null || touchStartY.current === null) return;
         
-        // Strictly block browser navigation/scroll if horizontal swipe is detected
-        if (Math.abs(diff) > 5) {
-            if (e.cancelable) e.preventDefault();
+        const touch = e.targetTouches[0];
+        const currentX = touch.clientX;
+        const currentY = touch.clientY;
+        const diffX = currentX - touchStartX.current;
+        const diffY = currentY - touchStartY.current;
+
+        const THRESHOLD = 5; // Lowered for faster response
+        // Direction Locking: Determine if the gesture is horizontal or vertical
+        if (isHorizontalRef.current === null) {
+            if (Math.abs(diffX) > THRESHOLD || Math.abs(diffY) > THRESHOLD) {
+                isHorizontalRef.current = Math.abs(diffX) > Math.abs(diffY);
+            }
         }
-        
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => {
-            updatePosterStyles(diff);
-        });
+
+        if (isHorizontalRef.current === false) {
+            // Explicitly Vertical: Allow native scroll, stop slider tracking
+            isDraggingRef.current = false;
+            setIsDragging(false);
+            return;
+        }
+
+        if (isHorizontalRef.current === true) {
+            // Explicitly Horizontal: Intercept for slider control
+            if (e.cancelable) e.preventDefault();
+            
+            // Subtract threshold from diffX to eliminate the visual jump when locking starts
+            const jumpAdjustedDiff = diffX - (Math.sign(diffX) * THRESHOLD);
+
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            rafRef.current = requestAnimationFrame(() => {
+                updatePosterStyles(jumpAdjustedDiff);
+            });
+        }
     };
 
     const onTouchEnd = () => {
@@ -215,7 +248,6 @@ export function HeroSlider({ movies }: HeroSliderProps) {
         // Prevent default to stop browser from starting native drag or text selection
         e.preventDefault();
         isDraggingRef.current = true;
-        setIsDragging(true);
         touchStartX.current = e.clientX;
         touchStartTime.current = Date.now();
         dragOffsetRef.current = 0;
@@ -295,14 +327,14 @@ export function HeroSlider({ movies }: HeroSliderProps) {
 
     // Auto-play
     useEffect(() => {
-        if (isDragging) return;
         const timer = setInterval(() => {
-            const next = (currentIndexRef.current + 1) % movies.length;
+            if (isDraggingRef.current) return;
+            const next = (currentIndexRef.current + 1) % moviesRef.current.length;
             currentIndexRef.current = next;
             setCurrentIndex(next);
         }, 6000); // 6 seconds per slide
         return () => clearInterval(timer);
-    }, [movies.length, isDragging]);
+    }, [movies.length]);
 
     // Sync DOM with state on mount or change
     useEffect(() => {
@@ -322,6 +354,8 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             slider.removeEventListener('touchmove', nativeTouchMove);
         };
     }, []);
+
+
 
     const handlePrev = (step: number = 1) => {
         if (step <= 0) {
@@ -397,7 +431,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
     return (
         <div
             ref={sliderRef}
-            className="relative w-full h-[85vh] md:h-screen -mt-[calc(3.5rem+env(safe-area-inset-top))] md:-mt-16 group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing touch-none"
+            className="relative w-full h-auto md:h-screen -mt-[calc(3.5rem+env(safe-area-inset-top))] md:-mt-16 group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing touch-pan-y"
             style={{ overscrollBehaviorX: 'none' }}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
@@ -420,10 +454,10 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             {/* Content */}
             {/* Mobile layout: poster overlay, info below, centered, with short description */}
             <div 
-                className="absolute inset-0 z-20 container mx-auto px-4 flex flex-col justify-center pt-24 md:pt-40 pb-8 md:pb-32"
+                ref={contentWrapperRef}
+                className="relative md:absolute md:inset-0 z-20 container mx-auto px-4 flex flex-col justify-start md:justify-center pt-20 md:pt-40 pb-12 md:pb-32"
                 style={{
                     opacity: 1,
-                    transition: isDragging ? 'none' : (isJumping ? 'all 300ms ease-out' : 'all 700ms cubic-bezier(0.16, 1, 0.3, 1)'),
                     willChange: 'opacity'
                 }}
             >
@@ -514,6 +548,18 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                                 ? currentMovie.content.replace(/<[^>]*>/g, '')
                                 : 'Không có mô tả.'}
                         </div>
+                    </div>
+                    {/* Mobile dots moved here so they stay close to description */}
+                    <div className="mt-3 md:hidden flex justify-center gap-1.5 z-30">
+                        {movies.slice(0, 10).map((_, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => setCurrentIndex(idx)}
+                                className={`h-1 rounded-full transition-all duration-300 ${
+                                    idx === currentIndex ? 'w-5 bg-primary' : 'w-1.5 bg-white/30'
+                                }`}
+                            />
+                        ))}
                     </div>
                 </div>
                 {/* Desktop: original layout */}
@@ -615,18 +661,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                 })}
             </div>
 
-            {/* Mobile: simple dots */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 md:hidden">
-                {movies.slice(0, 10).map((_, idx) => (
-                    <button
-                        key={idx}
-                        onClick={() => setCurrentIndex(idx)}
-                        className={`h-1 rounded-full transition-all duration-300 ${
-                            idx === currentIndex ? 'w-5 bg-primary' : 'w-1.5 bg-white/30'
-                        }`}
-                    />
-                ))}
-            </div>
+            {/* Mobile dots moved into mobile content so they stay close to the description */}
         </div>
     );
 }

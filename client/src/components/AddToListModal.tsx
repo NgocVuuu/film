@@ -12,6 +12,7 @@ interface AddToListModalProps {
     isOpen: boolean;
     onClose: () => void;
     movieId: string;
+    standalone?: boolean;
 }
 
 interface MovieList {
@@ -20,7 +21,7 @@ interface MovieList {
     hasMovie: boolean;
 }
 
-export function AddToListModal({ isOpen, onClose, movieId }: AddToListModalProps) {
+export function AddToListModal({ isOpen, onClose, movieId, standalone = false }: AddToListModalProps) {
     const [lists, setLists] = useState<MovieList[]>([]);
     const [loading, setLoading] = useState(true);
     const [newListName, setNewListName] = useState('');
@@ -138,51 +139,58 @@ export function AddToListModal({ isOpen, onClose, movieId }: AddToListModalProps
         }
     };
 
+    const renderContent = () => (
+        <div className="space-y-4 py-4">
+            {/* Create New */}
+            <div className="flex gap-2">
+                <Input 
+                    placeholder="Tạo danh sách mới..." 
+                    value={newListName}
+                    onChange={(e) => setNewListName(e.target.value)}
+                    className="bg-black/20 border-white/10 text-white"
+                />
+                <Button onClick={handleCreateList} disabled={creating || !newListName.trim()} className="bg-primary text-black">
+                    {creating ? <Loader2 className="animate-spin w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                </Button>
+            </div>
+
+            {/* Lists */}
+            <div className="space-y-2 max-h-75 overflow-y-auto pr-2 custom-scrollbar">
+                {loading ? (
+                    <div className="flex justify-center py-4"><Loader2 className="animate-spin w-6 h-6 text-primary" /></div>
+                ) : lists.length === 0 ? (
+                    <p className="text-gray-500 text-center py-4 text-sm">Chưa có danh sách nào</p>
+                ) : (
+                    lists.map(list => (
+                        <button
+                            key={list._id}
+                            onClick={() => handleToggleMovie(list)}
+                            className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 group"
+                        >
+                            <span className="font-medium text-gray-200 group-hover:text-white truncate">{list.name}</span>
+                            {list.hasMovie ? (
+                                <Check className="w-5 h-5 text-primary" />
+                            ) : (
+                                <Plus className="w-5 h-5 text-gray-600 group-hover:text-gray-400" />
+                            )}
+                        </button>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+
+    if (standalone) {
+        return renderContent();
+    }
+
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="bg-surface-900 border-white/10 text-white sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Lưu vào danh sách</DialogTitle>
                 </DialogHeader>
-                
-                <div className="space-y-4 py-4">
-                    {/* Create New */}
-                    <div className="flex gap-2">
-                        <Input 
-                            placeholder="Tạo danh sách mới..." 
-                            value={newListName}
-                            onChange={(e) => setNewListName(e.target.value)}
-                            className="bg-black/20 border-white/10 text-white"
-                        />
-                        <Button onClick={handleCreateList} disabled={creating || !newListName.trim()} className="bg-primary text-black">
-                            {creating ? <Loader2 className="animate-spin w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                        </Button>
-                    </div>
-
-                    {/* Lists */}
-                    <div className="space-y-2 max-h-75 overflow-y-auto pr-2">
-                        {loading ? (
-                            <div className="flex justify-center py-4"><Loader2 className="animate-spin w-6 h-6 text-primary" /></div>
-                        ) : lists.length === 0 ? (
-                            <p className="text-gray-500 text-center py-4 text-sm">Chưa có danh sách nào</p>
-                        ) : (
-                            lists.map(list => (
-                                <button
-                                    key={list._id}
-                                    onClick={() => handleToggleMovie(list)}
-                                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 group"
-                                >
-                                    <span className="font-medium text-gray-200 group-hover:text-white truncate">{list.name}</span>
-                                    {list.hasMovie ? (
-                                        <Check className="w-5 h-5 text-primary" />
-                                    ) : (
-                                        <Plus className="w-5 h-5 text-gray-600 group-hover:text-gray-400" />
-                                    )}
-                                </button>
-                            ))
-                        )}
-                    </div>
-                </div>
+                {renderContent()}
             </DialogContent>
         </Dialog>
     );

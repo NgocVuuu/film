@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,13 +25,6 @@ interface Movie {
     quality?: string;
     lang?: string;
     episode_current?: string;
-    progress?: {
-        currentTime: number;
-        duration: number;
-        percentage: number;
-        episodeSlug: string;
-        episodeName: string;
-    };
 }
 
 interface TrendingCarouselProps {
@@ -92,10 +86,15 @@ export function TrendingCarousel({ movies, title = "Xếp Hạng Nổi Bật" }:
                 opts={{
                     align: 'start',
                     loop: true,
+                    dragFree: true,
+                    skipSnaps: false,
+                    containScroll: 'trimSnaps',
                 }}
                 plugins={[
                     Autoplay({
                         delay: 3500,
+                        stopOnInteraction: true,
+                        stopOnMouseEnter: true,
                     }),
                 ]}
                 className="w-full relative group/trending"
@@ -107,11 +106,21 @@ export function TrendingCarousel({ movies, title = "Xếp Hạng Nổi Bật" }:
                             <CarouselItem key={movie._id} className="pl-4 basis-[48%] sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
                                 <Link href={`/movie/${movie.slug}`} className="block group transition-all duration-300">
                                     {/* Skewed Poster Card */}
-                                    <div className="relative w-full aspect-[2/3] border-2 border-yellow-500/50 hover:border-yellow-400 transition-all duration-300 hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] hover:scale-[1.03] -skew-x-6 rounded-2xl md:rounded-3xl transform bg-black overflow-hidden">
-                                        <img
+                                    <div 
+                                        className="relative w-full aspect-[2/3] border-2 border-yellow-500/50 hover:border-yellow-400 transition-all duration-300 hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] hover:scale-[1.03] -skew-x-6 rounded-2xl md:rounded-3xl bg-black overflow-hidden"
+                                        style={{ 
+                                            willChange: 'transform',
+                                            backfaceVisibility: 'hidden'
+                                        }}
+                                    >
+                                        <Image
                                             src={movie.poster_url || movie.thumb_url}
                                             alt={movie.name}
-                                            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-110 scale-[1.15] skew-x-6"
+                                            fill
+                                            sizes="(max-width: 768px) 50vw, 33vw"
+                                            className="object-cover object-center transition-transform duration-500 group-hover:scale-110 scale-[1.15] skew-x-6"
+                                            loading="lazy"
+                                            style={{ imageRendering: 'auto' }}
                                         />
 
                                         {/* Overlay */}
@@ -130,7 +139,10 @@ export function TrendingCarousel({ movies, title = "Xếp Hạng Nổi Bật" }:
                                         {/* Unified Badges (Bottom Right) - Inside Poster */}
                                         <div className="absolute bottom-3 right-4 z-20 skew-x-6 pointer-events-none flex flex-col items-end gap-0.5 max-w-[80%]">
                                             {movieBadges.map((b, idx) => (
-                                                <div key={idx} className={`backdrop-blur-md text-[6.5px] font-bold px-1 py-0.5 rounded-[2px] border shadow-sm transition-colors ${b.classes}`}>
+                                                <div 
+                                                    key={idx} 
+                                                    className={`text-[6.5px] font-bold px-1 py-0.5 rounded-[2px] border shadow-sm transition-colors md:backdrop-blur-md ${b.classes}`}
+                                                >
                                                     {b.display}
                                                 </div>
                                             ))}

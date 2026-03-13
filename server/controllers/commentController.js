@@ -65,8 +65,8 @@ const addComment = async (req, res) => {
         }
 
         // Validate rating if provided
-        if (rating && (rating < 1 || rating > 10)) {
-            return res.status(400).json({ success: false, message: 'Đánh giá phải từ 1 đến 10.' });
+        if (rating && (rating < 1 || rating > 5)) {
+            return res.status(400).json({ success: false, message: 'Đánh giá phải từ 1 đến 5 sao.' });
         }
 
         // Validate parentId if provided

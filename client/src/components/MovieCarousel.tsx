@@ -1,5 +1,6 @@
 'use client';
 import { useRef } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { useLongPress } from '@/hooks/useLongPress';
@@ -134,26 +135,36 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
                                 href={`/movie/${movie.slug}`}
                                 {...longPressHandlers}
                                 className="bg-surface-800 rounded-lg overflow-hidden border border-border/50 shadow-lg relative snap-start w-[31vw] md:w-50 shrink-0 group transition-all duration-300 hover:scale-[1.03] hover:shadow-primary/20"
+                                style={{ 
+                                    willChange: 'transform',
+                                    backfaceVisibility: 'hidden'
+                                }}
                             >
                                 {/* Image */}
                                 <div className="aspect-2/3 w-full relative overflow-hidden">
-                                    <img
+                                    <Image
                                         src={movie.thumb_url}
                                         alt={movie.name}
+                                        fill
+                                        sizes="(max-width: 768px) 31vw, 250px"
                                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                         loading="lazy"
+                                        style={{ imageRendering: 'auto' }}
                                     />
                                     <div className="absolute inset-0 bg-linear-to-t from-black via-transparent to-transparent opacity-60 transition-opacity group-hover:opacity-40" />
 
                                     {/* Unified Badges (Bottom Right) */}
                                     <div className="absolute bottom-1 right-1 z-20 pointer-events-none flex flex-col items-end gap-0.5 max-w-[90%]">
                                         {movieBadges.map((b, idx) => (
-                                            <div key={idx} className={`backdrop-blur-md text-[6.5px] font-bold px-1 py-0.5 rounded-[2px] border shadow-sm transition-colors ${b.classes}`}>
+                                            <div 
+                                                key={idx} 
+                                                className={`text-[6.5px] font-bold px-1 py-0.5 rounded-[2px] border shadow-sm transition-colors md:backdrop-blur-md ${b.classes}`}
+                                            >
                                                 {b.display}
                                             </div>
                                         ))}
                                     </div>
-
+                                    
                                     {/* Hover Play */}
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                         <div className="w-10 h-10 rounded-full bg-primary text-black flex items-center justify-center shadow-lg shadow-primary/50 transform group-hover:scale-110 transition-transform">
