@@ -96,7 +96,7 @@ export function CommentSection({
     useEffect(() => {
         setLoading(true);
         fetchComments(1);
-    }, [movieSlug, onlyWithRating]);
+    }, [movieSlug, onlyWithRating, type]);
 
     const handleSubmit = async (e: React.FormEvent, parentId: string | null = null) => {
         e.preventDefault();

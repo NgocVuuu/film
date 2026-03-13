@@ -12,7 +12,15 @@ const getComments = async (req, res) => {
 
         const filter = { movieSlug: slug, parentId: null };
         if (type) {
-            filter.type = type;
+            if (type === 'comment') {
+                // If type is 'comment', show data where type is either 'comment' OR missing
+                filter.$or = [
+                    { type: 'comment' },
+                    { type: { $exists: false } }
+                ];
+            } else {
+                filter.type = type;
+            }
         }
 
         const comments = await Comment.find(filter)
