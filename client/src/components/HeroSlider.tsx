@@ -455,7 +455,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             {/* Mobile layout: poster overlay, info below, centered, with short description */}
             <div 
                 ref={contentWrapperRef}
-                className="relative md:absolute md:inset-0 z-20 container mx-auto px-4 flex flex-col justify-start md:justify-center pt-20 md:pt-40 pb-12 md:pb-32"
+                className="relative md:absolute md:inset-0 z-20 container mx-auto px-4 flex flex-col justify-start md:justify-center pt-28 md:pt-40 pb-12 md:pb-32"
                 style={{
                     opacity: 1,
                     willChange: 'opacity'

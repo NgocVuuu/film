@@ -5,15 +5,15 @@ const Movie = require('../models/Movie');
 const getComments = async (req, res) => {
     try {
         const { slug } = req.params;
+        const { type } = req.query;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20; // Increased limit
         const skip = (page - 1) * limit;
 
-        // Fetch top-level comments (parentId: null) first? 
-        // Or fetch all and let frontend arrange? 
-        // For pagination of threads, best to fetch top-level.
-
         const filter = { movieSlug: slug, parentId: null };
+        if (type) {
+            filter.type = type;
+        }
 
         const comments = await Comment.find(filter)
             .sort({ createdAt: -1 })
@@ -57,11 +57,11 @@ const getComments = async (req, res) => {
 // 2. Add Comment (or Reply)
 const addComment = async (req, res) => {
     try {
-        const { movieSlug, content, rating, parentId, episodeName } = req.body;
+        const { movieSlug, content, rating, parentId, episodeName, type } = req.body;
         const userId = req.user._id;
 
-        if (!content) {
-            return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung.' });
+        if (!content && !rating) {
+            return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung hoặc chọn mức đánh giá.' });
         }
 
         // Validate rating if provided
@@ -90,7 +90,8 @@ const addComment = async (req, res) => {
             content,
             rating: rating || undefined,
             parentId: parentId || null,
-            episodeName: episodeName || null
+            episodeName: episodeName || null,
+            type: type || 'comment'
         });
         await newComment.save();
 

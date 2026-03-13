@@ -18,7 +18,9 @@ async function migrate() {
 
         for (const comment of comments) {
             const oldRating = comment.rating;
-            const newRating = Math.max(1, Math.floor(oldRating / 2));
+            // Only divide if rating is on a 10-point scale (> 5)
+            // If it's already <= 5, it's likely already converted or a low rating
+            const newRating = oldRating > 5 ? Math.max(1, Math.floor(oldRating / 2)) : oldRating;
             
             if (oldRating !== newRating) {
                 comment.rating = newRating;

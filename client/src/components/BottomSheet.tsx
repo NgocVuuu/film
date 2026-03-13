@@ -18,6 +18,7 @@ interface BottomSheetProps {
     showClose?: boolean;
     fullHeight?: boolean;
     noPadding?: boolean;
+    closeOnOutsideClick?: boolean;
 }
 
 export function BottomSheet({
@@ -28,7 +29,8 @@ export function BottomSheet({
     className,
     showClose = true,
     fullHeight = false,
-    noPadding = false
+    noPadding = false,
+    closeOnOutsideClick = true
 }: BottomSheetProps) {
     return (
         <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -40,6 +42,12 @@ export function BottomSheet({
                 
                 {/* Content - Slides from bottom */}
                 <DialogPrimitive.Content
+                    onPointerDownOutside={(e) => {
+                        if (!closeOnOutsideClick) e.preventDefault();
+                    }}
+                    onFocusOutside={(e) => {
+                        if (!closeOnOutsideClick) e.preventDefault();
+                    }}
                     className={cn(
                         /* Base: stick to bottom, full width, rounded top corners */
                         "fixed left-0 right-0 z-50 flex flex-col bg-[#080808] border-t border-white/5 shadow-2xl outline-none",

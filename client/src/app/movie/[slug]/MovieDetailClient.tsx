@@ -412,13 +412,17 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
 
         try {
             const token = getAuthToken();
-            const res = await fetch(`${API_URL}/api/movie/${movie?.slug}/rate`, {
+            const res = await fetch(`${API_URL}/api/comments`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ rating: userRating, comment: ratingComment }) // Send 5 stars directly
+                body: JSON.stringify({ 
+                    movieSlug: movie?.slug,
+                    rating: userRating, 
+                    content: ratingComment 
+                })
             });
             const data = await res.json();
             if (data.success) {
@@ -897,12 +901,14 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                                 movieSlug={slug as string} 
                                                 hideRatingForm={true}
                                                 formPosition="top"
+                                                type="comment"
                                             />
                                         ) : (
                                             <CommentSection 
                                                 movieSlug={slug as string} 
-                                                onlyWithRating={true}
+                                                onlyWithRating={false}
                                                 hideRatingForm={false}
+                                                type="rating"
                                             />
                                         )}
                                     </div>
@@ -1126,29 +1132,32 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                 title="Cộng đồng"
                 fullHeight={true}
                 noPadding={true}
+                closeOnOutsideClick={false}
             >
-                <div className="flex flex-col h-full">
-                    <div className="flex bg-surface-900/50 p-1 rounded-2xl m-4 md:mb-6 border border-white/5">
-                        <button
-                            onClick={() => setCommentSubTab('comment')}
-                            className={cn(
-                                "flex-1 py-2 md:py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                                commentSubTab === 'comment' ? "bg-primary text-black shadow-lg" : "text-gray-400 hover:text-white"
-                            )}
-                        >
-                            <MessageCircle className="w-4 h-4" />
-                            Bình luận
-                        </button>
-                        <button
-                            onClick={() => setCommentSubTab('rating')}
-                            className={cn(
-                                "flex-1 py-2 md:py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                                commentSubTab === 'rating' ? "bg-primary text-black shadow-lg" : "text-gray-400 hover:text-white"
-                            )}
-                        >
-                            <Star className="w-4 h-4" />
-                            Đánh giá
-                        </button>
+                <div className="flex flex-col h-full overflow-hidden">
+                    <div className="shrink-0 bg-surface-950/80 backdrop-blur-md px-4 py-2 border-b border-white/5">
+                        <div className="flex bg-surface-800/50 p-1 rounded-2xl border border-white/5">
+                            <button
+                                onClick={() => setCommentSubTab('comment')}
+                                className={cn(
+                                    "flex-1 py-2 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
+                                    commentSubTab === 'comment' ? "bg-primary text-black shadow-lg" : "text-gray-400 hover:text-white"
+                                )}
+                            >
+                                <MessageCircle className="w-4 h-4" />
+                                Bình luận
+                            </button>
+                            <button
+                                onClick={() => setCommentSubTab('rating')}
+                                className={cn(
+                                    "flex-1 py-2 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
+                                    commentSubTab === 'rating' ? "bg-primary text-black shadow-lg" : "text-gray-400 hover:text-white"
+                                )}
+                            >
+                                <Star className="w-4 h-4" />
+                                Đánh giá
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex-1 pb-4">
@@ -1158,13 +1167,15 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                 hideRatingForm={true}
                                 formPosition="bottom"
                                 compactInput={true}
+                                type="comment"
                             />
                         ) : (
                             <CommentSection 
                                 movieSlug={movie?.slug || ''} 
-                                onlyWithRating={true}
-                                hideForm={true}
+                                onlyWithRating={false}
+                                hideForm={false}
                                 compactInput={true}
+                                type="rating"
                             />
                         )}
                     </div>

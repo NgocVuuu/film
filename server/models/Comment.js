@@ -18,7 +18,7 @@ const commentSchema = new mongoose.Schema({
     },
     content: {
         type: String,
-        required: true,
+        required: false, // Made optional for rating-only comments
         trim: true,
         maxlength: 1000 // Increased limit
     },
@@ -41,6 +41,12 @@ const commentSchema = new mongoose.Schema({
     isHidden: {
         type: Boolean,
         default: false
+    },
+    type: {
+        type: String,
+        enum: ['comment', 'rating'],
+        default: 'comment',
+        index: true
     }
 }, {
     timestamps: true
