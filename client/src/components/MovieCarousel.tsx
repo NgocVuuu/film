@@ -126,7 +126,7 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
                     {movies.map((movie) => {
                         const longPressHandlers = useLongPress(() => {
                             showQuickView(movie as any);
-                        });
+                        }, { shouldPreventDefault: false });
                         const movieBadges = getBadges(movie.quality, movie.episode_current, movie.lang);
 
                         return (

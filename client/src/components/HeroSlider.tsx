@@ -210,7 +210,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
         const diffX = currentX - touchStartX.current;
         const diffY = currentY - touchStartY.current;
 
-        const THRESHOLD = 5; // Lowered for faster response
+        const THRESHOLD = 3; // Lowered for faster response (was 5)
         // Direction Locking: Determine if the gesture is horizontal or vertical
         if (isHorizontalRef.current === null) {
             if (Math.abs(diffX) > THRESHOLD || Math.abs(diffY) > THRESHOLD) {
@@ -245,8 +245,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
     };
 
     const onMouseDown = (e: React.MouseEvent) => {
-        // Prevent default to stop browser from starting native drag or text selection
-        e.preventDefault();
+        // We removed e.preventDefault() to allow button clicks inside the slider to work
         isDraggingRef.current = true;
         touchStartX.current = e.clientX;
         touchStartTime.current = Date.now();
@@ -286,15 +285,17 @@ export function HeroSlider({ movies }: HeroSliderProps) {
         const v = velocityX !== undefined ? velocityX : (offset / Math.max(Date.now() - touchStartTime.current, 1));
 
         if (isMobile) {
-            // Adaptive kinetic drift for mobile
-            const drift = v * 250; 
+            // Adaptive kinetic drift for mobile - increased momentum (was 250)
+            const drift = v * 400; 
             const totalOffset = offset + drift;
             snapOffset = Math.round(totalOffset / SLOT_PX) * SLOT_PX;
         } else {
             // Limited momentum for desktop (max 1 slide jump)
-            if (offset > threshold || v > 0.5) {
+            // Velocity-sensitive snapping for desktop/general
+            // Lowered velocity threshold from 0.5 to 0.35 for higher sensitivity
+            if (offset > threshold || v > 0.35) {
                 snapOffset = SLOT_PX;
-            } else if (offset < -threshold || v < -0.5) {
+            } else if (offset < -threshold || v < -0.35) {
                 snapOffset = -SLOT_PX;
             } else {
                 snapOffset = 0;
@@ -325,8 +326,11 @@ export function HeroSlider({ movies }: HeroSliderProps) {
         });
     };
 
-    // Auto-play
+    // Auto-play (Disabled on mobile)
     useEffect(() => {
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        if (isMobile) return;
+
         const timer = setInterval(() => {
             if (isDraggingRef.current) return;
             const next = (currentIndexRef.current + 1) % moviesRef.current.length;
@@ -486,15 +490,17 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                                     // NO reactive transform/opacity/transition here to prevent React flicker
                                 }}
                             >
-                                <div className={`relative w-full h-full rounded-2xl overflow-hidden shadow-xl ${idx === currentIndex ? 'border-2 border-yellow-300/60 shadow-yellow-200/20' : 'bg-gray-900/50'}`}>
-                                    <img
-                                        src={movie.poster_url || movie.thumb_url}
-                                        alt={movie.name}
-                                        className="w-full h-full object-cover object-top rounded-2xl"
-                                        draggable={false}
-                                        onDragStart={(e) => e.preventDefault()}
-                                    />
-                                </div>
+                                <Link href={`/movie/${movie.slug}`} className="block w-full h-full">
+                                    <div className={`relative w-full h-full rounded-2xl overflow-hidden shadow-xl ${idx === currentIndex ? 'border-2 border-yellow-300/60 shadow-yellow-200/20' : 'bg-gray-900/50'}`}>
+                                        <img
+                                            src={movie.poster_url || movie.thumb_url}
+                                            alt={movie.name}
+                                            className="w-full h-full object-cover object-top rounded-2xl transition-transform duration-500 hover:scale-105"
+                                            draggable={false}
+                                            onDragStart={(e) => e.preventDefault()}
+                                        />
+                                    </div>
+                                </Link>
                             </div>
                         ))}
                     </div>
@@ -525,7 +531,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                     {/* Static Action Buttons - Do not fade on swipe */}
                     <div className="flex flex-wrap gap-4 justify-center pt-1 mb-4 z-30">
                         <Link href={`/movie/${currentMovie.slug}/watch`}>
-                            <Button size="sm" className="bg-primary text-black hover:bg-gold-400 font-bold text-sm px-4 py-2 rounded-lg shadow-md shadow-primary/20 flex items-center gap-2 transform hover:scale-105 transition-all duration-300 min-w-28">
+                            <Button size="sm" className="bg-gold-gradient text-black hover:brightness-110 font-bold text-sm px-4 py-2 rounded-lg shadow-glow flex items-center gap-2 transform active:scale-95 transition-all duration-300 min-w-28 border-none">
                                 <Play fill="black" className="w-4 h-4" />
                                 XEM NGAY
                             </Button>
@@ -592,7 +598,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                     )}
                     <div className="flex flex-wrap gap-3 pt-4">
                         <Link href={`/movie/${currentMovie.slug}/watch`}>
-                            <Button size="lg" className="bg-primary text-black hover:bg-gold-400 font-bold text-base md:text-lg px-6 md:px-8 py-6 rounded-xl shadow-lg shadow-primary/30 flex items-center gap-2 transform hover:scale-105 transition-all duration-300">
+                            <Button size="lg" className="bg-gold-gradient text-black hover:brightness-110 font-bold text-base md:text-lg px-6 md:px-8 py-6 rounded-xl shadow-glow flex items-center gap-2 transform hover:scale-105 transition-all duration-300 border-none">
                                 <Play fill="black" className="w-5 h-5" />
                                 XEM NGAY
                             </Button>

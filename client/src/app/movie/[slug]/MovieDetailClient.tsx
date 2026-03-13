@@ -445,6 +445,9 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
         <div className="min-h-screen bg-deep-black text-white font-sans">
             {/* ── MOBILE VIEW ──────────────────────────────────────────────────────── */}
             <div className={cn("block md:hidden", !isPWA ? "-mt-[calc(3.5rem+env(safe-area-inset-top))]" : "-mt-[env(safe-area-inset-top)]")}>
+                {/* Safe area spacer for notch (tai thỏ) */}
+                <div className="h-[env(safe-area-inset-top)] w-full" />
+                
                 {/* 1. Backdrop Image (Landscape) */}
                 <div className="relative w-full aspect-video overflow-hidden">
                     <img
@@ -460,7 +463,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                     <div className="pt-2">
                         <Button
                             onClick={handleWatchNow}
-                            className="w-full h-11 bg-gold-gradient hover:opacity-90 text-black font-extrabold rounded-xl shadow-glow relative overflow-hidden active:scale-95 transition-all text-xs"
+                            className="w-full h-11 bg-gold-gradient hover:brightness-110 text-black font-extrabold rounded-xl shadow-glow relative overflow-hidden active:scale-95 transition-all text-xs border-none"
                         >
                             <Play fill="black" className="w-4 h-4 mr-2" />
                             {movie.progress && movie.progress.percentage > 0 && movie.progress.percentage < 100
@@ -737,7 +740,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                         {/* XEM NGAY */}
                                         <Button
                                             onClick={handleWatchNow}
-                                            className="group relative h-11 md:h-13 px-8 bg-gold-gradient hover:opacity-90 text-black text-sm md:text-base font-extrabold rounded-xl shadow-[0_0_24px_rgba(234,179,8,0.45)] hover:shadow-[0_0_40px_rgba(234,179,8,0.65)] transition-all duration-300 hover:scale-[1.04] active:scale-95 overflow-hidden"
+                                            className="group relative h-11 md:h-13 px-8 bg-gold-gradient hover:brightness-110 text-black text-sm md:text-base font-extrabold rounded-xl shadow-glow hover:shadow-[0_0_30px_rgba(234,179,8,0.65)] transition-all duration-300 hover:scale-[1.04] active:scale-95 overflow-hidden border-none"
                                         >
                                             <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
                                             <Play fill="black" className="mr-2 w-4 h-4 md:w-5 md:h-5 shrink-0" />

@@ -144,7 +144,12 @@
   }
 
   .bg-gold-gradient {
-    @apply bg-linear-to-r from-yellow-500 via-yellow-600 to-yellow-700;
+    /* Adjusted from 500-600-700 to 400-500-600 for more vibrancy */
+    @apply bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-600;
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.45);
   }
 
   .border-gold-glow {

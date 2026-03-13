@@ -29,7 +29,7 @@ export function MovieCard({ movie, isEditing }: MovieCardProps) {
     const { showQuickView } = useQuickView();
     const longPressHandlers = useLongPress(() => {
         showQuickView(movie as any);
-    }, { delay: 800 });
+    }, { delay: 800, shouldPreventDefault: false });
 
     // Helper to get unified language + episode badge style
     const getBadges = (quality?: string, episode?: string, lang?: string) => {
