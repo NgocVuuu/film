@@ -229,7 +229,7 @@ export function CommentSection({
         <div className="flex flex-col h-full min-h-0">
             {/* Comment list container that stretches */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
-                <div className="flex flex-col gap-6 p-4 md:p-0">
+                <div className="flex flex-col gap-6 px-0 md:px-0 py-4 md:py-0">
                     {!hideForm && formPosition === 'top' && (
                         <RenderForm 
                             hideForm={hideForm}
@@ -373,8 +373,8 @@ const CommentItem = ({
 
     return (
         <div className={cn(
-            "p-2.5 md:p-5 rounded-2xl bg-surface-900/40 border border-white/5 flex gap-2.5 md:gap-4 group hover:border-white/20 hover:shadow-2xl hover:shadow-black/50 transition-all duration-300",
-            isReply ? 'ml-4 md:ml-14 border-l-2 border-l-white/10' : ''
+            "px-1 py-2.5 md:p-5 rounded-2xl bg-surface-900/40 border border-white/5 flex gap-2.5 md:gap-4 group hover:border-white/20 hover:shadow-2xl hover:shadow-black/50 transition-all duration-300",
+            isReply ? 'ml-3 md:ml-14 border-l-2 border-l-white/10' : ''
         )}>
             <div className="shrink-0">
                 <div className="relative">
@@ -573,7 +573,7 @@ const RenderForm = ({
     }
 
     return (
-        <div className={cn("bg-surface-800/80 p-3.5 rounded-[2rem] border border-white/10 backdrop-blur-md", formPosition === 'bottom' ? 'mb-4 shadow-2xl' : '')}>
+        <div className={cn("bg-surface-800/80 px-1 py-2.5 md:p-3.5 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 backdrop-blur-md", formPosition === 'bottom' ? 'mb-4 shadow-2xl' : '')}>
             {!user ? (
                 <div className="text-center py-3">
                     <p className="text-gray-400 text-[11px] mb-2">Vui lòng đăng nhập để bình luận.</p>
@@ -615,7 +615,7 @@ const RenderForm = ({
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                             placeholder="Chia sẻ cảm nghĩ của bạn..."
-                            className="w-full bg-black/40 border border-white/5 rounded-2xl p-3 text-[12px] text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none min-h-[80px] md:min-h-[100px] resize-none transition-all"
+                            className="w-full bg-black/40 border border-white/5 rounded-2xl p-3 text-[12px] text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none min-h-[60px] md:min-h-[100px] resize-none transition-all"
                             maxLength={1000}
                         />
                         <div className="absolute bottom-2 right-3 text-[9px] font-bold text-gray-600">

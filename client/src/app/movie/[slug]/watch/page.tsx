@@ -644,30 +644,30 @@ export default function WatchPage() {
 
             {/* Comments Section */}
             {movie && (
-                <div className="max-w-7xl mx-auto w-full px-4 md:px-6 pb-12">
+                <div className="max-w-7xl mx-auto w-full px-1 md:px-6 pb-12">
                     <div className="mt-8 bg-white/[0.02] rounded-3xl border border-white/5 overflow-hidden">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between bg-surface-900/80 p-1.5 border-b border-white/5 gap-2 md:gap-0">
-                            <div className="px-4 md:px-6 py-2">
-                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between bg-surface-900/80 p-1 md:p-1.5 border-b border-white/5 gap-2 md:gap-0">
+                            <div className="px-3 md:px-6 py-1.5 md:py-2">
+                                <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
                                     Mọi người đang nói gì?
                                 </h3>
                             </div>
                             <div className="flex p-0.5 bg-black/20 rounded-2xl md:mr-2">
                                 <button
                                     onClick={() => setShowTabs('comment')}
-                                    className={`flex-1 md:flex-none md:min-w-[140px] py-2 px-6 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 ${showTabs === 'comment' ? "bg-primary text-black shadow-lg" : "text-gray-500 hover:text-white"}`}
+                                    className={`flex-1 md:flex-none md:min-w-[140px] py-1.5 md:py-2 px-3 md:px-6 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 ${showTabs === 'comment' ? "bg-primary text-black shadow-lg" : "text-gray-500 hover:text-white"}`}
                                 >
                                     Bình luận
                                 </button>
                                 <button
                                     onClick={() => setShowTabs('rating')}
-                                    className={`flex-1 md:flex-none md:min-w-[140px] py-2 px-6 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 ${showTabs === 'rating' ? "bg-primary text-black shadow-lg" : "text-gray-500 hover:text-white"}`}
+                                    className={`flex-1 md:flex-none md:min-w-[140px] py-1.5 md:py-2 px-3 md:px-6 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 ${showTabs === 'rating' ? "bg-primary text-black shadow-lg" : "text-gray-500 hover:text-white"}`}
                                 >
                                     Đánh giá
                                 </button>
                             </div>
                         </div>
-                        <div className="p-6">
+                        <div className="px-0 py-3 md:p-6">
                             {showTabs === 'comment' ? (
                                 <CommentSection
                                     movieSlug={movie.slug}
