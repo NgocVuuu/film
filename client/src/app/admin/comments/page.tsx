@@ -11,6 +11,8 @@ interface Comment {
     content: string;
     movieSlug: string;
     isHidden: boolean;
+    type: 'comment' | 'rating';
+    rating?: number;
     user: {
         displayName: string;
         email: string;
@@ -24,11 +26,13 @@ export default function AdminCommentsPage() {
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [filterType, setFilterType] = useState<'all' | 'comment' | 'rating'>('all');
 
     const fetchComments = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await customFetch(`/api/admin/comments?page=${page}&limit=20`, {
+            const typeParam = filterType !== 'all' ? `&type=${filterType}` : '';
+            const res = await customFetch(`/api/admin/comments?page=${page}&limit=20${typeParam}`, {
                 credentials: 'include'
             });
             const data = await res.json();
@@ -45,11 +49,11 @@ export default function AdminCommentsPage() {
         } finally {
             setLoading(false);
         }
-    }, [page]);
+    }, [page, filterType]);
 
     useEffect(() => {
         fetchComments();
-    }, [fetchComments]);
+    }, [fetchComments, filterType, page]);
 
     const handleToggleHide = async (commentId: string) => {
         try {
@@ -104,7 +108,28 @@ export default function AdminCommentsPage() {
     return (
         <div className="p-4 md:p-6">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-                <h1 className="text-2xl md:text-3xl font-bold text-white">Quản lý Bình luận</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-white">Quản lý Bình luận & Đánh giá</h1>
+                
+                <div className="flex p-1 bg-white/[0.05] rounded-xl border border-white/10">
+                    <button
+                        onClick={() => { setFilterType('all'); setPage(1); }}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === 'all' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Tất cả
+                    </button>
+                    <button
+                        onClick={() => { setFilterType('comment'); setPage(1); }}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === 'comment' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Bình luận
+                    </button>
+                    <button
+                        onClick={() => { setFilterType('rating'); setPage(1); }}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === 'rating' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Đánh giá
+                    </button>
+                </div>
             </div>
 
             <div className="bg-surface-900 rounded-xl border border-white/5 overflow-hidden shadow-2xl">
@@ -113,6 +138,7 @@ export default function AdminCommentsPage() {
                         <thead className="bg-surface-800">
                             <tr>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Người dùng</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Loại</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Nội dung</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Phim</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Ngày đăng</th>
@@ -126,12 +152,10 @@ export default function AdminCommentsPage() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
                                             <div className="relative w-8 h-8 shrink-0">
-                                                <Image
+                                                <img
                                                     src={comment.user.avatar || '/default-avatar.png'}
                                                     alt={comment.user.displayName}
-                                                    fill
-                                                    sizes="32px"
-                                                    className="rounded-full object-cover border border-white/10"
+                                                    className="w-8 h-8 rounded-full object-cover border border-white/10"
                                                 />
                                             </div>
                                             <div>
@@ -140,8 +164,26 @@ export default function AdminCommentsPage() {
                                             </div>
                                         </div>
                                     </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex flex-col gap-1">
+                                            <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded w-fit ${comment.type === 'rating' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'}`}>
+                                                {comment.type === 'rating' ? 'Đánh giá' : 'Bình luận'}
+                                            </span>
+                                            {comment.type === 'rating' && comment.rating && (
+                                                <div className="flex items-center gap-0.5 text-amber-500">
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <svg key={i} className={`w-3 h-3 ${i < comment.rating! ? 'fill-current' : 'text-gray-600'}`} viewBox="0 0 24 24">
+                                                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                                        </svg>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
                                     <td className="px-6 py-4">
-                                        <div className="text-sm text-gray-300 max-w-xs md:max-w-md line-clamp-2 italic">&quot;{comment.content}&quot;</div>
+                                        <div className="text-sm text-gray-300 max-w-xs md:max-w-md line-clamp-2 italic">
+                                            {comment.content ? `"${comment.content}"` : <span className="text-gray-600">(Không có nội dung)</span>}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-xs text-primary font-medium hover:underline cursor-pointer">{comment.movieSlug}</div>

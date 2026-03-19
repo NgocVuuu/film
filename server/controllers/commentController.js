@@ -5,15 +5,23 @@ const Movie = require('../models/Movie');
 const getComments = async (req, res) => {
     try {
         const { slug } = req.params;
+        const { type } = req.query;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20; // Increased limit
         const skip = (page - 1) * limit;
 
-        // Fetch top-level comments (parentId: null) first? 
-        // Or fetch all and let frontend arrange? 
-        // For pagination of threads, best to fetch top-level.
-
         const filter = { movieSlug: slug, parentId: null };
+        if (type) {
+            if (type === 'comment') {
+                // If type is 'comment', show data where type is either 'comment' OR missing
+                filter.$or = [
+                    { type: 'comment' },
+                    { type: { $exists: false } }
+                ];
+            } else {
+                filter.type = type;
+            }
+        }
 
         const comments = await Comment.find(filter)
             .sort({ createdAt: -1 })
@@ -57,16 +65,16 @@ const getComments = async (req, res) => {
 // 2. Add Comment (or Reply)
 const addComment = async (req, res) => {
     try {
-        const { movieSlug, content, rating, parentId, episodeName } = req.body;
+        const { movieSlug, content, rating, parentId, episodeName, type } = req.body;
         const userId = req.user._id;
 
-        if (!content) {
-            return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung.' });
+        if (!content && !rating) {
+            return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung hoặc chọn mức đánh giá.' });
         }
 
         // Validate rating if provided
-        if (rating && (rating < 1 || rating > 10)) {
-            return res.status(400).json({ success: false, message: 'Đánh giá phải từ 1 đến 10.' });
+        if (rating && (rating < 1 || rating > 5)) {
+            return res.status(400).json({ success: false, message: 'Đánh giá phải từ 1 đến 5 sao.' });
         }
 
         // Validate parentId if provided
@@ -90,7 +98,8 @@ const addComment = async (req, res) => {
             content,
             rating: rating || undefined,
             parentId: parentId || null,
-            episodeName: episodeName || null
+            episodeName: episodeName || null,
+            type: type || 'comment'
         });
         await newComment.save();
 
@@ -207,9 +216,42 @@ const toggleLike = async (req, res) => {
     }
 };
 
+// 5. Get recent comments across all movies (for home page showcase)
+const getRecentComments = async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit) || 12, 50);
+
+        const comments = await Comment.find({
+            parentId: null,
+            content: { $exists: true, $ne: '' }
+        })
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .populate('user', 'displayName avatar role')
+            .lean();
+
+        // Batch-fetch movie info
+        const slugs = [...new Set(comments.map(c => c.movieSlug))];
+        const movies = await Movie.find({ slug: { $in: slugs } })
+            .select('slug name thumb_url poster_url')
+            .lean();
+        const movieMap = Object.fromEntries(movies.map(m => [m.slug, m]));
+
+        const data = comments.map(c => ({
+            ...c,
+            movie: movieMap[c.movieSlug] || { slug: c.movieSlug, name: c.movieSlug }
+        }));
+
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getComments,
     addComment,
     deleteComment,
-    toggleLike
+    toggleLike,
+    getRecentComments
 };

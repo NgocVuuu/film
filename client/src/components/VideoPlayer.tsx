@@ -46,6 +46,7 @@ interface VideoPlayerProps {
     onNextEpisode?: () => void;
     onPrevEpisode?: () => void;
     onTimeUpdate?: (time: number) => void;
+    onError?: () => void;  // Callback when video fails to load (e.g. NC CDN blocked)
     // In-player episode panel
     episodeServers?: {
         server_name: string;
@@ -91,6 +92,7 @@ export default function VideoPlayer({
     onTimeUpdate,
     episodeServers,
     onEpisodeSelect,
+    onError,
 }: VideoPlayerProps) {
     const { user } = useAuth();
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -100,6 +102,8 @@ export default function VideoPlayer({
     // Track previous episode/movie to detect changes
     const prevEpisodeRef = useRef<{ movie: string, episode: string } | null>(null);
     const savedTimeRef = useRef<number>(0);
+    // Prevent onError from firing multiple times for the same src
+    const onErrorFiredRef = useRef(false);
 
     // State
     const [isPlaying, setIsPlaying] = useState(false);
@@ -116,7 +120,7 @@ export default function VideoPlayer({
     const [showControls, setShowControls] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(false);
-    const [useEmbed] = useState(false);
+    const [useEmbed, setUseEmbed] = useState(false);
     const [hoverTime, setHoverTime] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<number>(0);
 
@@ -160,7 +164,7 @@ export default function VideoPlayer({
     // Premium Stream Initialization
     useEffect(() => {
         const fetchPremiumLink = async () => {
-            if (!magnet || !user || user.subscription?.tier !== 'premium') {
+            if (!magnet || !user || !user.isPremium) {
                 setPremiumStreamUrl(null);
                 return;
             }
@@ -322,44 +326,51 @@ export default function VideoPlayer({
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!touchStartRef.current || !containerRef.current) return;
 
-        // Gestures only active in fullscreen (landscape/zoomed)
-        if (!isFullscreen && !isLandscape) return;
+        const currentY = e.touches[0].clientY;
+        const currentX = e.touches[0].clientX;
+        const deltaY = touchStartRef.current.y - currentY;
+        const deltaX = currentX - touchStartRef.current.x;
 
-        // Prevent page scroll
-        // e.preventDefault(); // Warning: Passive event listener issue in React?
-        // Better handled via CSS touch-action: none
-
-        const deltaY = touchStartRef.current.y - e.touches[0].clientY;
-        const deltaX = e.touches[0].clientX - touchStartRef.current.x;
         const rect = containerRef.current.getBoundingClientRect();
-        const sensitive = 150; // Pixels to scroll to max change
 
-        // Ignore horizontal swipes (seeking) - threshold 30px difference
-        if (Math.abs(deltaX) > Math.abs(deltaY) + 30) return;
+        // Determine gesture direction from accumulated movement
+        // Only trigger volume/brightness if primarily vertical swipe
+        if (Math.abs(deltaX) > Math.abs(deltaY) + 15) {
+            // Horizontal swipe detected - skip volume/brightness
+            return;
+        }
 
-        const percentChange = deltaY / sensitive;
+        // Must have moved at least 5px vertically to trigger gesture
+        if (Math.abs(deltaY) < 5) return;
+
+        // 150 pixels swipe = 100% change (smoother feel)
+        const percentChange = deltaY / 150;
 
         // Left side: Brightness
         if (touchStartRef.current.x < rect.width / 2) {
-            const newBrightness = Math.max(0.2, Math.min(1.5, brightness + percentChange * 0.05));
-            setBrightness(newBrightness);
-            setGestureFeedback({ type: 'brightness', value: newBrightness });
+            setBrightness(prev => {
+                const newBrightness = Math.max(0.2, Math.min(1.5, prev + percentChange));
+                setGestureFeedback({ type: 'brightness', value: newBrightness });
+                return newBrightness;
+            });
         }
         // Right side: Volume
         else {
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             if (isIOS) {
                 // iOS does not allow volume control via JS
-                // Show feedback but don't change volume
-                setGestureFeedback({ type: 'error', value: 0 }); // Error type for "Use Buttons"
+                setGestureFeedback({ type: 'error', value: 0 });
             } else if (videoRef.current) {
-                const newVolume = Math.max(0, Math.min(1, volume + percentChange * 0.05));
+                const newVolume = Math.max(0, Math.min(1, videoRef.current.volume + percentChange));
                 videoRef.current.volume = newVolume;
                 setVolume(newVolume);
                 setIsMuted(newVolume === 0);
                 setGestureFeedback({ type: 'volume', value: newVolume });
             }
         }
+
+        // Update the reference point for incremental tracking
+        touchStartRef.current.y = currentY;
     };
 
     const handleTouchEnd = (e: React.TouchEvent) => {
@@ -378,8 +389,8 @@ export default function VideoPlayer({
 
         // Check if touch moved significantly (swipe vs tap)
         const touchMoved = touchStartRef.current && (
-            Math.abs(x - touchStartRef.current.x) > 15 ||
-            Math.abs(y - touchStartRef.current.y) > 15
+            Math.abs(x - touchStartRef.current.x) > 20 ||
+            Math.abs(y - touchStartRef.current.y) > 20
         );
 
         if (container && wasTap && !touchMoved) {
@@ -602,6 +613,14 @@ export default function VideoPlayer({
 
     // -- HLS & Init --
 
+    // Call onError safely after render (not during render) to avoid infinite re-render loops
+    useEffect(() => {
+        if (error && onError && serverName?.startsWith('NC -') && !onErrorFiredRef.current) {
+            onErrorFiredRef.current = true;
+            onError();
+        }
+    }, [error, onError, serverName]);
+
     // Track view for anonymous users
     useEffect(() => {
         if (!user && movieSlug && episodeSlug) {
@@ -636,12 +655,19 @@ export default function VideoPlayer({
         const activeSrc = premiumStreamUrl || src;
 
         if (!activeSrc) {
-            setError(true);
-            setIsLoading(false);
+            if (embedUrl) {
+                setUseEmbed(true);
+                setIsLoading(false);
+            } else {
+                setError(true);
+                setIsLoading(false);
+            }
             return;
         }
 
+        setUseEmbed(false);
         setError(false);
+        onErrorFiredRef.current = false;
         setIsLoading(true);
         let hls: Hls;
 
@@ -726,13 +752,16 @@ export default function VideoPlayer({
                 // === Performance & Seeking ===
                 progressive: true, // Crucial: start playing before fragment is fully loaded
                 // === Memory Management (critical for long sessions / PWA) ===
-                maxBufferLength: 45,
-                backBufferLength: 10,
-                maxMaxBufferLength: 90,
-                maxBufferSize: 30 * 1024 * 1024,
-                fragLoadingTimeOut: 15000,
-                fragLoadingMaxRetry: 5,
-                appendErrorMaxRetry: 3,
+                maxBufferLength: 60,           // Tăng từ 45→60s: ít bị stall hơn khi CDN chậm
+                backBufferLength: 30,          // 30s: đủ để tua lại mà không nặng RAM mobile
+                maxMaxBufferLength: 120,       // Tăng từ 90→120s: cho phép buffer tối đa 2 phút
+                maxBufferSize: 50 * 1024 * 1024, // 50MB: cân bằng giữa HD quality và RAM mobile
+                fragLoadingTimeOut: 20000,     // Tăng từ 15→20s: CDN chậm có thêm thời gian
+                fragLoadingMaxRetry: 6,        // Tăng từ 5→6 lần retry khi segment lỗi
+                fragLoadingRetryDelay: 1000,   // Thêm: chờ 1s giữa các lần retry
+                appendErrorMaxRetry: 5,        // Tăng từ 3→5
+                levelLoadingTimeOut: 20000,    // Thêm: timeout cho manifest/level
+                manifestLoadingTimeOut: 20000, // Thêm: timeout cho manifest load
             });
             hlsRef.current = hls;
 
@@ -769,7 +798,7 @@ export default function VideoPlayer({
                     const isNetworkError = data.type === Hls.ErrorTypes.NETWORK_ERROR || data.type === Hls.ErrorTypes.MEDIA_ERROR;
 
                     // Fallback cấp cứu Premium Nginx Proxy/DPI chặn
-                    if (user?.subscription?.tier === 'premium' && magnet && currentKeyId && isNetworkError) {
+                    if (user?.isPremium && magnet && currentKeyId && isNetworkError) {
                         console.warn(`[VideoPlayer] Trigger Fallback Cấp cứu DPI/424...`);
                         const savedTime = videoRef.current?.currentTime || 0;
                         try {
@@ -797,7 +826,15 @@ export default function VideoPlayer({
 
                     switch (data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
-                            hls.startLoad();
+                            // Manifest load failure = CDN is dead, no point retrying
+                            if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR ||
+                                data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
+                                hls.destroy();
+                                setError(true);
+                            } else {
+                                // Segment-level error: try to resume
+                                hls.startLoad();
+                            }
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
                             hls.recoverMediaError();
@@ -932,21 +969,67 @@ export default function VideoPlayer({
         return () => window.removeEventListener('keydown', handleKeyPress);
     }, [onPrevEpisode, onNextEpisode]);
 
+    // Native touch handler with passive:false to allow preventDefault (stop page scroll during gesture)
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        // Track if swipe is vertical for scroll prevention
+        let startX = 0;
+        let startY = 0;
+        let isVerticalSwipe: boolean | null = null;
+
+        const onTouchStart = (e: TouchEvent) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            isVerticalSwipe = null;
+        };
+
+        const onTouchMove = (e: TouchEvent) => {
+            const deltaX = Math.abs(e.touches[0].clientX - startX);
+            const deltaY = Math.abs(e.touches[0].clientY - startY);
+
+            // Determine direction on first move
+            if (isVerticalSwipe === null && (deltaX > 5 || deltaY > 5)) {
+                isVerticalSwipe = deltaY > deltaX;
+            }
+
+            // Only prevent default for vertical swipes to stop page scroll
+            if (isVerticalSwipe) {
+                e.preventDefault();
+            }
+        };
+
+        container.addEventListener('touchstart', onTouchStart, { passive: true });
+        container.addEventListener('touchmove', onTouchMove, { passive: false });
+
+        return () => {
+            container.removeEventListener('touchstart', onTouchStart);
+            container.removeEventListener('touchmove', onTouchMove);
+        };
+    }, []);
+
 
     if (error || (useEmbed && embedUrl)) {
-        if (embedUrl) {
+        // NC source: never iframe (X-Frame-Options blocks streamc.xyz) — onError handled via useEffect
+        if (serverName?.startsWith('NC -') && !useEmbed) {
+            return <div className="w-full h-full bg-black" />;
+        }
+        
+        if (useEmbed && embedUrl) {
             return (
-                <div className="relative w-full h-full bg-black rounded-lg overflow-hidden border border-border">
+                <div className="relative w-full h-full bg-black rounded-xl overflow-hidden border border-white/10">
                     <iframe
-                        src={`${embedUrl}${autoPlay ? '?autoplay=1' : ''}`}
+                        src={embedUrl}
                         className="w-full h-full"
                         frameBorder="0"
                         allowFullScreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allow="autoplay; encrypted-media; picture-in-picture"
                     />
                 </div>
             );
         }
+
         return (
             <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center border border-border rounded-lg gap-4">
                 <p className="text-red-500">Lỗi: Không thể tải tập phim này.</p>
@@ -1307,7 +1390,7 @@ export default function VideoPlayer({
                                                 >
                                                     Tắt phụ đề
                                                 </button>
-                                                {subtitles.map((sub, idx) => (
+                                                {subtitles.map((sub: any, idx: number) => (
                                                     <button
                                                         key={idx}
                                                         onClick={() => changeSubtitle(idx)}
@@ -1458,7 +1541,7 @@ export default function VideoPlayer({
                                     size="icon"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        if (!panelServerName && episodeServers.length > 0) {
+                                        if (!panelServerName && episodeServers && episodeServers.length > 0) {
                                             setPanelServerName(episodeServers[0].server_name);
                                         }
                                         setShowEpisodePanel(v => !v);

@@ -1,12 +1,12 @@
 import Link from 'next/link';
 
-export function MarvelBanner() {
+export function MarvelBanner({ compact }: { compact?: boolean }) {
     return (
         <Link href="/marvel" className="block group">
-            <div className="relative w-full overflow-hidden rounded-2xl cursor-pointer select-none"
+            <div className="relative w-full overflow-hidden rounded-2xl cursor-pointer select-none flex items-center"
                 style={{
                     background: 'linear-gradient(135deg, #0d0d0d 0%, #3a0000 40%, #8B0000 70%, #c41e1e 100%)',
-                    minHeight: 140,
+                    minHeight: compact ? 80 : 140,
                 }}>
 
                 {/* Blob shapes */}
@@ -32,10 +32,10 @@ export function MarvelBanner() {
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 flex items-center gap-3 lg:gap-6 px-4 lg:px-10 py-6">
+                <div className={`relative z-10 flex items-center gap-3 lg:gap-4 px-4 lg:px-6 w-full ${compact ? '' : 'py-6'}`}>
                     {/* Marvel logo pill */}
                     <div className="shrink-0">
-                        <div className="bg-[#ED1D24] px-4 lg:px-5 py-1.5 rounded font-black text-white tracking-widest text-base lg:text-2xl shadow-lg shadow-red-900/50"
+                        <div className={`bg-[#ED1D24] px-3 lg:px-4 py-1 rounded font-black text-white tracking-widest shadow-lg shadow-red-900/50 ${compact ? 'text-sm lg:text-base' : 'text-base lg:text-2xl'}`}
                             style={{ fontFamily: 'Impact, "Arial Black", sans-serif' }}>
                             MARVEL
                         </div>
@@ -43,12 +43,14 @@ export function MarvelBanner() {
 
                     {/* Text */}
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-white font-bold text-sm lg:text-xl leading-tight group-hover:text-red-300 transition-colors">
+                        <h2 className={`text-white font-bold leading-tight group-hover:text-red-300 transition-colors ${compact ? 'text-xs lg:text-sm' : 'text-sm lg:text-xl'}`}>
                             Vũ Trụ Điện Ảnh Marvel
                         </h2>
-                        <p className="text-gray-400 text-xs md:text-sm mt-0.5">
-                            MCU từ Iron Man đến nay...
-                        </p>
+                        {!compact && (
+                            <p className="text-gray-400 text-xs md:text-sm mt-0.5">
+                                MCU từ Iron Man đến nay...
+                            </p>
+                        )}
                     </div>
 
                     {/* Arrow */}

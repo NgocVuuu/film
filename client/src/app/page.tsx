@@ -6,12 +6,43 @@ import { ContinueWatchingCard } from '@/components/ContinueWatchingCard';
 import { LazyMovieSection } from '@/components/LazyMovieSection';
 import { TrendingCarousel } from '@/components/TrendingCarousel';
 import { PWAAds } from '@/components/PWAAds';
+import { RecentComments } from '@/components/RecentComments';
 import LoadingScreen from '@/components/LoadingScreen';
 import { customFetch } from '@/lib/api';
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 import { MarvelBanner } from '@/components/MarvelBanner';
 import { DCUBanner } from '@/components/DCUBanner';
 import { StephenChowBanner } from '@/components/StephenChowBanner';
 import { KoreanDrama2016Banner } from '@/components/KoreanDrama2016Banner';
+import { SadMoviesBanner } from '@/components/SadMoviesBanner';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
+
+const UNIVERSE_BANNERS = [MarvelBanner, DCUBanner, StephenChowBanner, KoreanDrama2016Banner, SadMoviesBanner];
+
+function UniverseBannersCarousel() {
+  return (
+    <Carousel
+      opts={{ align: 'start', loop: true, dragFree: true }}
+      className="w-full relative group/banners md:px-8"
+    >
+      <CarouselContent className="-ml-3">
+        {UNIVERSE_BANNERS.map((Banner, i) => (
+          <CarouselItem key={i} className="pl-3 basis-[88vw] md:basis-1/2 lg:basis-1/3">
+            <Banner compact />
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+      <CarouselPrevious className="left-0 opacity-0 group-hover/banners:opacity-100 transition-opacity bg-black/70 border-white/10 hover:bg-primary hover:text-black hidden md:flex" />
+      <CarouselNext className="right-0 opacity-0 group-hover/banners:opacity-100 transition-opacity bg-black/70 border-white/10 hover:bg-primary hover:text-black hidden md:flex" />
+    </Carousel>
+  );
+}
 
 interface Movie {
   _id: string;
@@ -34,9 +65,12 @@ interface Movie {
 export default function Home() {
 
   const [loading, setLoading] = useState(true);
+  useScrollRestoration(!loading);
   const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]); // Array for Hero
   const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]); // New Upcoming Movies
-  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]); // New Trending
+  const [allTrending, setAllTrending] = useState<Movie[]>([]);
+  const [seriesTrending, setSeriesTrending] = useState<Movie[]>([]);
+  const [movieTrending, setMovieTrending] = useState<Movie[]>([]);
   const [continueWatchingMovies, setContinueWatchingMovies] = useState<Movie[]>([]); // New Continue Watching
 
   // Categories State
@@ -67,6 +101,7 @@ export default function Home() {
   const [vnMovies, setVnMovies] = useState<Movie[]>([]);
   const [hotAnimeMovies, setHotAnimeMovies] = useState<Movie[]>([]);
   const [legendaryAnimeMovies, setLegendaryAnimeMovies] = useState<Movie[]>([]);
+  const [xianxiaMovies, setXianxiaMovies] = useState<Movie[]>([]);
 
   useEffect(() => {
     // Fetch data from our Node.js server
@@ -75,7 +110,9 @@ export default function Home() {
       .then((data) => {
         if (data.success && data.data) {
           const {
-            trendingMovies,
+            allTrending,
+            seriesTrending,
+            movieTrending,
             featuredMovies,
             upcomingMovies,
             latestMovies,
@@ -105,13 +142,64 @@ export default function Home() {
             hkMovies,
             vnMovies,
             hotAnimeMovies,
-            legendaryAnimeMovies
+            legendaryAnimeMovies,
+            xianxiaMovies
           } = data.data;
 
-          setTrendingMovies(trendingMovies || []);
+          setAllTrending(allTrending || []);
+          setSeriesTrending(seriesTrending || []);
+          setMovieTrending(movieTrending || []);
           setFeaturedMovies(featuredMovies || []);
-          setUpcomingMovies(upcomingMovies || []);
-          setContinueWatchingMovies(continueWatching || []);
+          // Merge local history with API history for instant sync
+          let mergedHistory = continueWatching || [];
+          try {
+            const localHistoryStr = localStorage.getItem('history');
+            if (localHistoryStr) {
+              const localHistory = JSON.parse(localHistoryStr);
+              if (Array.isArray(localHistory) && localHistory.length > 0) {
+                // Build a map of API items by slug for O(1) lookup
+                const apiMap = new Map<string, any>((continueWatching || []).map((item: any) => [item.slug, item]));
+
+                const finalHistory: any[] = [];
+                const processedSlugs = new Set();
+
+                // First pass: local items (may have most recent data from this device)
+                for (const localItem of localHistory) {
+                  if (!localItem?.slug || !localItem.progress) continue;
+                  const apiItem = apiMap.get(localItem.slug);
+                  if (apiItem) {
+                    // Both exist — keep the one with newer timestamp (cross-device sync)
+                    const localTime = localItem.viewedAt ? new Date(localItem.viewedAt).getTime() : 0;
+                    const apiTime = apiItem.viewedAt ? new Date(apiItem.viewedAt).getTime() : 0;
+                    finalHistory.push(localTime >= apiTime ? localItem : apiItem);
+                  } else {
+                    finalHistory.push(localItem);
+                  }
+                  processedSlugs.add(localItem.slug);
+                }
+
+                // Second pass: add API-only items (watched on another device)
+                for (const apiItem of (continueWatching || [])) {
+                  if (apiItem?.slug && !processedSlugs.has(apiItem.slug)) {
+                    finalHistory.push(apiItem);
+                  }
+                }
+
+                // Sort by viewedAt descending
+                finalHistory.sort((a, b) => {
+                  const timeA = a.viewedAt ? new Date(a.viewedAt).getTime() : 0;
+                  const timeB = b.viewedAt ? new Date(b.viewedAt).getTime() : 0;
+                  return timeB - timeA;
+                });
+
+                mergedHistory = finalHistory.slice(0, 10);
+              }
+            }
+          } catch (e) {
+            console.error('Error merging local history:', e);
+          }
+
+          setContinueWatchingMovies(mergedHistory);
 
           setLatestMovies(latestMovies || []);
           setChinaMovies(chinaMovies || []);
@@ -140,6 +228,7 @@ export default function Home() {
           setVnMovies(vnMovies || []);
           setHotAnimeMovies(hotAnimeMovies || []);
           setLegendaryAnimeMovies(legendaryAnimeMovies || []);
+          setXianxiaMovies(xianxiaMovies || []);
         }
         setLoading(false);
       })
@@ -157,30 +246,21 @@ export default function Home() {
     <div className="min-h-screen bg-deep-black text-foreground pb-20">
 
       {/* Hero Slider Section */}
-      {featuredMovies.length > 0 && (
-        <HeroSlider movies={featuredMovies} />
+      {allTrending.length > 0 && (
+        <HeroSlider movies={allTrending} />
       )}
 
       {/* UNIVERSE BANNERS */}
-      <div className="container mx-auto px-4 -mt-4 relative z-20 mb-2">
-        <div className="flex overflow-x-auto gap-4 scrollbar-hide snap-x snap-mandatory pb-2">
-          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
-            <MarvelBanner />
-          </div>
-          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
-            <DCUBanner />
-          </div>
-          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
-            <StephenChowBanner />
-          </div>
-          <div className="shrink-0 w-[85vw] md:w-[48%] lg:w-[49%] snap-start">
-            <KoreanDrama2016Banner />
-          </div>
-        </div>
+      <div className="container mx-auto px-4 mt-4 md:mt-10 relative z-20 mb-2">
+        <h2 className="text-lg md:text-2xl font-bold text-white mb-1 flex items-center gap-2">
+          <span className="w-1 h-6 bg-primary rounded-full"></span>
+          Chủ đề đang hot
+        </h2>
+        <UniverseBannersCarousel />
       </div>
 
       {/* Carousel Sections */}
-      <div className="container mx-auto px-4 space-y-12 mt-4 relative z-20">
+      <div className="container mx-auto px-4 space-y-0.5 mt-1 relative z-20">
 
         {/* 1. Cinema / Featured */}
         {featuredMovies.length > 0 && (
@@ -200,28 +280,36 @@ export default function Home() {
           />
         )}
 
-        {/* 2. Trending Section */}
-        {trendingMovies.length > 0 && (
-          <TrendingCarousel movies={trendingMovies} />
+        {/* 2. Trending Sections - Separated with Darker Themed Background */}
+        {seriesTrending.length > 0 && (
+          <div className="mt-12 mb-6 relative overflow-hidden rounded-t-[40px] bg-linear-to-b from-primary/20 via-primary/5 to-transparent pt-10 pb-4 px-1 border-t border-primary/20">
+            <TrendingCarousel title="Phim bộ nổi bật" movies={seriesTrending} />
+          </div>
+        )}
+
+        {movieTrending.length > 0 && (
+          <div className="mt-4 mb-10 relative overflow-hidden rounded-t-[40px] bg-linear-to-b from-primary/20 via-primary/5 to-transparent pt-10 pb-4 px-1 border-t border-primary/20">
+            <TrendingCarousel title="Phim lẻ nổi bật" movies={movieTrending} />
+          </div>
         )}
 
         {/* 3. Recommended */}
         <MovieCarousel
           title="Phim nổi bật đề cử cho bạn"
-          movies={trendingMovies.slice().reverse()}
+          movies={[...allTrending].reverse()}
         />
 
         {/* Continue Watching Section */}
-        {continueWatchingMovies.length > 0 && (
-          <div className="container mx-auto px-4 mt-8">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-6 flex items-center gap-2">
+        {continueWatchingMovies.filter(m => m.progress).length > 0 && (
+          <div className="container mx-auto px-4 mt-6">
+            <h2 className="text-lg md:text-2xl font-bold text-white mb-3 flex items-center gap-2">
               <span className="w-1 h-6 bg-primary rounded-full"></span>
-              Tiếp tục xem ({continueWatchingMovies.length})
+              Tiếp tục xem ({continueWatchingMovies.filter(m => m.progress).length})
             </h2>
             <div className="relative">
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
                 {continueWatchingMovies.filter(m => m.progress).map((movie) => (
-                  <div key={movie._id} className="shrink-0 w-40 snap-start">
+                  <div key={movie._id} className="shrink-0 w-32 snap-start">
                     <ContinueWatchingCard movie={movie as typeof movie & { progress: NonNullable<typeof movie.progress> }} />
                   </div>
                 ))}
@@ -229,6 +317,11 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Recent Comments */}
+        <div className="mt-8">
+          <RecentComments />
+        </div>
 
         {/* 4. Hot Anime */}
         <LazyMovieSection
@@ -249,6 +342,13 @@ export default function Home() {
           title="Thế giới hoạt hình đa sắc màu"
           movies={cartoonMovies}
           viewAllLink="/hoat-hinh?category=gia-dinh&sort=newest"
+        />
+
+        {/* 4.3 Xianxia / Chinese Animation */}
+        <LazyMovieSection
+          title="Hoạt hình Tiên Hiệp Trung Quốc đỉnh nhất"
+          movies={xianxiaMovies}
+          viewAllLink="/hoat-hinh?country=trung-quoc&sort=newest"
         />
 
         {/* 5. China */}
@@ -420,7 +520,7 @@ export default function Home() {
         />
 
         <div className="pb-8">
-          <PWAAds />
+          <PWAAds variant="home" />
         </div>
 
       </div>

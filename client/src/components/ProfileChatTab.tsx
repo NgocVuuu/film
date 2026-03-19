@@ -233,11 +233,9 @@ export default function ProfileChatTab({ onBack }: { onBack?: () => void }) {
                                         </div>
                                     )}
                                     {isMe && showAvatar && msg.senderId?.avatar && (
-                                        <Image
+                                        <img
                                             src={msg.senderId.avatar}
                                             alt={msg.senderId.displayName}
-                                            width={32}
-                                            height={32}
                                             className="rounded-full w-8 h-8 object-cover shadow-md"
                                         />
                                     )}

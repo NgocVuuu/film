@@ -34,29 +34,17 @@ export function ContinueWatchingCard({ movie, onRemove }: ContinueWatchingCardPr
     const serverQuery = movie.progress.serverName ? `&server=${encodeURIComponent(movie.progress.serverName)}` : '';
     const watchUrl = `/movie/${movie.slug}/watch?episode=${movie.progress.episodeSlug}&t=${Math.floor(movie.progress.currentTime)}${serverQuery}`;
 
-    // DEBUG: Log to console
-    console.log('[ContinueWatchingCard]', {
-        name: movie.name,
-        watchUrl,
-        episodeSlug: movie.progress.episodeSlug,
-        episodeName: movie.progress.episodeName,
-        currentTime: movie.progress.currentTime
-    });
-
     return (
         <Link
             href={watchUrl}
             className="group relative block w-full rounded-md overflow-hidden bg-card border border-border shadow-md hover:shadow-primary/30 transition-all duration-300 hover:scale-105"
-            onClick={() => {
-                console.log('[ContinueWatchingCard] Click! Navigating to:', watchUrl);
-            }}
         >
             {/* Image Container */}
             <div className="aspect-[2/3] w-full overflow-hidden relative">
                 <img
                     src={movie.thumb_url}
                     alt={movie.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"
                 />
                 {/* Overlay Gradient */}

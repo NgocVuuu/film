@@ -23,6 +23,7 @@ router.get('/stats', adminController.getDashboardStats);
 router.get('/users', adminController.getAllUsers);
 router.get('/users/:userId', adminController.getUserDetails);
 router.patch('/users/:userId/ban', adminController.toggleBanUser);
+router.patch('/users/:userId/premium', adminController.manualUpgradePremium);
 router.delete('/users/:userId', adminController.deleteUser);
 
 // Subscription management
@@ -78,6 +79,11 @@ router.get('/notifications/sent', adminNotificationController.getSentNotificatio
 // Test email (for debugging SMTP)
 const adminEmailController = require('../controllers/adminEmailController');
 router.post('/test-email', adminEmailController.testEmail);
+
+// Cache management
+const { clearTmdbCache, debugTmdb } = require('../controllers/movieController');
+router.post('/cache/clear-tmdb', clearTmdbCache);
+router.get('/debug-tmdb', debugTmdb);
 
 // Crawler
 router.get('/crawler/status', adminController.getCrawlerStatus);

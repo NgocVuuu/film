@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { customFetch } from '@/lib/api';
+import { customFetch, getAuthToken } from '@/lib/api';
+import { API_URL } from '@/lib/config';
 
 interface WatchProgressProps {
     movieSlug?: string;
@@ -23,6 +24,8 @@ export function useWatchProgress({
     const [initialProgress, setInitialProgress] = useState<number | null>(null);
     const [progressLoaded, setProgressLoaded] = useState(false);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // Store the latest time/duration so flush handlers can access it without stale closure
+    const lastKnownRef = useRef<{ currentTime: number; duration: number } | null>(null);
 
     // Load initial progress from server
     useEffect(() => {
@@ -146,19 +149,73 @@ export function useWatchProgress({
         }
     };
 
-    // Debounced save - saves after user stops seeking for 5 seconds (increased from 2s to reduce API load)
+    // Debounced save - saves after user stops seeking for 2 seconds
     const debouncedSave = (currentTime: number, duration: number) => {
+        lastKnownRef.current = { currentTime, duration };
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
         }
         saveTimeoutRef.current = setTimeout(() => {
             saveProgress(currentTime, duration);
-        }, 5000);
+        }, 2000); // Reduced to 2s for better UI responsiveness
+    };
+
+    // Instant save on tab close / visibility hidden using sendBeacon so it survives page unload
+    useEffect(() => {
+        const flushViaBeacon = () => {
+            const last = lastKnownRef.current;
+            if (!last || !user || !movieSlug || !episodeSlug || !serverName) return;
+            const token = getAuthToken();
+            const payload = JSON.stringify({
+                movieSlug,
+                movieName,
+                movieThumb,
+                episodeSlug,
+                episodeName,
+                serverName,
+                currentTime: last.currentTime,
+                duration: last.duration,
+            });
+            const url = `${API_URL}/api/progress/save`;
+            // sendBeacon works even when page is unloading; falls back to fetch if unavailable
+            const blob = new Blob([payload], { type: 'application/json' });
+            if (navigator.sendBeacon && token) {
+                // sendBeacon doesn't support custom headers, so append token as query param
+                navigator.sendBeacon(`${url}?_token=${encodeURIComponent(token)}`, blob);
+            }
+            // Also cancel any pending debounce to avoid double-save when component unmounts normally
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') flushViaBeacon();
+        };
+        const handleBeforeUnload = () => flushViaBeacon();
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    // Provide an explicit flush function so Parent can call it with the current exact time
+    const flushSave = (currentTime: number, duration: number) => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+        saveProgress(currentTime, duration);
     };
 
     return {
         initialProgress,
         saveProgress,
-        debouncedSave
+        debouncedSave,
+        flushSave
     };
 }

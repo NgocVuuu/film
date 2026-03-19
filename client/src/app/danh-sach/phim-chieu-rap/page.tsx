@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
 import LoadingScreen from '@/components/LoadingScreen';
+import { PWAAds } from '@/components/PWAAds';
 import { API_URL } from '@/lib/config';
 
 interface Movie {
@@ -101,11 +102,12 @@ function PhimChieuRapContent() {
 
                 {movies.length > 0 ? (
                     <>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                             {movies.map((movie) => (
                                 <MovieCard key={movie._id} movie={movie} />
                             ))}
                         </div>
+                        <PWAAds variant="inline" />
                         {totalPages > 1 && (
                             <div className="flex justify-center gap-2 mt-8">
                                 {page > 1 && (

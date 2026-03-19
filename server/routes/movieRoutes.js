@@ -5,6 +5,9 @@ const movieController = require('../controllers/movieController');
 const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 const { optionalAuthMiddleware } = require('../middleware/authMiddleware');
 
+// Sitemap Data - Cache for 1 hour (3600s) - returns all slugs for SEO
+router.get('/movies/sitemap', cacheMiddleware(3600), movieController.getMoviesForSitemap);
+
 // Home Data (New) - Auth first, then cache for 5 minutes (300s)
 router.get('/movies/home', optionalAuthMiddleware, cacheMiddleware(300), movieController.getHomeData);
 
@@ -25,5 +28,8 @@ router.get('/movies/stephenchow', cacheMiddleware(600), movieController.getSteph
 
 // Korean Drama 2016 Collection
 router.get('/movies/korean-drama-2016', cacheMiddleware(600), movieController.getKoreanDrama2016Movies);
+
+// Sad / Healing Movies Collection
+router.get('/movies/sad-movies', cacheMiddleware(600), movieController.getSadMovies);
 
 module.exports = router;

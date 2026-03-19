@@ -78,9 +78,9 @@ export default function PricingPage() {
             return;
         }
 
-        if (user.subscription?.tier === 'premium' && user.subscription?.status === 'active') {
-            const endDate = new Date(user.subscription.endDate!);
-            if (endDate > new Date()) {
+        if (user.isPremium) {
+            const endDate = user.subscription?.endDate ? new Date(user.subscription.endDate) : null;
+            if (!endDate || endDate > new Date()) {
                 toast.error('Bạn đã là thành viên Premium');
                 return;
             }

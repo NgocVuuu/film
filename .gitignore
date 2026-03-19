@@ -1,0 +1,6 @@
+node_modules/
+
+# Output thu muc va zip khi chay prepare-for-sale.ps1
+dist-sale/
+film-source-sale.zip
+git-export-temp.zip

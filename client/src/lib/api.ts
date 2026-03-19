@@ -37,7 +37,6 @@ export const customFetch = async (endpoint: string, options: FetchOptions = {}) 
         headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Ensure endpoint doesn't start with / if we are appending to base URL
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
 
     const response = await fetch(url, {
@@ -46,6 +45,15 @@ export const customFetch = async (endpoint: string, options: FetchOptions = {}) 
         ...options,
         headers
     });
+
+    // Intercept 401/403 — chỉ redirect khi user đang có token (session thực sự expired)
+    // Nếu không có token → guest bình thường, không redirect
+    if (response.status === 401 || response.status === 403) {
+        const existingToken = getAuthToken();
+        if (existingToken && typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:expired'));
+        }
+    }
 
     return response;
 };

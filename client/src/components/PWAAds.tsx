@@ -1,58 +1,116 @@
 'use client';
 
-import { X, Crown, Sparkles } from 'lucide-react';
-import { useState } from 'react';
-import { Button } from './ui/button';
-import Link from 'next/link';
-
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 
-export function PWAAds() {
-    const { user } = useAuth();
-    const [isVisible, setIsVisible] = useState(true);
+// ── Cấu hình qua env vars ─────────────────────────────────────────────────────
+// NEXT_PUBLIC_AD_WATCH_SCRIPT   — Adsterra script URL cho watch page (nhỏ, trên player)
+// NEXT_PUBLIC_AD_HOME_SCRIPT    — Adsterra script URL cho home page (dưới cùng)
+// NEXT_PUBLIC_AD_INLINE_SCRIPT  — Adsterra script URL cho các trang danh sách / chi tiết
+// ─────────────────────────────────────────────────────────────────────────────
 
-    if (!isVisible || user?.isPremium) return null;
+export type AdVariant = 'watch' | 'home' | 'inline' | 'inline2';
 
-    return (
-        <div className="mx-4 mt-2 mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="relative overflow-hidden rounded-xl bg-linear-to-r from-surface-900 to-surface-800 border border-yellow-500/20 shadow-xl">
-                {/* Decorative background elements */}
-                <div className="absolute -top-4 -right-4 w-24 h-24 bg-yellow-500/10 rounded-full blur-2xl"></div>
+interface PWAAdsProps {
+    variant?: AdVariant;
+}
 
-                <button
-                    onClick={() => setIsVisible(false)}
-                    className="absolute top-2 right-2 p-1 text-gray-500 hover:text-white transition-colors z-10"
-                >
-                    <X className="w-4 h-4" />
-                </button>
+export function PWAAds({ variant = 'home' }: PWAAdsProps) {
+    const { user, loading } = useAuth();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [loaded, setLoaded] = useState(false);
 
-                <div className="p-4 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0 border border-yellow-500/30">
-                        <Crown className="w-6 h-6 text-yellow-500" />
-                    </div>
+    const scriptSrc =
+        variant === 'watch'   ? process.env.NEXT_PUBLIC_AD_WATCH_SCRIPT :
+        variant === 'inline'  ? process.env.NEXT_PUBLIC_AD_INLINE_SCRIPT :
+        variant === 'inline2' ? process.env.NEXT_PUBLIC_AD_INLINE2_SCRIPT :
+                                process.env.NEXT_PUBLIC_AD_HOME_SCRIPT;
 
-                    <div className="flex-1 min-w-0 font-vietnamese">
-                        <h4 className="text-sm font-bold text-white flex items-center gap-1.5 leading-tight mb-0.5 font-vietnamese">
-                            Trở thành VIP - Trải nghiệm điện ảnh đỉnh cao! <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-                        </h4>
-                        <p className="text-[11px] text-gray-400 leading-tight font-vietnamese">
-                            Đặc quyền không quảng cáo, tốc độ tải trang cực mượt và vô vàn lợi ích chờ sếp khám phá. Nâng cấp ngay!
-                        </p>
-                    </div>
+    const isPremium = user?.isPremium;
 
-                    {/* Nâng cấp button */}
-                    <Button
-                        size="sm"
-                        asChild
-                        className="bg-yellow-500 hover:bg-yellow-600 text-black text-xs font-bold h-8 px-3 rounded-lg shadow-lg shadow-yellow-500/20 shrink-0 cursor-pointer mr-2 md:mr-4"
-                    >
-                        <Link href="/pricing">
-                            Nâng cấp
-                        </Link>
-                    </Button>
+    // Dimensions cho atOptions theo từng variant
+    const adDimensions =
+        variant === 'watch'   ? { width: 728, height: 90  } :
+        variant === 'inline'  ? { width: 320, height: 50  } :
+        variant === 'inline2' ? { width: 468, height: 60  } :
+                                { width: 300, height: 250 };
 
-                </div>
+    // Chờ auth resolve xong mới inject — tránh inject cho premium user
+    useEffect(() => {
+        if (loading || isPremium || !scriptSrc || !containerRef.current || loaded) return;
+        setLoaded(true);
+
+        // Extract key từ URL: //www.highperformanceformat.com/{key}/invoke.js
+        const key = scriptSrc.match(/\/([a-f0-9]{32})\//)?.[1];
+        if (!key) return;
+
+        // Dùng iframe riêng để cô lập atOptions — tránh bị ghi đè bởi banner khác cùng trang
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = `border:none;width:${adDimensions.width}px;height:${adDimensions.height}px;display:block;`;
+        iframe.setAttribute('scrolling', 'no');
+        containerRef.current.appendChild(iframe);
+
+        const doc = iframe.contentDocument;
+        if (!doc) return;
+        doc.open();
+        doc.write(
+            `<script>atOptions={'key':'${key}','format':'iframe','height':${adDimensions.height},'width':${adDimensions.width},'params':{}};` +
+            `\x3C/script><script src="${scriptSrc}" data-cfasync="false">\x3C/script>`
+        );
+        doc.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading]);
+
+    // Ẩn hoàn toàn với premium users và khi chưa cấu hình script
+    if (!loading && (isPremium || !scriptSrc)) return null;
+
+    // Placeholder khi đang resolve auth
+    const showPlaceholder = loading;
+
+    if (variant === 'watch') {
+        return (
+            <div
+                ref={showPlaceholder ? undefined : containerRef}
+                className="w-full overflow-hidden rounded-lg bg-white/5 border border-dashed border-white/15 min-h-12.5 flex items-center justify-center"
+                aria-label="Advertisement"
+            >
+                {showPlaceholder && (
+                    <span className="text-[11px] font-semibold tracking-widest uppercase text-white/30 select-none">
+                        — AD · watch —
+                    </span>
+                )}
             </div>
+        );
+    }
+
+    if (variant === 'inline' || variant === 'inline2') {
+        return (
+            <div
+                ref={showPlaceholder ? undefined : containerRef}
+                className="w-full overflow-hidden rounded-xl border border-dashed border-white/15 bg-white/5 min-h-16 flex items-center justify-center my-4"
+                aria-label="Advertisement"
+            >
+                {showPlaceholder && (
+                    <span className="text-xs font-semibold tracking-widest uppercase text-white/30 select-none">
+                        — AD · {variant} —
+                    </span>
+                )}
+            </div>
+        );
+    }
+
+    // Home page bottom
+    return (
+        <div
+            ref={showPlaceholder ? undefined : containerRef}
+                className="w-full overflow-hidden rounded-xl border border-dashed border-white/15 bg-white/5 min-h-22.5 flex items-center justify-center mx-auto max-w-4xl"
+            aria-label="Advertisement"
+        >
+            {showPlaceholder && (
+                <span className="text-xs font-semibold tracking-widest uppercase text-white/30 select-none">
+                    — AD · home —
+                </span>
+            )}
         </div>
     );
 }

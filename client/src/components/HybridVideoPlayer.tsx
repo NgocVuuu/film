@@ -96,7 +96,7 @@ const HybridVideoPlayer = ({
 
     useEffect(() => {
         const fetchPremiumLink = async () => {
-            if (!magnet || !user || user.subscription?.tier !== 'premium') {
+            if (!magnet || !user || !user.isPremium) {
                 setStreamUrl(src); // Fallback to default HLS
                 return;
             }
@@ -145,7 +145,7 @@ const HybridVideoPlayer = ({
         console.error('[VideoPlayer] Phát hiện lỗi Error Event đứt gãy luồng:', errorDetail);
 
         // Tự động giải cứu Domino & DPI: Nếu Video sập (Mã 424 từ Nginx) hoặc bị Nhà mạng chặn Tên miền (Network Error)
-        if (user?.subscription?.tier === 'premium' && magnet && currentKeyId) {
+        if (user?.isPremium && magnet && currentKeyId) {
 
             // Nhận diện lỗi mạng (Nghi ngờ DPI chặn tên miền)
             const isNetworkError = event.detail?.code === 2 || event.detail?.code === 'MEDIA_ERR_NETWORK' || String(errorDetail?.message || '').toLowerCase().includes('network');

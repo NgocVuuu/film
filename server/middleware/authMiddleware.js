@@ -3,12 +3,14 @@ const User = require('../models/User');
 
 const authMiddleware = async (req, res, next) => {
     try {
-        // Get token from header or cookie
+        // Get token from header, cookie, or query param (for sendBeacon fallback)
         let token = null;
         if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
             token = req.headers.authorization.split(' ')[1];
         } else if (req.cookies && req.cookies.token) {
             token = req.cookies.token;
+        } else if (req.query && req.query._token) {
+            token = req.query._token;
         }
 
         if (!token || token === 'undefined' || token === 'null') {

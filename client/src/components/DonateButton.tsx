@@ -15,7 +15,7 @@ const OPTIONS = [
     {
         label: 'Buy Me a Coffee',
         href: 'https://buymeacoffee.com/pchill_admin',
-        content: <Image src="/bmc-button.png" alt="Buy Me a Coffee" width={86} height={25} className="block" unoptimized />,
+        content: <Image src="/bmc-button.png" alt="Buy Me a Coffee" width={86} height={25} className="block w-auto h-auto" unoptimized />,
         bg: 'bg-[#FFDD00]',
     },
     {
@@ -64,7 +64,7 @@ export function DonateButton({ className = '' }: { className?: string }) {
 
             {/* Brand buttons — absolutely overlay the trigger, no layout shift */}
             <div
-                className={`absolute inset-0 flex items-center gap-1.5 transition-opacity duration-200
+                className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-200
                     ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
             >
                 {OPTIONS.map(({ label, href, content, bg }) => (

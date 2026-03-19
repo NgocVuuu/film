@@ -209,7 +209,7 @@ export default function AdminCrawlerPage() {
                 credentials: 'include',
                 body: JSON.stringify({
                     slug: movieSlug.trim(),
-                    source: movieSource || null
+                    source: (movieSource && movieSource !== 'ALL') ? movieSource : null
                 })
             });
             const data = await response.json();

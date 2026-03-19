@@ -167,7 +167,7 @@ export default function ListDetailPage() {
                         </Button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                         {list.movies.map((item) => (
                             <div key={item._id} className="relative group">
                                 <MovieCard movie={item.movie} />

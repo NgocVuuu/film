@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server: SocketIO } = require('socket.io');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
@@ -32,6 +33,7 @@ const movieListRoutes = require('./routes/movieListRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const torrentRoutes = require('./routes/torrentRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const proxyRoutes = require('./routes/proxyRoutes');
 const ChatConversation = require('./models/ChatConversation');
 const ChatMessage = require('./models/ChatMessage');
 const User = require('./models/User');
@@ -182,9 +184,26 @@ app.use(cors({
     origin: allowedOrigins,
     credentials: true
 }));
+// Capture raw body for sendBeacon requests (Content-Type: application/octet-stream or text/plain)
+app.use((req, res, next) => {
+    const ct = req.headers['content-type'] || '';
+    if (ct.includes('octet-stream') || (ct.includes('text/plain') && req.path.includes('/api/progress'))) {
+        let data = '';
+        req.setEncoding('utf8');
+        req.on('data', chunk => { data += chunk; });
+        req.on('end', () => {
+            req.rawBody = data;
+            try { req.body = JSON.parse(data); } catch { req.body = {}; }
+            next();
+        });
+    } else {
+        next();
+    }
+});
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
+app.use('/subtitles', express.static(path.join(__dirname, 'public/subtitles')));
 
 // Security Middleware
 app.use(helmet({
@@ -328,6 +347,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/torrent', torrentRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/proxy', proxyRoutes);
 
 // Error Handler (Last Middleware)
 app.use(errorHandler);

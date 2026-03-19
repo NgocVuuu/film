@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { setAuthToken, removeAuthToken, customFetch } from '@/lib/api';
+import { setAuthToken, removeAuthToken, customFetch, getAuthToken } from '@/lib/api';
 
 interface User {
     id: string;
@@ -51,10 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const data = await response.json();
                 if (data.success) {
                     setUser(data.data);
-                    // In PWA, localStorage might be cleared by the OS. 
-                    // If the backend returned success via Cookie, but localStorage token is missing, 
-                    // we still consider the user logged in. We can optionally get a fresh token from backend here 
-                    // if the backend provided it, but since backend uses cookie too, it's fine.
                 }
             } else if (response.status === 401) {
                 // Token really invalid or expired
@@ -68,10 +64,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    // Global listener for 401 Unauthorized API responses
+    useEffect(() => {
+        const handleAuthExpired = () => {
+            removeAuthToken();
+            setUser(null);
+            toast.error('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại.');
+            router.push('/login');
+        };
+
+        window.addEventListener('auth:expired', handleAuthExpired);
+        return () => window.removeEventListener('auth:expired', handleAuthExpired);
+    }, [router]);
+
     const login = (userData: User, token?: string) => {
         if (token) setAuthToken(token);
         setUser(userData);
         toast.success(`Chào mừng, ${userData.displayName}!`);
+        // Migrate any localStorage favorites up to the API (fire-and-forget)
+        try {
+            const localFavs: Array<{ slug?: string }> = JSON.parse(localStorage.getItem('favorites') || '[]');
+            if (localFavs.length > 0) {
+                const authToken = token || getAuthToken();
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/favorites/sync`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers,
+                    body: JSON.stringify({ items: localFavs }),
+                }).catch(() => { /* silent */ });
+            }
+        } catch { /* silent */ }
     };
 
     const logout = async () => {

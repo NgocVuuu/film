@@ -8,11 +8,12 @@ exports.getAllComments = async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
-        const { movieSlug, isHidden } = req.query;
-
+        const { movieSlug, isHidden, type } = req.query;
+ 
         let query = {};
         if (movieSlug) query.movieSlug = movieSlug;
         if (isHidden !== undefined) query.isHidden = isHidden === 'true';
+        if (type) query.type = type;
 
         const comments = await Comment.find(query)
             .populate('user', 'displayName email avatar')

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
 import { Play, ArrowLeft, Crown } from 'lucide-react';
 import { ReportModal } from '@/components/ReportModal';
@@ -9,6 +9,7 @@ import { DonateButton } from '@/components/DonateButton';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
 import { useAuth } from '@/contexts/auth-context';
+import toast from 'react-hot-toast';
 
 export const runtime = 'edge';
 import { PWAAds } from '@/components/PWAAds';
@@ -25,6 +26,7 @@ interface Episode {
         link_embed: string;
         time_intro?: number[];
         time_outro?: number[];
+        isPremium?: boolean;
     }[];
 }
 
@@ -67,11 +69,13 @@ interface MovieDetail {
 
 export default function WatchPage() {
     const { slug } = useParams();
+    const router = useRouter();
     const searchParams = useSearchParams();
     const [movie, setMovie] = useState<MovieDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
-    const isPremium = user?.subscription?.tier === 'premium';
+    const isPremium = user?.subscription?.tier === 'premium' || user?.role === 'admin';
+    const [showTabs, setShowTabs] = useState<'comment' | 'rating'>('comment');
 
     // Player State
     const [currentEpisode, setCurrentEpisode] = useState<{ name: string; slug: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] } | null>(null);
@@ -119,26 +123,27 @@ export default function WatchPage() {
         const sources = new Set<string>();
         movie.episodes.forEach((ep: Episode) => {
             const name = ep.server_name;
-            if (name.startsWith('NC -')) sources.add('NguonC');
-            else if (name.startsWith('KK -')) sources.add('KKPhim');
-            else if (name.startsWith('OP -')) sources.add('Ophim');
+            if (name === 'PChill') sources.add('Premium');
+            else if (name?.startsWith('NC -')) sources.add('NguonC');
+            else if (name?.startsWith('KK -')) sources.add('KKPhim');
+            else if (name?.startsWith('OP -')) sources.add('Ophim');
             else sources.add('Khác');
         });
 
-        // Add Torrent as a source for premium users if movie has torrents
+        // Add Torrent as a source for premium users
         if (isPremium && movie.torrents && movie.torrents.length > 0) {
             sources.add('Premium');
         }
 
-        // Priority Order
-        const sourceOrder = ['Premium', 'NguonC', 'KKPhim', 'Ophim', 'Khác'];
-        const sortedSources = Array.from(sources).sort((a, b) => {
-            const indexA = sourceOrder.indexOf(a);
-            const indexB = sourceOrder.indexOf(b);
-            const weightA = indexA === -1 ? 99 : indexA;
-            const weightB = indexB === -1 ? 99 : indexB;
-            return weightA - weightB;
-        });
+        // Priority Order: KKPhim, Ophim first, Premium on the right
+        const sourceOrder = ['KKPhim', 'Ophim', 'Premium'];
+        const sortedSources = Array.from(sources)
+            .filter(s => sourceOrder.includes(s))
+            .sort((a, b) => {
+                const indexA = sourceOrder.indexOf(a);
+                const indexB = sourceOrder.indexOf(b);
+                return indexA - indexB;
+            });
 
         setAvailableSources(sortedSources);
 
@@ -150,9 +155,9 @@ export default function WatchPage() {
                 const matchedServer = movie.episodes.find(ep => ep.server_name === serverParam);
                 if (matchedServer) {
                     const name = matchedServer.server_name;
-                    if (name.startsWith('NC -')) activeSource = 'NguonC';
-                    else if (name.startsWith('KK -')) activeSource = 'KKPhim';
-                    else if (name.startsWith('OP -')) activeSource = 'Ophim';
+                    if (name?.startsWith('NC -')) activeSource = 'NguonC';
+                    else if (name?.startsWith('KK -')) activeSource = 'KKPhim';
+                    else if (name?.startsWith('OP -')) activeSource = 'Ophim';
                     else activeSource = 'Khác';
                 }
             }
@@ -165,6 +170,7 @@ export default function WatchPage() {
         // 3. Filter Servers
         if (activeSource) {
             const prefixMap: Record<string, string> = {
+                'Premium': 'PChill',
                 'NguonC': 'NC -',
                 'KKPhim': 'KK -',
                 'Ophim': 'OP -',
@@ -172,19 +178,14 @@ export default function WatchPage() {
             };
             const prefix = prefixMap[activeSource];
 
-            const filtered = activeSource === 'Premium' ? [] : movie.episodes.filter((ep: Episode) => {
-                if (activeSource === 'Khác') {
-                    return !ep.server_name.startsWith('NC -') &&
-                        !ep.server_name.startsWith('KK -') &&
-                        !ep.server_name.startsWith('OP -');
-                }
-                return ep.server_name.startsWith(prefix);
-            });
+            const filtered = activeSource === 'Premium' 
+                ? movie.episodes.filter(ep => ep.server_name === 'PChill') 
+                : movie.episodes.filter((ep: Episode) => ep.server_name?.startsWith(prefix));
 
-            // Add Premium Torrent servers if active source is Premium
-            if (activeSource === 'Premium' && movie.torrents) {
+            // Add Premium Torrent servers if active source is Premium AND torrents exist
+            if (activeSource === 'Premium' && movie.torrents && movie.torrents.length > 0) {
                 const torrentServer: Episode = {
-                    server_name: 'PREMIUM - 4K TORRENT',
+                    server_name: 'Premium - 4K TORRENT',
                     server_data: movie.torrents.map(t => ({
                         name: `${t.quality} (${t.size})${t.hasViSub ? ' - Vietsub' : ''}`,
                         slug: `torrent-${t.quality}-${t.size}`.toLowerCase().replace(/\s+/g, '-'),
@@ -201,13 +202,25 @@ export default function WatchPage() {
             const uniqueServersMap = new Map<string, Episode>();
             filtered.forEach(ep => {
                 const cleanName = getCleanServerName(ep.server_name);
-                if (!uniqueServersMap.has(cleanName)) {
-                    uniqueServersMap.set(cleanName, ep);
+                if (uniqueServersMap.has(cleanName)) {
+                    // Merge data if same clean name (e.g. multiple sources for same type)
+                    const existing = uniqueServersMap.get(cleanName)!;
+                    existing.server_data = [...existing.server_data, ...ep.server_data];
+                } else {
+                    uniqueServersMap.set(cleanName, { ...ep });
                 }
             });
             const deduplicatedFiltered = Array.from(uniqueServersMap.values());
 
             setFilteredServers(deduplicatedFiltered);
+
+            // AUTO-SELECT VIEWING SERVER
+            if (deduplicatedFiltered.length > 0) {
+                // If current selection is invalid for new source, pick first
+                if (!viewingServerName || !deduplicatedFiltered.some(s => s.server_name === viewingServerName)) {
+                    setViewingServerName(deduplicatedFiltered[0].server_name);
+                }
+            }
 
             // 4. Auto-select episode from URL or first episode
             if (!currentEpisode && deduplicatedFiltered.length > 0) {
@@ -343,7 +356,17 @@ export default function WatchPage() {
         }
     }, [currentEpisode, currentServerName, filteredServers]);
 
-    const handleEpisodeClick = (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] }) => {
+    const handleEpisodeClick = (serverName: string, episode: { name: string; slug: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[]; isPremium?: boolean }) => {
+        // User request: Premium restricted episodes
+        if (episode.isPremium && !isPremium) {
+            toast.error('Nội dung này chỉ dành cho thành viên Premium. Vui lòng nâng cấp để xem!', {
+                icon: '👑',
+                duration: 5000
+            });
+            router.push('/pricing');
+            return;
+        }
+
         const isSameEpisode = currentEpisode?.slug === episode.slug;
 
         setCurrentServerName(serverName);
@@ -382,11 +405,11 @@ export default function WatchPage() {
 
             const targetServers = movie.episodes.filter((ep: Episode) => {
                 if (newSource === 'Khác') {
-                    return !ep.server_name.startsWith('NC -') &&
-                        !ep.server_name.startsWith('KK -') &&
-                        !ep.server_name.startsWith('OP -');
+                    return !ep.server_name?.startsWith('NC -') &&
+                        !ep.server_name?.startsWith('KK -') &&
+                        !ep.server_name?.startsWith('OP -');
                 }
-                return ep.server_name.startsWith(prefix);
+                return ep.server_name?.startsWith(prefix);
             });
 
             if (targetServers.length > 0) {
@@ -483,17 +506,17 @@ export default function WatchPage() {
 
                     {/* AD BANNER (Non-Premium) */}
                     <div className="mb-4">
-                        <PWAAds />
+                        <PWAAds variant="watch" />
                     </div>
 
                     <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (
                             <VideoPlayer
-                                key={currentEpisode.link_m3u8}
-                                src={currentEpisode.link_m3u8.startsWith('magnet:') ? '' : currentEpisode.link_m3u8}
-                                magnet={currentEpisode.link_m3u8.startsWith('magnet:') ? currentEpisode.link_m3u8 : undefined}
+                                key={`${currentEpisode.slug}-${currentServerName}`}
+                                src={(currentEpisode.link_m3u8 && currentEpisode.link_m3u8.startsWith('magnet:')) ? '' : (currentEpisode.link_m3u8 || '')}
+                                magnet={(currentEpisode.link_m3u8 && currentEpisode.link_m3u8.startsWith('magnet:')) ? currentEpisode.link_m3u8 : undefined}
                                 poster={movie.poster_url}
-                                embedUrl={currentEpisode.link_embed}
+                                embedUrl={currentEpisode.link_embed || ''}
                                 autoPlay={shouldAutoPlay}
                                 movieSlug={movie.slug}
                                 movieName={movie.name}
@@ -533,7 +556,7 @@ export default function WatchPage() {
                                     ...(movie?.subtitles?.map(s => ({
                                         lang: s.lang,
                                         label: s.label,
-                                        url: s.url,
+                                        url: (s.url && !s.url.startsWith('http')) ? `${API_URL}${s.url.startsWith('/') ? '' : '/'}${s.url}` : s.url,
                                         default: s.isDefault
                                     })) || []),
                                     ...((currentServerName === 'PREMIUM - 4K TORRENT' && (currentEpisode as any)?.subtitleUrl) ? [{
@@ -543,6 +566,11 @@ export default function WatchPage() {
                                         default: true
                                     }] : [])
                                 ]}
+                                onError={currentSource === 'NguonC' ? () => {
+                                    // Auto-switch to next available source when NC fails
+                                    const fallback = availableSources.find(s => s !== 'NguonC');
+                                    if (fallback) handleSourceChange(fallback);
+                                } : undefined}
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-surface-900">
@@ -590,23 +618,38 @@ export default function WatchPage() {
                             </div>
                         </div>
 
-                        {/* Source Tabs - Hidden on desktop (moved to sidebar) */}
+                        {/* Source Tabs - Mobile */}
                         {availableSources.length > 1 && (
                             <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto">
                                 <span className="text-xs font-bold text-gray-500 uppercase shrink-0">Nguồn:</span>
-                                {availableSources.map((source, index) => (
+                                {availableSources.filter(s => s !== 'Premium').map((source, index) => (
                                     <button
                                         key={source}
                                         onClick={() => handleSourceChange(source)}
-                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${currentSource === source
+                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${currentSource === source
                                             ? 'bg-primary text-black shadow-md shadow-primary/20'
                                             : 'bg-surface-800 text-gray-400 hover:bg-surface-700 hover:text-white border border-white/5'
                                             }`}
                                     >
-                                        {source === 'Premium' && <Crown className="w-3.5 h-3.5" />}
-                                        {source === 'Premium' ? '4KVIP' : `Server ${index + (availableSources.includes('Premium') ? 0 : 1)}`}
+                                        Server {index + 1}
                                     </button>
                                 ))}
+                                
+                                {availableSources.includes('Premium') && (
+                                    <>
+                                        <div className="w-px h-4 bg-white/10 mx-1 shrink-0" />
+                                        <button
+                                            onClick={() => handleSourceChange('Premium')}
+                                            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${currentSource === 'Premium'
+                                                ? 'bg-primary text-black shadow-md shadow-primary/20'
+                                                : 'bg-surface-800 text-gray-400 hover:bg-surface-700 hover:text-white border border-white/5'
+                                                }`}
+                                        >
+                                            <Crown className="w-3.5 h-3.5" />
+                                            4KVIP (PChill)
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
@@ -624,26 +667,41 @@ export default function WatchPage() {
                             {availableSources.length > 1 && (
                                 <div className="hidden lg:flex items-center gap-2 flex-wrap">
                                     <span className="text-xs font-bold text-gray-500 uppercase shrink-0">Nguồn:</span>
-                                    {availableSources.map((source, index) => (
+                                    {availableSources.filter(s => s !== 'Premium').map((source, index) => (
                                         <button
                                             key={source}
                                             onClick={() => handleSourceChange(source)}
-                                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${currentSource === source
+                                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${currentSource === source
                                                 ? 'bg-primary text-black shadow-md shadow-primary/20'
                                                 : 'bg-surface-700 text-gray-400 hover:bg-surface-600 hover:text-white border border-white/5'
                                                 }`}
                                         >
-                                            {source === 'Premium' && <Crown className="w-3.5 h-3.5" />}
-                                            {source === 'Premium' ? '4KVIP' : `Server ${index + (availableSources.includes('Premium') ? 0 : 1)}`}
+                                            Server {index + 1}
                                         </button>
                                     ))}
+
+                                    {availableSources.includes('Premium') && (
+                                        <>
+                                            <div className="w-px h-4 bg-white/10 mx-1" />
+                                            <button
+                                                onClick={() => handleSourceChange('Premium')}
+                                                className={`px-3 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${currentSource === 'Premium'
+                                                    ? 'bg-primary text-black shadow-md shadow-primary/20'
+                                                    : 'bg-surface-700 text-gray-400 hover:bg-surface-600 hover:text-white border border-white/5'
+                                                    }`}
+                                            >
+                                                <Crown className="w-3.5 h-3.5" />
+                                                4KVIP (PChill)
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
 
                         <div className="p-4 flex-1 space-y-4 flex flex-col">
                             {/* Server/Category Horizontal Tabs */}
-                            {filteredServers.length > 0 && (
+                            {filteredServers.length > 1 && (
                                 <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar border-b border-white/10 shrink-0">
                                     {filteredServers.map((server) => {
                                         const cleanName = getCleanServerName(server.server_name);
@@ -700,11 +758,46 @@ export default function WatchPage() {
 
             {/* Comments Section */}
             {movie && (
-                <div className="max-w-screen-xl mx-auto w-full px-4 md:px-6 pb-12">
-                    <CommentSection
-                        movieSlug={movie.slug}
-                        episodeName={currentEpisode?.name}
-                    />
+                <div className="max-w-7xl mx-auto w-full px-1 md:px-6 pb-12">
+                    <div className="mt-8 bg-white/[0.02] rounded-3xl border border-white/5 overflow-hidden">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between bg-surface-900/80 p-1 md:p-1.5 border-b border-white/5 gap-2 md:gap-0">
+                            <div className="px-3 md:px-6 py-1.5 md:py-2">
+                                <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
+                                    Mọi người đang nói gì?
+                                </h3>
+                            </div>
+                            <div className="flex p-0.5 bg-black/20 rounded-2xl md:mr-2">
+                                <button
+                                    onClick={() => setShowTabs('comment')}
+                                    className={`flex-1 md:flex-none md:min-w-[140px] py-1.5 md:py-2 px-3 md:px-6 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 ${showTabs === 'comment' ? "bg-primary text-black shadow-lg" : "text-gray-500 hover:text-white"}`}
+                                >
+                                    Bình luận
+                                </button>
+                                <button
+                                    onClick={() => setShowTabs('rating')}
+                                    className={`flex-1 md:flex-none md:min-w-[140px] py-1.5 md:py-2 px-3 md:px-6 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 ${showTabs === 'rating' ? "bg-primary text-black shadow-lg" : "text-gray-500 hover:text-white"}`}
+                                >
+                                    Đánh giá
+                                </button>
+                            </div>
+                        </div>
+                        <div className="px-0 py-3 md:p-6">
+                            {showTabs === 'comment' ? (
+                                <CommentSection
+                                    movieSlug={movie.slug}
+                                    episodeName={currentEpisode?.name}
+                                    type="comment"
+                                    hideRatingForm={true}
+                                />
+                            ) : (
+                                <CommentSection
+                                    movieSlug={movie.slug}
+                                    episodeName={currentEpisode?.name}
+                                    type="rating"
+                                />
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

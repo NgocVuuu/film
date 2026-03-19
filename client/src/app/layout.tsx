@@ -1,12 +1,14 @@
 import { useState, useEffect, Suspense } from 'react';
 import Script from 'next/script';
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Dancing_Script } from "next/font/google";
 import "./globals.css";
 import MainLayout from "@/components/MainLayout";
 import { ToastProvider } from "@/components/toast-provider";
 import { AuthProvider } from "@/contexts/auth-context";
 import ChatWidget from "@/components/ChatWidget";
+import { AdInterstitial } from "@/components/AdInterstitial";
+import { QuickViewProvider } from "@/contexts/QuickViewContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,6 +18,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const dancingScript = Dancing_Script({
+  variable: "--font-dancing-script",
+  subsets: ["vietnamese", "latin"],
+  weight: ["700"],
 });
 
 export const metadata: Metadata = {
@@ -98,17 +106,22 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-deep-black text-foreground overflow-x-hidden`}
+        className={`${geistSans.variable} ${geistMono.variable} ${dancingScript.variable} antialiased min-h-screen flex flex-col bg-deep-black text-foreground overflow-x-hidden`}
         suppressHydrationWarning={true}
       >
         <AuthProvider>
-          <MainLayout>
-            {children}
-          </MainLayout>
-          <Suspense fallback={null}>
-            <ChatWidget />
-          </Suspense>
-          <ToastProvider />
+          <QuickViewProvider>
+            <MainLayout>
+              {children}
+            </MainLayout>
+            <Suspense fallback={null}>
+              <ChatWidget />
+            </Suspense>
+            <Suspense fallback={null}>
+              <AdInterstitial />
+            </Suspense>
+            <ToastProvider />
+          </QuickViewProvider>
         </AuthProvider>
       </body>
     </html>

@@ -12,12 +12,35 @@ exports.hybridSearch = async (req, res) => {
         let localMovies = await Movie.find({
             $or: [
                 { name: { $regex: keyword, $options: 'i' } },
-                { origin_name: { $regex: keyword, $options: 'i' } }
+                { origin_name: { $regex: keyword, $options: 'i' } },
+                { actor: { $regex: keyword, $options: 'i' } }
             ]
         }).limit(20).select('name slug thumb_url origin_name year type quality episode_current');
 
         // If found in DB, return immediately
         if (localMovies.length > 0) {
+            // Deduplicate by normalized origin_name (same movie from multiple sources)
+            const seenIdx = new Map(); // key → index in deduped array
+            const deduped = [];
+            for (const m of localMovies) {
+                const key = (m.origin_name || m.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (seenIdx.has(key)) {
+                    // Replace existing entry if new one has more data (year, quality, episode_current)
+                    const idx = seenIdx.get(key);
+                    const existing = deduped[idx];
+                    const betterYear = !existing.year && m.year;
+                    const betterQuality = !existing.quality && m.quality;
+                    const betterEpisode = !existing.episode_current && m.episode_current;
+                    if (betterYear || betterQuality || betterEpisode) {
+                        deduped[idx] = m;
+                    }
+                } else {
+                    seenIdx.set(key, deduped.length);
+                    deduped.push(m);
+                }
+            }
+            localMovies = deduped;
+
             // Attach progress if logged in
             if (req.user) {
                 localMovies = await attachProgressToMovies(localMovies, req.user._id);

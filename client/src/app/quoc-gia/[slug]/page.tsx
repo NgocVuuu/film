@@ -1,138 +1,53 @@
-'use client';
-import { Suspense } from 'react';
-import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
-import { MovieCard } from '@/components/MovieCard';
+import { Metadata } from 'next';
+import Script from 'next/script';
+import CountryPageClient, { COUNTRY_NAMES } from './CountryPageClient';
 import LoadingScreen from '@/components/LoadingScreen';
 import { API_URL } from '@/lib/config';
 
-interface Movie {
-    _id: string;
-    name: string;
-    origin_name: string;
-    slug: string;
-    thumb_url: string;
-    year: number;
-    episode_current?: string;
-    quality?: string;
-    progress?: {
-        currentTime: number;
-        duration: number;
-        percentage: number;
-        episodeSlug: string;
-        episodeName: string;
+type Props = { params: Promise<{ slug: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const { slug } = await params;
+    const name = COUNTRY_NAMES[slug] || slug;
+
+    return {
+        title: `Phim ${name} - Xem Phim ${name} Hay Nhất Online | Pchill`,
+        description: `Xem phim ${name} online miễn phí tại Pchill. Tổng hợp phim ${name} mới nhất, hay nhất, đầy đủ vietsub và thuyết minh.`,
+        keywords: [`phim ${name}`, `xem phim ${name}`, `phim ${name} vietsub`, `phim ${name} thuyết minh`, `phim ${name} online`, 'pchill'],
+        alternates: { canonical: `https://pchill.online/quoc-gia/${slug}` },
+        openGraph: {
+            title: `Phim ${name} | Pchill Movie`,
+            description: `Xem phim ${name} online miễn phí chất lượng cao tại Pchill.`,
+            url: `https://pchill.online/quoc-gia/${slug}`,
+            siteName: 'Pchill Movie',
+            type: 'website',
+        },
     };
 }
 
-const COUNTRY_NAMES: Record<string, string> = {
-    'trung-quoc': 'Trung Quốc',
-    'han-quoc': 'Hàn Quốc',
-    'thai-lan': 'Thái Lan',
-    'nhat-ban': 'Nhật Bản',
-    'au-my': 'Âu Mỹ (Hollywood)',
-    'anh': 'Anh',
-    'my': 'Mỹ',
-    'viet-nam': 'Việt Nam',
-    'hong-kong': 'Hồng Kông',
-    'phap': 'Pháp',
-    'duc': 'Đức',
-    'an-do': 'Ấn Độ',
-};
+export default async function CountryPage({ params }: Props) {
+    const { slug } = await params;
+    const name = COUNTRY_NAMES[slug] || slug;
 
-function CountryPageContent() {
-    const params = useParams();
-    const searchParams = useSearchParams();
-    const countrySlug = params.slug as string;
-    const page = parseInt(searchParams.get('page') || '1');
-
-    const [movies, setMovies] = useState<Movie[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [totalPages, setTotalPages] = useState(1);
-
-    useEffect(() => {
-        fetchMovies();
-    }, [countrySlug, page]);
-
-    const fetchMovies = async () => {
-        setLoading(true);
-        try {
-            // 'au-my' in home slide fetches country IN [au-my, anh, my] + type=single
-            // We match this by using a custom query for au-my
-            const isWestern = countrySlug === 'au-my';
-            const url = isWestern
-                ? `${API_URL}/api/movies?country=au-my&type=single&page=${page}&limit=30`
-                : `${API_URL}/api/movies?country=${countrySlug}&page=${page}&limit=30`;
-
-            const res = await fetch(url, { credentials: 'include' });
-            const data = await res.json();
-            if (data.success) {
-                setMovies(data.data);
-                setTotalPages(data.pagination?.totalPages || 1);
-            }
-        } catch (error) {
-            console.error('Error fetching movies:', error);
-        } finally {
-            setLoading(false);
-        }
+    const breadcrumbJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: 'https://pchill.online' },
+            { '@type': 'ListItem', position: 2, name: 'Quốc gia', item: 'https://pchill.online/quoc-gia' },
+            { '@type': 'ListItem', position: 3, name: `Phim ${name}`, item: `https://pchill.online/quoc-gia/${slug}` },
+        ],
     };
 
-    if (loading) return <LoadingScreen />;
-
-    const countryName = COUNTRY_NAMES[countrySlug] || countrySlug;
-
     return (
-        <div className="min-h-screen bg-deep-black text-foreground pt-20 pb-20">
-            <div className="container mx-auto px-4">
-                <h1 className="text-2xl md:text-3xl font-bold text-white mb-6 flex items-center gap-2">
-                    <span className="w-1 h-8 bg-primary rounded-full"></span>
-                    Phim {countryName}
-                </h1>
-
-                {movies.length > 0 ? (
-                    <>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {movies.map((movie) => (
-                                <MovieCard key={movie._id} movie={movie} />
-                            ))}
-                        </div>
-
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="flex justify-center gap-2 mt-8">
-                                {page > 1 && (
-                                    <a
-                                        href={`/quoc-gia/${countrySlug}?page=${page - 1}`}
-                                        className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors"
-                                    >
-                                        Trang trước
-                                    </a>
-                                )}
-                                <span className="px-4 py-2 bg-primary text-black rounded font-bold">
-                                    {page} / {totalPages}
-                                </span>
-                                {page < totalPages && (
-                                    <a
-                                        href={`/quoc-gia/${countrySlug}?page=${page + 1}`}
-                                        className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors"
-                                    >
-                                        Trang sau
-                                    </a>
-                                )}
-                            </div>
-                        )}
-                    </>
-                ) : (
-                    <p className="text-center text-gray-400 py-20">Không tìm thấy phim nào</p>
-                )}
-            </div>
-        </div>
-    );
-}
-
-export default function CountryPage() {
-    return (
-        <Suspense fallback={<LoadingScreen />}>
-            <CountryPageContent />
-        </Suspense>
+        <>
+            <Script
+                id="breadcrumb-jsonld"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+                strategy="beforeInteractive"
+            />
+            <CountryPageClient />
+        </>
     );
 }
