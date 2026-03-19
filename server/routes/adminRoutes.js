@@ -81,9 +81,18 @@ const adminEmailController = require('../controllers/adminEmailController');
 router.post('/test-email', adminEmailController.testEmail);
 
 // Cache management
-const { clearTmdbCache, debugTmdb } = require('../controllers/movieController');
+const { clearTmdbCache, clearHomeCache, debugTmdb } = require('../controllers/movieController');
 router.post('/cache/clear-tmdb', clearTmdbCache);
+router.post('/cache/clear-home', clearHomeCache);
 router.get('/debug-tmdb', debugTmdb);
+
+// Hash management (Debrid torrent hash)
+const hashController = require('../controllers/hashController');
+router.get('/hashes/:slug', hashController.getMovieHashes);
+router.post('/hashes/:slug/hunt', hashController.huntHashes);
+router.post('/hashes/:slug/manual', hashController.addManualHash);
+router.post('/hashes/:slug/refresh', hashController.refreshStatus);
+router.delete('/hashes/:slug/:hash', hashController.deleteHash);
 
 // Crawler
 router.get('/crawler/status', adminController.getCrawlerStatus);

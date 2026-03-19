@@ -50,11 +50,15 @@ interface MovieDetail {
     lang?: string;
     time?: string;
     torrents?: {
+        hash?: string;           // SHA1 torrent hash
         magnet: string;
         quality: string;
         size: string;
-        seeders: number;
+        sizeBytes?: number;
+        seeders?: number;
         isPremiumOnly: boolean;
+        rdCached?: boolean | null; // null=chưa check, true=RD cached
+        source?: 'zilean' | 'prowlarr' | 'manual';
         subtitleUrl?: string;
         subtitleLanguage?: string;
         hasViSub?: boolean;

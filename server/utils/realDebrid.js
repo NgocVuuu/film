@@ -100,6 +100,30 @@ class RealDebridService {
     }
 
     /**
+     * Check if a torrent hash is instantly available (cached) on Real-Debrid
+     * @returns {boolean} true = cached, false = not cached
+     */
+    async checkInstantAvailability(apiKey, hash) {
+        if (!apiKey || !hash) return false;
+        try {
+            const result = await this.apiRequest('GET', `/torrents/instantAvailability/${hash.toLowerCase()}`, apiKey);
+            const data = result[hash.toLowerCase()];
+            return !!(data && data.rd && data.rd.length > 0);
+        } catch (error) {
+            if (error.response?.status === 404) return false;
+            return false;
+        }
+    }
+
+    /**
+     * Extract SHA1 hash từ magnet link
+     */
+    extractHash(magnet) {
+        const match = magnet.match(/urn:btih:([a-fA-F0-9]{40})/i);
+        return match ? match[1].toLowerCase() : null;
+    }
+
+    /**
      * Complete workflow to get a streamable link from a magnet
      */
     async getStreamLink(magnet, proxyIndex, proxyDomain = null) {
@@ -112,6 +136,20 @@ class RealDebridService {
         }
 
         try {
+            // === OPTIMIZATION: Check Instant Availability trước khi addMagnet ===
+            // Nếu RD đã cache hash → không cần addMagnet → lấy link ngay
+            const hash = this.extractHash(magnet);
+            if (hash) {
+                const isCached = await this.checkInstantAvailability(current.key, hash);
+                if (!isCached) {
+                    console.warn(`[RealDebrid] Hash ${hash.substring(0, 8)}... KHÔNG có trong RD cache. Báo user chờ.`);
+                    const cacheMissError = new Error('Phim này chưa được lưu sẵn trên hệ thống đám mây. Vui lòng chọn nguồn khác hoặc quay lại sau!');
+                    cacheMissError.isTorrentDownloading = true;
+                    throw cacheMissError;
+                }
+                console.log(`[RealDebrid] Hash ${hash.substring(0, 8)}... ĐÃ CÓ trong RD cache — lấy link ngay!`);
+            }
+
             // 1. Add magnet
             const addResult = await this.addMagnet(current.key, magnet, proxyDomain);
             const torrentId = addResult.id;

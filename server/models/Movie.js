@@ -64,14 +64,20 @@ const movieSchema = new mongoose.Schema({
     },
   ],
 
-  // High quality sources (Torrent/Magnet)
+  // High quality sources — Debrid/Torrent
   torrents: [
     {
-      magnet: String,
-      quality: String, // 4K, 1080p, Bluray, etc.
-      size: String,
+      quality: { type: String, enum: ['4K', '2160p', '1080p', '720p', 'Bluray', 'Remux'] },
+      hash: { type: String, index: true },     // SHA1 torrent hash (40 chars hex)
+      magnet: String,                           // magnet:?xt=urn:btih:HASH (auto-built từ hash)
+      size: String,                             // '50 GB', '25 GB'
+      sizeBytes: Number,                        // bytes (cho tính toán băng thông)
+      source: { type: String, enum: ['zilean', 'prowlarr', 'manual'], default: 'manual' },
+      rdCached: { type: Boolean, default: null }, // null=chưa check, true=RD đã cache, false=chưa có
+      rdCheckedAt: Date,                        // Thời điểm check gần nhất
       seeders: Number,
-      isPremiumOnly: { type: Boolean, default: true }
+      isPremiumOnly: { type: Boolean, default: true },
+      addedAt: { type: Date, default: Date.now }
     }
   ],
 
