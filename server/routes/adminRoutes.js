@@ -77,8 +77,9 @@ const adminEmailController = require('../controllers/adminEmailController');
 router.post('/test-email', adminEmailController.testEmail);
 
 // Cache management
-const { clearTmdbCache, debugTmdb } = require('../controllers/movieController');
+const { clearTmdbCache, clearHomeCache, debugTmdb } = require('../controllers/movieController');
 router.post('/cache/clear-tmdb', clearTmdbCache);
+router.post('/cache/clear-home', clearHomeCache); // Xóa home page cache ngay lập tức
 router.get('/debug-tmdb', debugTmdb);
 
 // Crawler

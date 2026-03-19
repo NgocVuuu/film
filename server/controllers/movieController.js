@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const axios = require('axios');
 const NodeCache = require('node-cache');
 const searchCache = new NodeCache({ stdTTL: 1200 }); // 20 minutes search cache
+const homeCache = new NodeCache({ stdTTL: 300 }); // 5 minutes home page cache
 
 const { attachProgressToMovies } = require('../utils/movieUtils');
 const { syncSpecificMovie } = require('../crawler');
@@ -267,120 +268,139 @@ const getTmdbTrendingMovies = async () => {
 const getHomeData = async (req, res) => {
     try {
         const start = Date.now();
-        // 0. Trending Logic (TMDB + Local Fallback)
-        const trendingDataPromise = getTmdbTrendingMovies();
 
-        // Execute all queries in parallel
-        const [
-            trendingData,
-            featuredMovies,
-            upcomingMovies,
-            latestMovies,
-            chinaMovies,
-            koreaMovies,
-            usukMovies,
-            cartoonMovies,
-            horrorMovies,
-            familyMovies,
-            thailandMovies,
-            japanMovies,
-            actionMovies,
-            romanceMovies,
-            comedyMovies,
-            adventureMovies,
-            scifiMovies,
-            crimeMovies,
-            historyDramaMovies,
-            martialArtsMovies,
-            shortDramaMovies,
-            tvShows,
-            warMovies,
-            mysteryMovies,
-            schoolMovies,
-            documentaryMovies,
-            fantasyMovies,
-            hkMovies,
-            vnMovies,
-            hotAnimeMovies,
-            legendaryAnimeMovies,
-            xianxiaMovies
-        ] = await Promise.all([
-            trendingDataPromise,
-            // 2. Featured (Cinema - Exclude Trailer only)
-            Movie.find({ chieurap: true, isActive: { $ne: false }, episode_current: { $not: /trailer/i } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 2.5 Upcoming (Cinema - Only Trailer)
-            Movie.find({ chieurap: true, isActive: { $ne: false }, episode_current: { $regex: /trailer/i } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 3. Latest
-            Movie.find({ isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 4. China
-            Movie.find({ 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 5. Korea
-            Movie.find({ 'country.slug': 'han-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 6. Western (Holland/USUK) - Single movies only for blockbuster feel
-            Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] }, type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 7. Cartoon/Anime (Kids & Family only as per label)
-            Movie.find({ type: 'hoathinh', 'category.slug': 'gia-dinh', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 8. Horror - Single movies prioritize
-            Movie.find({ 'category.slug': 'kinh-di', type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 9. Family/Kids - Live Action Only (Exclude Animation)
-            Movie.find({ 'category.slug': 'gia-dinh', type: { $ne: 'hoathinh' }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 10. Thailand
-            Movie.find({ 'country.slug': 'thai-lan', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 11. Japan
-            Movie.find({ 'country.slug': 'nhat-ban', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 12. Action - Exclude Animation & TV Shows
-            Movie.find({ 'category.slug': 'hanh-dong', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 12. Romance - Exclude Animation & TV Shows
-            Movie.find({ 'category.slug': 'tinh-cam', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 13. Comedy - Exclude Animation & TV Shows
-            Movie.find({ 'category.slug': 'hai-huoc', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 14. Adventure - Exclude Animation & TV Shows
-            Movie.find({ 'category.slug': 'phieu-luu', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 15. Sci-Fi - Exclude Animation & TV Shows
-            Movie.find({ 'category.slug': 'vien-tuong', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 16. Crime - Exclude Animation & TV Shows
-            Movie.find({ 'category.slug': 'hinh-su', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 17. Historical/Cổ Trang (Strictly China as per plan)
-            Movie.find({ 'category.slug': 'co-trang', 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 18. Martial Arts - Exclude Animation & TV Shows
-            Movie.find({ 'category.slug': 'vo-thuat', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 19. Short Drama
-            Movie.find({ 'category.slug': 'short-drama', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 20. TV Shows - Use type: 'tvshows' strictly
-            Movie.find({ type: 'tvshows', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
-            // 21. War - Exclude Animation & TV Shows
-            Movie.find({ 'category.slug': 'chien-tranh', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
-            // 22. Mystery - Exclude Animation & TV Shows
-            Movie.find({ 'category.slug': 'bi-an', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
-            // 23. School - Filter by China & Exclude Animation
-            Movie.find({ 'category.slug': 'hoc-duong', 'country.slug': 'trung-quoc', type: { $ne: 'hoathinh' }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
-            // 24. Documentary - Exclude Animation
-            Movie.find({ 'category.slug': 'tai-lieu', type: { $ne: 'hoathinh' }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
-            // 25. Fantasy - Exclude Animation & TV Shows
-            Movie.find({ 'category.slug': 'than-thoai', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
-            // 26. Hong Kong
-            Movie.find({ 'country.slug': 'hong-kong', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
-            // 27. Vietnam
-            Movie.find({ 'country.slug': 'viet-nam', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
-            // 28. Hot Anime
-            Movie.find({ type: 'hoathinh', isActive: { $ne: false } }).sort({ view: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
-            // 29. Legendary Anime (Older than or equal to 2015)
-            Movie.find({ type: 'hoathinh', year: { $lte: 2015 }, isActive: { $ne: false } }).sort({ view: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
-            // 30. Xianxia / Chinese Animation
-            Movie.find({ type: 'hoathinh', 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean()
-        ]);
+        // ============================================================
+        // HOME CACHE: Cache 30+ MongoDB queries trong 5 phút
+        // Giảm tải Atlas từ hàng nghìn queries/phút xuống ~30 queries/5 phút
+        // ============================================================
+        const HOME_CACHE_KEY = 'home_base_data';
+        let baseData = homeCache.get(HOME_CACHE_KEY);
 
-        const { seriesTrending, movieTrending, allTrending } = trendingData;
+        if (!baseData) {
+            console.log('[HomeCache] Cache miss - fetching from MongoDB Atlas...');
+            // 0. Trending Logic (TMDB + Local Fallback)
+            const trendingDataPromise = getTmdbTrendingMovies();
 
-        let responseData = {
-            allTrending, seriesTrending, movieTrending, 
-            featuredMovies, upcomingMovies, latestMovies, chinaMovies, koreaMovies,
-            usukMovies, cartoonMovies, horrorMovies, familyMovies, thailandMovies,
-            japanMovies, actionMovies, romanceMovies, comedyMovies, adventureMovies,
-            scifiMovies, crimeMovies, historyDramaMovies, martialArtsMovies, shortDramaMovies,
-            tvShows, warMovies, mysteryMovies, schoolMovies, documentaryMovies, fantasyMovies,
-            hkMovies, vnMovies, hotAnimeMovies, legendaryAnimeMovies, xianxiaMovies
-        };
+            // Execute all queries in parallel
+            const [
+                trendingData,
+                featuredMovies,
+                upcomingMovies,
+                latestMovies,
+                chinaMovies,
+                koreaMovies,
+                usukMovies,
+                cartoonMovies,
+                horrorMovies,
+                familyMovies,
+                thailandMovies,
+                japanMovies,
+                actionMovies,
+                romanceMovies,
+                comedyMovies,
+                adventureMovies,
+                scifiMovies,
+                crimeMovies,
+                historyDramaMovies,
+                martialArtsMovies,
+                shortDramaMovies,
+                tvShows,
+                warMovies,
+                mysteryMovies,
+                schoolMovies,
+                documentaryMovies,
+                fantasyMovies,
+                hkMovies,
+                vnMovies,
+                hotAnimeMovies,
+                legendaryAnimeMovies,
+                xianxiaMovies
+            ] = await Promise.all([
+                trendingDataPromise,
+                // 2. Featured (Cinema - Exclude Trailer only)
+                Movie.find({ chieurap: true, isActive: { $ne: false }, episode_current: { $not: /trailer/i } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 2.5 Upcoming (Cinema - Only Trailer)
+                Movie.find({ chieurap: true, isActive: { $ne: false }, episode_current: { $regex: /trailer/i } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 3. Latest
+                Movie.find({ isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 4. China
+                Movie.find({ 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 5. Korea
+                Movie.find({ 'country.slug': 'han-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 6. Western (Holland/USUK) - Single movies only for blockbuster feel
+                Movie.find({ 'country.slug': { $in: ['au-my', 'anh', 'my'] }, type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 7. Cartoon/Anime (Kids & Family only as per label)
+                Movie.find({ type: 'hoathinh', 'category.slug': 'gia-dinh', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 8. Horror - Single movies prioritize
+                Movie.find({ 'category.slug': 'kinh-di', type: 'single', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 9. Family/Kids - Live Action Only (Exclude Animation)
+                Movie.find({ 'category.slug': 'gia-dinh', type: { $ne: 'hoathinh' }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 10. Thailand
+                Movie.find({ 'country.slug': 'thai-lan', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 11. Japan
+                Movie.find({ 'country.slug': 'nhat-ban', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 12. Action - Exclude Animation & TV Shows
+                Movie.find({ 'category.slug': 'hanh-dong', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 12. Romance - Exclude Animation & TV Shows
+                Movie.find({ 'category.slug': 'tinh-cam', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 13. Comedy - Exclude Animation & TV Shows
+                Movie.find({ 'category.slug': 'hai-huoc', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 14. Adventure - Exclude Animation & TV Shows
+                Movie.find({ 'category.slug': 'phieu-luu', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 15. Sci-Fi - Exclude Animation & TV Shows
+                Movie.find({ 'category.slug': 'vien-tuong', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 16. Crime - Exclude Animation & TV Shows
+                Movie.find({ 'category.slug': 'hinh-su', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 17. Historical/Cổ Trang (Strictly China as per plan)
+                Movie.find({ 'category.slug': 'co-trang', 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 18. Martial Arts - Exclude Animation & TV Shows
+                Movie.find({ 'category.slug': 'vo-thuat', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 19. Short Drama
+                Movie.find({ 'category.slug': 'short-drama', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 20. TV Shows - Use type: 'tvshows' strictly
+                Movie.find({ type: 'tvshows', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-episodes -director -actor').lean(),
+                // 21. War - Exclude Animation & TV Shows
+                Movie.find({ 'category.slug': 'chien-tranh', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+                // 22. Mystery - Exclude Animation & TV Shows
+                Movie.find({ 'category.slug': 'bi-an', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+                // 23. School - Filter by China & Exclude Animation
+                Movie.find({ 'category.slug': 'hoc-duong', 'country.slug': 'trung-quoc', type: { $ne: 'hoathinh' }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+                // 24. Documentary - Exclude Animation
+                Movie.find({ 'category.slug': 'tai-lieu', type: { $ne: 'hoathinh' }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+                // 25. Fantasy - Exclude Animation & TV Shows
+                Movie.find({ 'category.slug': 'than-thoai', type: { $nin: ['hoathinh', 'tvshows'] }, isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+                // 26. Hong Kong
+                Movie.find({ 'country.slug': 'hong-kong', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+                // 27. Vietnam
+                Movie.find({ 'country.slug': 'viet-nam', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+                // 28. Hot Anime
+                Movie.find({ type: 'hoathinh', isActive: { $ne: false } }).sort({ view: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+                // 29. Legendary Anime (Older than or equal to 2015)
+                Movie.find({ type: 'hoathinh', year: { $lte: 2015 }, isActive: { $ne: false } }).sort({ view: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean(),
+                // 30. Xianxia / Chinese Animation
+                Movie.find({ type: 'hoathinh', 'country.slug': 'trung-quoc', isActive: { $ne: false } }).sort({ year: -1, updatedAt: -1 }).limit(15).select('-content -episodes -director -actor').lean()
+            ]);
+
+            const { seriesTrending, movieTrending, allTrending } = trendingData;
+
+            baseData = {
+                allTrending, seriesTrending, movieTrending,
+                featuredMovies, upcomingMovies, latestMovies, chinaMovies, koreaMovies,
+                usukMovies, cartoonMovies, horrorMovies, familyMovies, thailandMovies,
+                japanMovies, actionMovies, romanceMovies, comedyMovies, adventureMovies,
+                scifiMovies, crimeMovies, historyDramaMovies, martialArtsMovies, shortDramaMovies,
+                tvShows, warMovies, mysteryMovies, schoolMovies, documentaryMovies, fantasyMovies,
+                hkMovies, vnMovies, hotAnimeMovies, legendaryAnimeMovies, xianxiaMovies
+            };
+
+            homeCache.set(HOME_CACHE_KEY, baseData);
+            console.log(`[HomeCache] Cache set - ${Date.now() - start}ms to fetch from Atlas`);
+        } else {
+            console.log('[HomeCache] Cache HIT - skipped 30+ Atlas queries');
+        }
+
+        // Deep clone để tránh mutate cached object khi attach progress
+        let responseData = JSON.parse(JSON.stringify(baseData));
 
         if (req.user) {
             try {
@@ -388,13 +408,18 @@ const getHomeData = async (req, res) => {
 
                 // 1. Optimization: Batch fetch progress for ALL home page movies at once
                 const allMovies = [
-                    ...allTrending, ...seriesTrending, ...movieTrending,
-                    ...featuredMovies, ...upcomingMovies, ...latestMovies, ...chinaMovies, ...koreaMovies,
-                    ...usukMovies, ...cartoonMovies, ...horrorMovies, ...familyMovies, ...thailandMovies,
-                    ...japanMovies, ...actionMovies, ...romanceMovies, ...comedyMovies, ...adventureMovies,
-                    ...scifiMovies, ...crimeMovies, ...historyDramaMovies, ...martialArtsMovies, ...shortDramaMovies,
-                    ...tvShows, ...warMovies, ...mysteryMovies, ...schoolMovies, ...documentaryMovies, ...fantasyMovies,
-                    ...hkMovies, ...vnMovies, ...hotAnimeMovies, ...legendaryAnimeMovies, ...xianxiaMovies
+                    ...responseData.allTrending, ...responseData.seriesTrending, ...responseData.movieTrending,
+                    ...responseData.featuredMovies, ...responseData.upcomingMovies, ...responseData.latestMovies,
+                    ...responseData.chinaMovies, ...responseData.koreaMovies, ...responseData.usukMovies,
+                    ...responseData.cartoonMovies, ...responseData.horrorMovies, ...responseData.familyMovies,
+                    ...responseData.thailandMovies, ...responseData.japanMovies, ...responseData.actionMovies,
+                    ...responseData.romanceMovies, ...responseData.comedyMovies, ...responseData.adventureMovies,
+                    ...responseData.scifiMovies, ...responseData.crimeMovies, ...responseData.historyDramaMovies,
+                    ...responseData.martialArtsMovies, ...responseData.shortDramaMovies, ...responseData.tvShows,
+                    ...responseData.warMovies, ...responseData.mysteryMovies, ...responseData.schoolMovies,
+                    ...responseData.documentaryMovies, ...responseData.fantasyMovies, ...responseData.hkMovies,
+                    ...responseData.vnMovies, ...responseData.hotAnimeMovies, ...responseData.legendaryAnimeMovies,
+                    ...responseData.xianxiaMovies
                 ];
 
                 const allSlugs = [...new Set(allMovies.map(m => m.slug))];
@@ -419,7 +444,6 @@ const getHomeData = async (req, res) => {
                 // Attach progress to all lists in memory
                 const attachLocal = (movies) => {
                     return movies.map(movie => {
-                        // movie is a plain object due to .lean() in the queries
                         if (progressMap[movie.slug]) {
                             movie.progress = progressMap[movie.slug];
                         }
@@ -452,7 +476,6 @@ const getHomeData = async (req, res) => {
                     responseData.continueWatching = recentProgress.map(p => {
                         const movie = movies.find(m => m.slug === p.movieSlug);
                         if (!movie) return null;
-                        // movie is lean object
                         movie.progress = {
                             currentTime: p.currentTime,
                             duration: p.duration,
@@ -476,7 +499,7 @@ const getHomeData = async (req, res) => {
         res.json({
             success: true,
             data: responseData,
-            debug: { executionTime: `${Date.now() - start}ms` }
+            debug: { executionTime: `${Date.now() - start}ms`, cached: !!homeCache.get(HOME_CACHE_KEY) }
         });
     } catch (err) {
         console.error('Home data error:', err);
@@ -1192,6 +1215,14 @@ const debugTmdb = async (req, res) => {
     res.json(report);
 };
 
+// Admin: Xóa home cache ngay lập tức (dùng khi cần cập nhật trang chủ không đợi 5 phút)
+const clearHomeCache = (req, res) => {
+    homeCache.flushAll();
+    searchCache.del(/^tmdb_/); // Cũng xóa TMDB trending cache
+    console.log('[HomeCache] Cache đã được xóa bởi admin');
+    res.json({ success: true, message: 'Đã xóa home cache. Trang chủ sẽ fetch dữ liệu mới từ Atlas.' });
+};
+
 module.exports = {
     getHomeData,
     getMovies,
@@ -1199,6 +1230,7 @@ module.exports = {
     getMoviesForSitemap,
     getMarvelMovies,
     clearTmdbCache,
+    clearHomeCache,
     getTmdbTrendingMovies,
     debugTmdb,
     getDCUMovies,
