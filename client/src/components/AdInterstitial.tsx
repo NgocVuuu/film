@@ -55,18 +55,38 @@ export function AdInterstitial() {
         scriptInjected.current = true;
 
         // Extract key từ URL rồi inject atOptions trước (Adsterra Banner yêu cầu)
-        const key = scriptSrc.match(/\/([a-f0-9]{32})\//)?.[1];
-        if (key) {
-            const optScript = document.createElement('script');
-            optScript.text = `atOptions = {'key':'${key}','format':'iframe','height':300,'width':160,'params':{}};`;
-            containerRef.current.appendChild(optScript);
-        }
+        const key = scriptSrc.match(/\/([a-f0-9]{32})\//)?.[1] || '';
+        
+        const iframe = document.createElement('iframe');
+        iframe.sandbox = "allow-scripts allow-popups allow-same-origin"; // KHÔNG CHO PHÉP allow-top-navigation
+        iframe.style.width = "100%";
+        iframe.style.height = "100%";
+        iframe.style.border = "none";
+        
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <style>body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background-color: transparent; overflow: hidden; }</style>
+                </head>
+                <body>
+                    <script>
+                        var atOptions = {
+                            'key': '${key}',
+                            'format': 'iframe',
+                            'height': 300,
+                            'width': 160,
+                            'params': {}
+                        };
+                    </script>
+                    <script type="text/javascript" src="${scriptSrc}"></script>
+                </body>
+            </html>
+        `;
 
-        const script = document.createElement('script');
-        script.src = scriptSrc;
-        script.async = true;
-        script.setAttribute('data-cfasync', 'false');
-        containerRef.current.appendChild(script);
+        iframe.srcdoc = htmlContent;
+        containerRef.current.innerHTML = '';
+        containerRef.current.appendChild(iframe);
     }, [visible, scriptSrc]);
 
     if (!visible) return null;

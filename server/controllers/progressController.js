@@ -1,4 +1,6 @@
 const WatchProgress = require('../models/WatchProgress');
+const NodeCache = require('node-cache');
+const viewCache = new NodeCache({ stdTTL: 24 * 60 * 60 }); // 24 hours standard TTL
 
 // Save or update watch progress
 exports.saveProgress = async (req, res) => {
@@ -93,36 +95,50 @@ exports.saveProgress = async (req, res) => {
         // VIEW LOGGING LOGIC
         // Check if user has viewed this episode in the last 24 hours
         // If not, create a ViewLog entry
-        const ViewLog = require('../models/ViewLog');
-        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const viewCacheKey = `view_${userId}_${movieSlug}_${episodeSlug}`;
+        
+        if (!viewCache.has(viewCacheKey)) {
+            const ViewLog = require('../models/ViewLog');
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-        const existingLog = await ViewLog.findOne({
-            userId,
-            movieSlug,
-            episodeSlug,
-            createdAt: { $gte: twentyFourHoursAgo }
-        });
-
-        if (!existingLog) {
-            await ViewLog.create({
+            const existingLog = await ViewLog.findOne({
                 userId,
                 movieSlug,
-                episodeSlug
+                episodeSlug,
+                createdAt: { $gte: twentyFourHoursAgo }
             });
-            // Update total view count in Movie model if needed (optional optimization)
-            const Movie = require('../models/Movie');
-            await Movie.updateOne({ slug: movieSlug }, { $inc: { view: 1 } });
+
+            if (!existingLog) {
+                await ViewLog.create({
+                    userId,
+                    movieSlug,
+                    episodeSlug
+                });
+                // Update total view count in Movie model if needed (optional optimization)
+                const Movie = require('../models/Movie');
+                await Movie.updateOne({ slug: movieSlug }, { $inc: { view: 1 } });
+            }
+            
+            // Mới xem, lưu vào RAM Cache để 24h sau khỏi check DB nữa
+            viewCache.set(viewCacheKey, true);
         }
 
         // ACTIVE USER LOGIC
         // Update lastLogin if user hasn't been active today
         // This ensures the "Active Users" chart includes people watching movies, not just logging in
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const loginCacheKey = `login_${userId}`;
+        
+        if (!viewCache.has(loginCacheKey)) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-        if (req.user.lastLogin < today) {
-            const User = require('../models/User');
-            await User.findByIdAndUpdate(userId, { lastLogin: new Date() });
+            if (req.user.lastLogin < today) {
+                const User = require('../models/User');
+                await User.findByIdAndUpdate(userId, { lastLogin: new Date() });
+            }
+            
+            // Set cache 12 hours so it doesn't query DB
+            viewCache.set(loginCacheKey, true, 12 * 60 * 60);
         }
 
         res.json({
@@ -294,16 +310,21 @@ exports.trackView = async (req, res) => {
         const { movieSlug, episodeSlug } = req.body;
         // Check if user is logged in (optional)
         const userId = req.user ? req.user._id : null;
+        const reqIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
 
         if (!movieSlug || !episodeSlug) {
             return res.status(400).json({ success: false, message: 'Missing info' });
         }
 
+        // Cache check to prevent spam
+        const viewCacheKey = `guest_view_${reqIp}_${movieSlug}_${episodeSlug}`;
+        if (viewCache.has(viewCacheKey)) {
+            // Already logged a view for this IP/episode in the last hour
+            return res.json({ success: true, message: 'View tracked (cached)' });
+        }
+
         const ViewLog = require('../models/ViewLog');
         const Movie = require('../models/Movie');
-
-        // Rate limiting logic could go here (e.g., redis or memory cache)
-        // For now, relies on frontend to not spam
 
         // Log view
         await ViewLog.create({
@@ -315,7 +336,10 @@ exports.trackView = async (req, res) => {
         // Update total view count
         await Movie.updateOne({ slug: movieSlug }, { $inc: { view: 1 } });
 
-        res.json({ success: true });
+        // Cache view for 1 hour to prevent F5 spam
+        viewCache.set(viewCacheKey, true, 3600);
+
+        res.json({ success: true, message: 'View tracked completely' });
     } catch (error) {
         console.error('Track view error:', error);
         // Fail silently to client

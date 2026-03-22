@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Play, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -29,6 +30,11 @@ const QuickViewContext = createContext<QuickViewContextType | undefined>(undefin
 
 export function QuickViewProvider({ children }: { children: ReactNode }) {
     const [activeMovie, setActiveMovie] = useState<Movie | null>(null);
+    const pathname = usePathname();
+
+    useEffect(() => {
+        setActiveMovie(null);
+    }, [pathname]);
 
     const showQuickView = (movie: Movie) => {
         // Haptic feedback if available

@@ -96,6 +96,7 @@ export default function VideoPlayer({
     // Track previous episode/movie to detect changes
     const prevEpisodeRef = useRef<{ movie: string, episode: string } | null>(null);
     const savedTimeRef = useRef<number>(0);
+    const lastSeekTimeRef = useRef<number>(0);
     // Prevent onError from firing multiple times for the same src
     const onErrorFiredRef = useRef(false);
 
@@ -113,6 +114,8 @@ export default function VideoPlayer({
     const [useEmbed] = useState(false);
     const [hoverTime, setHoverTime] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<number>(0);
+    const [isScrubbing, setIsScrubbing] = useState(false);
+    const [scrubTime, setScrubTime] = useState(0);
 
     // Next Episode Countdown
     const [showNextEpisode, setShowNextEpisode] = useState(false);
@@ -210,13 +213,19 @@ export default function VideoPlayer({
         }
     };
 
-    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleScrubbing = (e: React.ChangeEvent<HTMLInputElement>) => {
         const time = Number(e.target.value);
-        if (videoRef.current) {
-            videoRef.current.currentTime = time;
-            setCurrentTime(time);
-        }
+        setScrubTime(time);
+        if (!isScrubbing) setIsScrubbing(true);
         if (!showControls) setShowControls(true);
+    };
+
+    const handleScrubEnd = () => {
+        setIsScrubbing(false);
+        if (videoRef.current) {
+            videoRef.current.currentTime = scrubTime;
+            setCurrentTime(scrubTime);
+        }
     };
 
     const toggleMute = () => {
@@ -569,6 +578,7 @@ export default function VideoPlayer({
         onErrorFiredRef.current = false;
         setIsLoading(true);
         let hls: Hls;
+        let networkRetryCount = 0;
 
         const onVideoLoaded = () => setIsLoading(false);
         const onVideoWaiting = () => setIsLoading(true);
@@ -689,8 +699,16 @@ export default function VideoPlayer({
                                 hls.destroy();
                                 setError(true);
                             } else {
-                                // Segment-level error: try to resume
-                                hls.startLoad();
+                                // Segment-level error: try to resume with exponential backoff
+                                networkRetryCount++;
+                                if (networkRetryCount <= 3) {
+                                    const delay = [1000, 3000, 5000][networkRetryCount - 1] || 1000;
+                                    setTimeout(() => { if (hls) hls.startLoad(); }, delay);
+                                    console.warn(`[HLS] Network drop 4G, auto-retry ${networkRetryCount} in ${delay}ms`);
+                                } else {
+                                    hls.destroy();
+                                    setError(true);
+                                }
                             }
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
@@ -702,6 +720,11 @@ export default function VideoPlayer({
                             break;
                     }
                 }
+            });
+
+            // Reset retry count upon successful network transfer
+            hls.on(Hls.Events.FRAG_LOADED, () => {
+                networkRetryCount = 0;
             });
 
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -723,6 +746,19 @@ export default function VideoPlayer({
             }
         }
 
+        // Visibility Change Handler to recover video when returning to suspended tab
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && hls && video) {
+                // If returning to tab and video is stalled/buffering, recover
+                if (!video.paused && video.readyState < 3) {
+                    console.warn('[HLS] Đánh thức Tab bị ẩn, ép tải lại luồng phim...');
+                    hls.recoverMediaError();
+                    hls.startLoad();
+                }
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         return () => {
             if (hls) hls.destroy();
             video.removeEventListener('loadeddata', onVideoLoaded);
@@ -735,6 +771,7 @@ export default function VideoPlayer({
             // Cleanup fullscreen listeners
             document.removeEventListener('fullscreenchange', onFullscreenChange);
             document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             video.removeEventListener('webkitendfullscreen', () => setIsFullscreen(false));
             video.removeEventListener('webkitpresentationmodechanged', () => {
                 // handle iOS pip state change if needed
@@ -769,6 +806,12 @@ export default function VideoPlayer({
     // Keyboard controls for seeking
     useEffect(() => {
         const handleKeyPress = (e: KeyboardEvent) => {
+            // Ignore if user is typing in an input or textarea
+            const target = e.target as HTMLElement;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+                return;
+            }
+
             // Only handle if video player is focused or visible
             if (!videoRef.current) return;
 
@@ -1091,11 +1134,14 @@ export default function VideoPlayer({
                         type="range"
                         min={0}
                         max={duration || 0}
-                        value={currentTime}
-                        onChange={handleSeek}
+                        value={isScrubbing ? scrubTime : currentTime}
+                        onChange={handleScrubbing}
+                        onPointerUp={handleScrubEnd}
+                        onMouseUp={handleScrubEnd}
+                        onTouchEnd={handleScrubEnd}
                         className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary transition-all group-hover/progress:h-2"
                         style={{
-                            background: `linear-gradient(to right, #D4AF37 ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) ${(currentTime / duration) * 100}%)`
+                            background: `linear-gradient(to right, #D4AF37 ${((isScrubbing ? scrubTime : currentTime) / duration) * 100}%, rgba(255,255,255,0.2) ${((isScrubbing ? scrubTime : currentTime) / duration) * 100}%)`
                         }}
                     />
                 </div>
