@@ -516,7 +516,6 @@ export default function WatchPage() {
                     <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (
                             <VideoPlayer
-                                key={`${currentEpisode.slug}-${currentServerName}`}
                                 src={(currentEpisode.link_m3u8 && currentEpisode.link_m3u8.startsWith('magnet:')) ? '' : (currentEpisode.link_m3u8 || '')}
                                 magnet={(currentEpisode.link_m3u8 && currentEpisode.link_m3u8.startsWith('magnet:')) ? currentEpisode.link_m3u8 : undefined}
                                 poster={movie.poster_url}
