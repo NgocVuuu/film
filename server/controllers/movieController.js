@@ -1160,6 +1160,10 @@ const clearTmdbCache = async (req, res) => {
     res.json({ success: true, message: 'TMDB trending cache cleared. Next home page request will fetch fresh data from TMDB.' });
 };
 
+const clearHomeCache = (req, res) => {
+    res.json({ success: true, message: 'Home cache not enabled on Torrent branch.' });
+};
+
 // Debug endpoint: kiểm tra TMDB API key, raw results và DB matching
 const debugTmdb = async (req, res) => {
     const TMDB_API_KEY = process.env.TMDB_API_KEY;
@@ -1205,6 +1209,7 @@ module.exports = {
     getMoviesForSitemap,
     getMarvelMovies,
     clearTmdbCache,
+    clearHomeCache,
     getTmdbTrendingMovies,
     debugTmdb,
     getDCUMovies,
