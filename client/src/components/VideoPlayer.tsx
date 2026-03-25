@@ -133,6 +133,7 @@ export default function VideoPlayer({
 
     // Timer for hiding controls
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const ignoreNextClickRef = useRef(false);
 
     // Watch Progress Hook
     const { initialProgress, debouncedSave } = useWatchProgress({
@@ -158,7 +159,7 @@ export default function VideoPlayer({
         if (!showControls) setShowControls(true);
     };
 
-    const togglePlay = (e?: React.MouseEvent | React.TouchEvent) => {
+    const togglePlay = (e?: React.MouseEvent | React.TouchEvent | React.SyntheticEvent) => {
         if (e) {
             e.stopPropagation();
         }
@@ -172,6 +173,36 @@ export default function VideoPlayer({
             });
         }
         setShowControls(true);
+    };
+
+    const handleContainerClick = (e: React.MouseEvent | React.TouchEvent | React.SyntheticEvent) => {
+        if (e) e.stopPropagation();
+
+        if (ignoreNextClickRef.current) {
+            ignoreNextClickRef.current = false;
+            return;
+        }
+
+        let handled = false;
+
+        if (showEpisodePanel) {
+            setShowEpisodePanel(false);
+            handled = true;
+        }
+
+        if (showSettings) {
+            setShowSettings(false);
+            handled = true;
+        }
+
+        if (handled) return;
+
+        if (!showControls && isPlaying) {
+            setShowControls(true);
+            return;
+        }
+
+        togglePlay(e);
     };
 
     const handleTimeUpdate = () => {
@@ -339,9 +370,6 @@ export default function VideoPlayer({
         const y = touch.clientY;
         const container = containerRef.current;
 
-        // Show controls on any touch end
-        if (!showControls) setShowControls(true);
-
         // Check if this was a quick tap (not a long press or swipe)
         const touchDuration = now - touchStartTimeRef.current;
         const wasTap = touchDuration < 250;
@@ -352,7 +380,16 @@ export default function VideoPlayer({
             Math.abs(y - touchStartRef.current.y) > 20
         );
 
-        if (container && wasTap && !touchMoved) {
+        // Determine if it's a tap on the video/empty area, not a specific tool
+        const target = e.target as HTMLElement;
+        const isVideoTap = !target.closest('button') && !target.closest('input') && !target.closest('a');
+
+        // Show controls on swipe end
+        if (touchMoved && !showControls) setShowControls(true);
+
+        if (container && wasTap && !touchMoved && isVideoTap) {
+            e.preventDefault(); // Stop onClick from firing
+
             const rect = container.getBoundingClientRect();
             const side = x < rect.width / 2 ? 'left' : 'right';
 
@@ -375,6 +412,7 @@ export default function VideoPlayer({
                 }
 
                 lastTapRef.current = null; // Reset to prevent triple tap
+                ignoreNextClickRef.current = true;
             } else {
                 // First tap - record time and position
                 lastTapRef.current = { time: now, x, side };
@@ -382,11 +420,22 @@ export default function VideoPlayer({
                 // Set a timer for single tap action
                 if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
                 singleTapTimerRef.current = setTimeout(() => {
-                    // Show controls if they are hidden, or toggle play if already shown
-                    if (!showControls) {
-                        setShowControls(true);
-                    } else {
-                        // togglePlay(e); // This might cause multiple triggers if not careful
+                    let handled = false;
+                    if (showEpisodePanel) {
+                        setShowEpisodePanel(false);
+                        handled = true;
+                    }
+                    if (showSettings) {
+                        setShowSettings(false);
+                        handled = true;
+                    }
+                    
+                    if (!handled) {
+                        if (!showControls && isPlaying) {
+                            setShowControls(true);
+                        } else {
+                            togglePlay(e);
+                        }
                     }
                     singleTapTimerRef.current = null;
                 }, 300);
@@ -920,7 +969,7 @@ export default function VideoPlayer({
                 }`}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => setShowControls(false)}
-            onClick={togglePlay}
+            onClick={handleContainerClick}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -1105,7 +1154,7 @@ export default function VideoPlayer({
             }
 
             {/* Controls Overlay */}
-            <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end px-3 py-3 md:p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end px-3 py-3 md:p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
 
                 {/* Progress Bar */}
                 <div
