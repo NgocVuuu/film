@@ -14,9 +14,22 @@ export function useLongPress(
     const [longPressTriggered, setLongPressTriggered] = useState(false);
     const timeout = useRef<NodeJS.Timeout | undefined>(undefined);
     const target = useRef<any>(null);
+<<<<<<< HEAD
 
     const start = useCallback(
         (event: any) => {
+=======
+    const startPos = useRef<{x: number, y: number} | null>(null);
+
+    const start = useCallback(
+        (event: any) => {
+            if (event.touches && event.touches.length > 0) {
+                startPos.current = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+            } else if (event.clientX !== undefined) {
+                startPos.current = { x: event.clientX, y: event.clientY };
+            }
+
+>>>>>>> main
             if (shouldPreventDefault && event.target) {
                 event.target.addEventListener('touchend', preventDefault, { passive: false });
                 target.current = event.target;
@@ -68,9 +81,41 @@ export function useLongPress(
         e.preventDefault();
     };
 
+<<<<<<< HEAD
     return {
         onMouseDown: (e: any) => start(e),
         onTouchStart: (e: any) => start(e),
+=======
+    const move = useCallback(
+        (event: any) => {
+            if (!startPos.current || !timeout.current) return;
+            let currentX = undefined;
+            let currentY = undefined;
+            if (event.touches && event.touches.length > 0) {
+                currentX = event.touches[0].clientX;
+                currentY = event.touches[0].clientY;
+            } else if (event.clientX !== undefined) {
+                currentX = event.clientX;
+                currentY = event.clientY;
+            }
+            
+            if (currentX !== undefined && currentY !== undefined) {
+                // Determine if swiped more than 10px
+                if (Math.abs(currentX - startPos.current.x) > 10 || Math.abs(currentY - startPos.current.y) > 10) {
+                    clear(event, false);
+                    startPos.current = null;
+                }
+            }
+        },
+        [clear]
+    );
+
+    return {
+        onMouseDown: (e: any) => start(e),
+        onTouchStart: (e: any) => start(e),
+        onMouseMove: (e: any) => move(e),
+        onTouchMove: (e: any) => move(e),
+>>>>>>> main
         onMouseUp: (e: any) => clear(e),
         onMouseLeave: (e: any) => clear(e, false),
         onTouchEnd: (e: any) => clear(e),

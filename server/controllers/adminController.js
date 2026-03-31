@@ -1,8 +1,11 @@
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const WatchProgress = require('../models/WatchProgress');
+<<<<<<< HEAD
 const ServerNode = require('../models/ServerNode');
 const axios = require('axios');
+=======
+>>>>>>> main
 const { getTmdbTrendingMovies } = require('./movieController');
 
 // Get all users with pagination and filters

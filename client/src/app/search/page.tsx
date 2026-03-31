@@ -1,6 +1,9 @@
 'use client';
 import { useEffect, useState, Suspense, useRef } from 'react';
+<<<<<<< HEAD
 import { useAuth } from '@/contexts/auth-context';
+=======
+>>>>>>> main
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
 import RequestMovieButton from '@/components/RequestMovieButton';

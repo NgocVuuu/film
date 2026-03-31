@@ -202,7 +202,14 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 app.use(cookieParser());
-app.use(morgan('dev'));
+// Morgan logging: dev mode locally, combined (skip progress spam) in production
+if (process.env.NODE_ENV !== 'production') {
+    app.use(morgan('dev'));
+} else {
+    app.use(morgan('combined', {
+        skip: (req) => req.url.startsWith('/api/progress') // Bỏ qua progress saves (spam khi 200+ users xem phim)
+    }));
+}
 app.use('/subtitles', express.static(path.join(__dirname, 'public/subtitles')));
 
 // Security Middleware

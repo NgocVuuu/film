@@ -77,8 +77,11 @@ export default function WatchPage() {
     const searchParams = useSearchParams();
     const [movie, setMovie] = useState<MovieDetail | null>(null);
     const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
     const { user } = useAuth();
     const isPremium = user?.subscription?.tier === 'premium' || user?.role === 'admin';
+=======
+>>>>>>> main
     const [showTabs, setShowTabs] = useState<'comment' | 'rating'>('comment');
 
     // Player State
@@ -134,6 +137,7 @@ export default function WatchPage() {
             else sources.add('Khác');
         });
 
+<<<<<<< HEAD
         // Add Torrent as a source for premium users
         if (isPremium && movie.torrents && movie.torrents.length > 0) {
             sources.add('Premium');
@@ -148,6 +152,13 @@ export default function WatchPage() {
                 const indexB = sourceOrder.indexOf(b);
                 return indexA - indexB;
             });
+=======
+        // Priority Order
+        const sourceOrder = ['KKPhim', 'NguonC', 'Ophim', 'Khác'];
+        const sortedSources = Array.from(sources).sort((a, b) => {
+            return sourceOrder.indexOf(a) - sourceOrder.indexOf(b);
+        });
+>>>>>>> main
 
         setAvailableSources(sortedSources);
 
@@ -516,8 +527,12 @@ export default function WatchPage() {
                     <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (
                             <VideoPlayer
+<<<<<<< HEAD
                                 src={(currentEpisode.link_m3u8 && currentEpisode.link_m3u8.startsWith('magnet:')) ? '' : (currentEpisode.link_m3u8 || '')}
                                 magnet={(currentEpisode.link_m3u8 && currentEpisode.link_m3u8.startsWith('magnet:')) ? currentEpisode.link_m3u8 : undefined}
+=======
+                                src={currentEpisode.link_m3u8}
+>>>>>>> main
                                 poster={movie.poster_url}
                                 embedUrl={currentEpisode.link_embed || ''}
                                 autoPlay={shouldAutoPlay}
@@ -555,6 +570,7 @@ export default function WatchPage() {
                                     const ep = server?.server_data.find((e: { slug: string }) => e.slug === episodeSlug);
                                     if (ep) handleEpisodeClick(serverName, ep);
                                 }}
+<<<<<<< HEAD
                                 subtitles={[
                                     ...(movie?.subtitles?.map(s => ({
                                         lang: s.lang,
@@ -574,6 +590,19 @@ export default function WatchPage() {
                                     const fallback = availableSources.find(s => s !== 'NguonC');
                                     if (fallback) handleSourceChange(fallback);
                                 } : undefined}
+=======
+                                onError={() => {
+                                    // Auto-switch to next available source when current fails
+                                    if (availableSources.length > 1) {
+                                        const currentIndex = availableSources.indexOf(currentSource);
+                                        const nextIndex = (currentIndex + 1) % availableSources.length;
+                                        const fallback = availableSources[nextIndex];
+                                        if (fallback && fallback !== currentSource) {
+                                            handleSourceChange(fallback);
+                                        }
+                                    }
+                                }}
+>>>>>>> main
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-surface-900">

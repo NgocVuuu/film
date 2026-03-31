@@ -102,6 +102,10 @@ export default function VideoPlayer({
     // Track previous episode/movie to detect changes
     const prevEpisodeRef = useRef<{ movie: string, episode: string } | null>(null);
     const savedTimeRef = useRef<number>(0);
+<<<<<<< HEAD
+=======
+    const lastSeekTimeRef = useRef<number>(0);
+>>>>>>> main
     // Prevent onError from firing multiple times for the same src
     const onErrorFiredRef = useRef(false);
 
@@ -123,6 +127,8 @@ export default function VideoPlayer({
     const [useEmbed, setUseEmbed] = useState(false);
     const [hoverTime, setHoverTime] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<number>(0);
+    const [isScrubbing, setIsScrubbing] = useState(false);
+    const [scrubTime, setScrubTime] = useState(0);
 
     // Next Episode Countdown
     const [showNextEpisode, setShowNextEpisode] = useState(false);
@@ -145,9 +151,15 @@ export default function VideoPlayer({
     const [showEpisodePanel, setShowEpisodePanel] = useState(false);
     const [panelServerName, setPanelServerName] = useState<string | null>(null);
 
+    // Zoom state
+    const [isZoomed, setIsZoomed] = useState(false);
+
     // Timer for hiding controls
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+<<<<<<< HEAD
     const [playPauseFeedback, setPlayPauseFeedback] = useState<'play' | 'pause' | null>(null);
+=======
+>>>>>>> main
     const ignoreNextClickRef = useRef(false);
 
     // Watch Progress Hook
@@ -252,6 +264,36 @@ export default function VideoPlayer({
         togglePlay(e);
     };
 
+    const handleContainerClick = (e: React.MouseEvent | React.TouchEvent | React.SyntheticEvent) => {
+        if (e) e.stopPropagation();
+
+        if (ignoreNextClickRef.current) {
+            ignoreNextClickRef.current = false;
+            return;
+        }
+
+        let handled = false;
+
+        if (showEpisodePanel) {
+            setShowEpisodePanel(false);
+            handled = true;
+        }
+
+        if (showSettings) {
+            setShowSettings(false);
+            handled = true;
+        }
+
+        if (handled) return;
+
+        if (!showControls && isPlaying) {
+            setShowControls(true);
+            return;
+        }
+
+        togglePlay(e);
+    };
+
     const handleTimeUpdate = () => {
         if (videoRef.current) {
             const time = videoRef.current.currentTime;
@@ -291,13 +333,19 @@ export default function VideoPlayer({
         }
     };
 
-    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleScrubbing = (e: React.ChangeEvent<HTMLInputElement>) => {
         const time = Number(e.target.value);
-        if (videoRef.current) {
-            videoRef.current.currentTime = time;
-            setCurrentTime(time);
-        }
+        setScrubTime(time);
+        if (!isScrubbing) setIsScrubbing(true);
         if (!showControls) setShowControls(true);
+    };
+
+    const handleScrubEnd = () => {
+        setIsScrubbing(false);
+        if (videoRef.current) {
+            videoRef.current.currentTime = scrubTime;
+            setCurrentTime(scrubTime);
+        }
     };
 
     const toggleMute = () => {
@@ -337,7 +385,7 @@ export default function VideoPlayer({
     };
 
     // -- Mobile Gestures & Orientation --
-    const touchStartRef = useRef<{ x: number, y: number } | null>(null);
+    const touchStartRef = useRef<{ x: number, y: number, pinchDist?: number } | null>(null);
     const touchStartTimeRef = useRef<number>(0);
     const [brightness, setBrightness] = useState(1);
     const [gestureFeedback, setGestureFeedback] = useState<{ type: 'volume' | 'brightness' | 'error', value: number } | null>(null);
@@ -347,6 +395,17 @@ export default function VideoPlayer({
     const lastTapRef = useRef<{ time: number, x: number, side: 'left' | 'right' } | null>(null);
 
     const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            touchStartRef.current = {
+                x: 0,
+                y: 0,
+                pinchDist: Math.hypot(dx, dy)
+            };
+            return;
+        }
+
         touchStartRef.current = {
             x: e.touches[0].clientX,
             y: e.touches[0].clientY
@@ -357,11 +416,35 @@ export default function VideoPlayer({
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!touchStartRef.current || !containerRef.current) return;
 
+<<<<<<< HEAD
         const currentY = e.touches[0].clientY;
         const currentX = e.touches[0].clientX;
         const deltaY = touchStartRef.current.y - currentY;
         const deltaX = currentX - touchStartRef.current.x;
 
+=======
+        if (e.touches.length === 2 && touchStartRef.current.pinchDist) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const newDist = Math.hypot(dx, dy);
+            
+            // If distance changed by more than 40px
+            if (newDist - touchStartRef.current.pinchDist > 40) {
+                if (!isZoomed) setIsZoomed(true); // Pinch Out -> Zoom In
+            } else if (touchStartRef.current.pinchDist - newDist > 40) {
+                if (isZoomed) setIsZoomed(false); // Pinch In -> Zoom Out
+            }
+            return;
+        }
+
+        if (e.touches.length > 1) return;
+
+        const currentY = e.touches[0].clientY;
+        const currentX = e.touches[0].clientX;
+        const deltaY = touchStartRef.current.y - currentY;
+        const deltaX = currentX - touchStartRef.current.x;
+
+>>>>>>> main
         const rect = containerRef.current.getBoundingClientRect();
 
         // Determine gesture direction from accumulated movement
@@ -466,8 +549,13 @@ export default function VideoPlayer({
                         setShowEpisodePanel(false);
                         handled = true;
                     }
+<<<<<<< HEAD
                     if (activeMenu !== null) {
                         setActiveMenu(null);
+=======
+                    if (showSettings) {
+                        setShowSettings(false);
+>>>>>>> main
                         handled = true;
                     }
                     
@@ -664,11 +752,19 @@ export default function VideoPlayer({
 
     // Call onError safely after render (not during render) to avoid infinite re-render loops
     useEffect(() => {
+<<<<<<< HEAD
         if (error && onError && serverName?.startsWith('NC -') && !onErrorFiredRef.current) {
             onErrorFiredRef.current = true;
             onError();
         }
     }, [error, onError, serverName]);
+=======
+        if (error && onError && !onErrorFiredRef.current) {
+            onErrorFiredRef.current = true;
+            onError();
+        }
+    }, [error, onError]);
+>>>>>>> main
 
     // Track view for anonymous users
     useEffect(() => {
@@ -719,6 +815,7 @@ export default function VideoPlayer({
         onErrorFiredRef.current = false;
         setIsLoading(true);
         let hls: Hls;
+        let networkRetryCount = 0;
 
         video.addEventListener('loadeddata', () => {
             setIsLoading(false);
@@ -767,6 +864,9 @@ export default function VideoPlayer({
                     video.currentTime = startTime;
                 } else if (initialProgress !== null && initialProgress > 10) {
                     video.currentTime = initialProgress;
+                } else {
+                    // Force reset to 0 in case the `<video>` element retained its currentTime
+                    video.currentTime = 0;
                 }
             }
 
@@ -881,8 +981,21 @@ export default function VideoPlayer({
                                 hls.destroy();
                                 setError(true);
                             } else {
+<<<<<<< HEAD
                                 // Segment-level error: try to resume
                                 hls.startLoad();
+=======
+                                // Segment-level error: try to resume with exponential backoff
+                                networkRetryCount++;
+                                if (networkRetryCount <= 3) {
+                                    const delay = [1000, 3000, 5000][networkRetryCount - 1] || 1000;
+                                    setTimeout(() => { if (hls) hls.startLoad(); }, delay);
+                                    console.warn(`[HLS] Network drop 4G, auto-retry ${networkRetryCount} in ${delay}ms`);
+                                } else {
+                                    hls.destroy();
+                                    setError(true);
+                                }
+>>>>>>> main
                             }
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
@@ -896,6 +1009,7 @@ export default function VideoPlayer({
                 }
             });
 
+<<<<<<< HEAD
             // Lắng nghe Multi-Audio tracks (Thuyết minh/Lồng tiếng kép)
             hls.on(Hls.Events.AUDIO_TRACK_LOADED, () => {
                 const tracks = hlsRef.current?.audioTracks || [];
@@ -906,6 +1020,11 @@ export default function VideoPlayer({
             });
             hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (event, data) => {
                 setCurrentAudioTrack(data.id);
+=======
+            // Reset retry count upon successful network transfer
+            hls.on(Hls.Events.FRAG_LOADED, () => {
+                networkRetryCount = 0;
+>>>>>>> main
             });
 
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -927,6 +1046,19 @@ export default function VideoPlayer({
             }
         }
 
+        // Visibility Change Handler to recover video when returning to suspended tab
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && hls && video) {
+                // If returning to tab and video is stalled/buffering, recover
+                if (!video.paused && video.readyState < 3) {
+                    console.warn('[HLS] Đánh thức Tab bị ẩn, ép tải lại luồng phim...');
+                    hls.recoverMediaError();
+                    hls.startLoad();
+                }
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         return () => {
             if (hls) hls.destroy();
             // Xóa listener tránh mem leak
@@ -940,6 +1072,7 @@ export default function VideoPlayer({
             // Cleanup fullscreen listeners
             document.removeEventListener('fullscreenchange', onFullscreenChange);
             document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             video.removeEventListener('webkitendfullscreen', () => setIsFullscreen(false));
             video.removeEventListener('webkitpresentationmodechanged', () => {
                 // handle iOS pip state change if needed
@@ -974,6 +1107,12 @@ export default function VideoPlayer({
     // Keyboard controls for seeking
     useEffect(() => {
         const handleKeyPress = (e: KeyboardEvent) => {
+            // Ignore if user is typing in an input or textarea
+            const target = e.target as HTMLElement;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+                return;
+            }
+
             // Only handle if video player is focused or visible
             if (!videoRef.current) return;
 
@@ -1059,6 +1198,7 @@ export default function VideoPlayer({
     }, []);
 
 
+<<<<<<< HEAD
     if (error || (useEmbed && embedUrl)) {
         // NC source: never iframe (X-Frame-Options blocks streamc.xyz) — onError handled via useEffect
         if (serverName?.startsWith('NC -') && !useEmbed) {
@@ -1086,6 +1226,8 @@ export default function VideoPlayer({
             </div>
         )
     }
+=======
+>>>>>>> main
 
     return (
         <div
@@ -1109,7 +1251,7 @@ export default function VideoPlayer({
             <video
                 ref={videoRef}
                 poster={poster}
-                className="w-full h-full object-contain rounded-lg"
+                className={`w-full h-full ${isZoomed ? 'object-cover' : 'object-contain'} rounded-lg`}
                 playsInline
                 crossOrigin="anonymous"
                 autoPlay={autoPlay}
@@ -1125,6 +1267,15 @@ export default function VideoPlayer({
                     />
                 ))}
             </video>
+
+            {/* Error Overlay */}
+            {error && (
+                <div className="absolute inset-0 z-[100] bg-gray-900 flex flex-col items-center justify-center rounded-lg gap-4 border border-border">
+                    <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
+                    <p className="text-red-500 font-medium">Lỗi luồng phát. Đang tìm nguồn dự phòng...</p>
+                    <Button onClick={() => window.location.reload()} variant="outline" className="mt-2 text-white border-white/20 hover:bg-white/10">Tải lại trang</Button>
+                </div>
+            )}
 
             {/* Gesture Feedback Overlay */}
             {gestureFeedback && (
@@ -1313,6 +1464,8 @@ export default function VideoPlayer({
                 <div
                     className="w-full mb-4 flex items-center gap-2 group/progress relative"
                     onClick={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
                     onMouseMove={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const x = e.clientX - rect.left;
@@ -1336,11 +1489,14 @@ export default function VideoPlayer({
                         type="range"
                         min={0}
                         max={duration || 0}
-                        value={currentTime}
-                        onChange={handleSeek}
+                        value={isScrubbing ? scrubTime : currentTime}
+                        onChange={handleScrubbing}
+                        onPointerUp={handleScrubEnd}
+                        onMouseUp={handleScrubEnd}
+                        onTouchEnd={handleScrubEnd}
                         className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary transition-all group-hover/progress:h-2"
                         style={{
-                            background: `linear-gradient(to right, #D4AF37 ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) ${(currentTime / duration) * 100}%)`
+                            background: `linear-gradient(to right, #D4AF37 ${((isScrubbing ? scrubTime : currentTime) / duration) * 100}%, rgba(255,255,255,0.2) ${((isScrubbing ? scrubTime : currentTime) / duration) * 100}%)`
                         }}
                     />
                 </div>
@@ -1415,6 +1571,7 @@ export default function VideoPlayer({
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /><line x1="2" y1="20" x2="2.01" y2="20" /></svg>
                         </Button>
 
+<<<<<<< HEAD
                         {/* Subtitles Button logic */}
                         {subtitles && subtitles.length > 0 && (
                             <div className="relative border-r border-white/10 pr-1 mr-1">
@@ -1433,6 +1590,17 @@ export default function VideoPlayer({
                                         <div>
                                             <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Phụ đề</p>
                                             <div className="flex flex-col gap-1">
+=======
+
+                            {/* Settings Popup */}
+                            {showSettings && (
+                                <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-45 max-h-[70vh] overflow-y-auto text-white space-y-3 z-60 shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+                                    {/* Speed */}
+                                    <div>
+                                        <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tốc độ</p>
+                                        <div className="grid grid-cols-4 gap-1">
+                                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(speed => (
+>>>>>>> main
                                                 <button
                                                     onClick={() => changeSubtitle(-1)}
                                                     className={`text-xs p-1.5 rounded text-left ${currentSubtitleIndex === -1 ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
@@ -1604,8 +1772,50 @@ export default function VideoPlayer({
                             </div>
                         )}
 
+<<<<<<< HEAD
                         <Button variant="ghost" size="icon" onClick={(e) => toggleFullscreen(e)} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center h-8 w-8">
                             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+=======
+                        {/* Mobile Rotate Button (Force Landscape) - Removed per request */}
+                        {/* <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleLandscape}
+                            className={`text-white hover:text-primary hover:bg-transparent md:hidden ${isLandscape ? 'text-primary' : ''}`}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                                <path d="M21 3v5h-5" />
+                            </svg>
+                        </Button> */}
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); setIsZoomed(!isZoomed); }}
+                            className="text-white hover:text-primary hover:bg-transparent md:hidden flex"
+                            title={isZoomed ? "Thu nhỏ" : "Phóng to"}
+                        >
+                            {isZoomed ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 15 6 6"/><path d="m9 9-6-6"/><path d="M21 16v5h-5"/><path d="M9 3v5H4"/><path d="M21 8V3h-5"/><path d="M3 16v5h5"/><path d="m15 9 6-6"/><path d="m9 15-6 6"/></svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 21-6-6m6 6v-4.8m0 4.8h-4.8M3 16.2V21m0 0h4.8M3 21l6-6M21 7.8V3m0 0h-4.8M21 3l-6 6M3 7.8V3m0 0h4.8M3 3l6 6"/></svg>
+                            )}
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => togglePIP(e)}
+                            className="text-white hover:text-primary hover:bg-transparent flex"
+                            title="Picture-in-Picture"
+                        >
+                            <PictureInPicture className="w-5 h-5" />
+                        </Button>
+
+                        <Button variant="ghost" size="icon" onClick={(e) => toggleFullscreen(e)} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center">
+                            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+>>>>>>> main
                         </Button>
                     </div>
                 </div>
