@@ -6,6 +6,7 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development",
   register: true,
   workboxOptions: {
+    exclude: [/middleware-manifest\.json$/, /_buildManifest\.js$/, /_ssgManifest\.js$/, /.*\.(?:map)$/, /app-build-manifest\.json$/],
     skipWaiting: true,
     cleanupOutdatedCaches: true,
     runtimeCaching: [
@@ -85,7 +86,7 @@ const withPWA = withPWAInit({
         handler: "NetworkFirst",
         options: {
           cacheName: "api-cache",
-          networkTimeoutSeconds: 8,
+          networkTimeoutSeconds: 15,
           expiration: {
             maxEntries: 30,
             maxAgeSeconds: 30 * 60, // 30 min (was 1hr - reduces stale auth)

@@ -153,7 +153,7 @@ function ProfileContent() {
                 )}
 
                 {/* Mobile Dashboard View */}
-                <div className={`md:hidden ${isMobileSubView ? 'hidden' : 'block'} pb-8 overflow-y-auto flex-1`}>
+                <div className={`md:hidden ${isMobileSubView ? 'hidden' : 'block'} pb-8 overflow-y-auto overflow-x-hidden flex-1`}>
                     <div className="flex items-center gap-4 mb-8">
                         <div className="relative shrink-0">
                             <img

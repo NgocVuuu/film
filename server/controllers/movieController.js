@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const axios = require('axios');
 const NodeCache = require('node-cache');
 const searchCache = new NodeCache({ stdTTL: 1200 }); // 20 minutes search cache
-const homeCache = new NodeCache({ stdTTL: 300 }); // 5 minutes home page cache
+const homeCache = new NodeCache({ stdTTL: 1800 }); // 30 minutes home page cache
 
 const { attachProgressToMovies } = require('../utils/movieUtils');
 const { syncSpecificMovie } = require('../crawler');

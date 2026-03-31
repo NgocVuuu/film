@@ -131,6 +131,9 @@ export default function VideoPlayer({
     const [showEpisodePanel, setShowEpisodePanel] = useState(false);
     const [panelServerName, setPanelServerName] = useState<string | null>(null);
 
+    // Zoom state
+    const [isZoomed, setIsZoomed] = useState(false);
+
     // Timer for hiding controls
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const ignoreNextClickRef = useRef(false);
@@ -296,7 +299,7 @@ export default function VideoPlayer({
     };
 
     // -- Mobile Gestures & Orientation --
-    const touchStartRef = useRef<{ x: number, y: number } | null>(null);
+    const touchStartRef = useRef<{ x: number, y: number, pinchDist?: number } | null>(null);
     const touchStartTimeRef = useRef<number>(0);
     const [brightness, setBrightness] = useState(1);
     const [gestureFeedback, setGestureFeedback] = useState<{ type: 'volume' | 'brightness' | 'error', value: number } | null>(null);
@@ -306,6 +309,17 @@ export default function VideoPlayer({
     const lastTapRef = useRef<{ time: number, x: number, side: 'left' | 'right' } | null>(null);
 
     const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            touchStartRef.current = {
+                x: 0,
+                y: 0,
+                pinchDist: Math.hypot(dx, dy)
+            };
+            return;
+        }
+
         touchStartRef.current = {
             x: e.touches[0].clientX,
             y: e.touches[0].clientY
@@ -315,6 +329,22 @@ export default function VideoPlayer({
 
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!touchStartRef.current || !containerRef.current) return;
+
+        if (e.touches.length === 2 && touchStartRef.current.pinchDist) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const newDist = Math.hypot(dx, dy);
+            
+            // If distance changed by more than 40px
+            if (newDist - touchStartRef.current.pinchDist > 40) {
+                if (!isZoomed) setIsZoomed(true); // Pinch Out -> Zoom In
+            } else if (touchStartRef.current.pinchDist - newDist > 40) {
+                if (isZoomed) setIsZoomed(false); // Pinch In -> Zoom Out
+            }
+            return;
+        }
+
+        if (e.touches.length > 1) return;
 
         const currentY = e.touches[0].clientY;
         const currentX = e.touches[0].clientX;
@@ -580,11 +610,11 @@ export default function VideoPlayer({
 
     // Call onError safely after render (not during render) to avoid infinite re-render loops
     useEffect(() => {
-        if (error && onError && serverName?.startsWith('NC -') && !onErrorFiredRef.current) {
+        if (error && onError && !onErrorFiredRef.current) {
             onErrorFiredRef.current = true;
             onError();
         }
-    }, [error, onError, serverName]);
+    }, [error, onError]);
 
     // Track view for anonymous users
     useEffect(() => {
@@ -662,6 +692,9 @@ export default function VideoPlayer({
                     video.currentTime = startTime;
                 } else if (initialProgress !== null && initialProgress > 10) {
                     video.currentTime = initialProgress;
+                } else {
+                    // Force reset to 0 in case the `<video>` element retained its currentTime
+                    video.currentTime = 0;
                 }
             }
 
@@ -946,18 +979,6 @@ export default function VideoPlayer({
     }, []);
 
 
-    if (error || (useEmbed && embedUrl)) {
-        // NC source: never iframe (X-Frame-Options blocks streamc.xyz) — onError handled via useEffect
-        if (serverName?.startsWith('NC -')) {
-            return <div className="w-full h-full bg-black" />;
-        }
-        return (
-            <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center border border-border rounded-lg gap-4">
-                <p className="text-red-500">Lỗi: Không thể tải tập phim này.</p>
-                <Button onClick={() => window.location.reload()} variant="outline">Tải lại trang</Button>
-            </div>
-        )
-    }
 
     return (
         <div
@@ -981,10 +1002,19 @@ export default function VideoPlayer({
             <video
                 ref={videoRef}
                 poster={poster}
-                className="w-full h-full object-contain rounded-lg"
+                className={`w-full h-full ${isZoomed ? 'object-cover' : 'object-contain'} rounded-lg`}
                 playsInline
                 autoPlay={autoPlay}
             />
+
+            {/* Error Overlay */}
+            {error && (
+                <div className="absolute inset-0 z-[100] bg-gray-900 flex flex-col items-center justify-center rounded-lg gap-4 border border-border">
+                    <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
+                    <p className="text-red-500 font-medium">Lỗi luồng phát. Đang tìm nguồn dự phòng...</p>
+                    <Button onClick={() => window.location.reload()} variant="outline" className="mt-2 text-white border-white/20 hover:bg-white/10">Tải lại trang</Button>
+                </div>
+            )}
 
             {/* Gesture Feedback Overlay */}
             {gestureFeedback && (
@@ -1160,6 +1190,8 @@ export default function VideoPlayer({
                 <div
                     className="w-full mb-4 flex items-center gap-2 group/progress relative"
                     onClick={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
                     onMouseMove={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const x = e.clientX - rect.left;
@@ -1346,6 +1378,20 @@ export default function VideoPlayer({
                                 <path d="M21 3v5h-5" />
                             </svg>
                         </Button> */}
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); setIsZoomed(!isZoomed); }}
+                            className="text-white hover:text-primary hover:bg-transparent md:hidden flex"
+                            title={isZoomed ? "Thu nhỏ" : "Phóng to"}
+                        >
+                            {isZoomed ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 15 6 6"/><path d="m9 9-6-6"/><path d="M21 16v5h-5"/><path d="M9 3v5H4"/><path d="M21 8V3h-5"/><path d="M3 16v5h5"/><path d="m15 9 6-6"/><path d="m9 15-6 6"/></svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 21-6-6m6 6v-4.8m0 4.8h-4.8M3 16.2V21m0 0h4.8M3 21l6-6M21 7.8V3m0 0h-4.8M21 3l-6 6M3 7.8V3m0 0h4.8M3 3l6 6"/></svg>
+                            )}
+                        </Button>
 
                         <Button
                             variant="ghost"
