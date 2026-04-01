@@ -83,8 +83,7 @@ router.post('/test-email', adminEmailController.testEmail);
 // Cache management
 const { clearTmdbCache, clearHomeCache, debugTmdb } = require('../controllers/movieController');
 router.post('/cache/clear-tmdb', clearTmdbCache);
-<<<<<<< HEAD
-router.post('/cache/clear-home', clearHomeCache);
+router.post('/cache/clear-home', clearHomeCache); // Xóa home page cache ngay lập tức
 router.get('/debug-tmdb', debugTmdb);
 
 // Hash management (Debrid torrent hash)
@@ -94,12 +93,6 @@ router.post('/hashes/:slug/hunt', hashController.huntHashes);
 router.post('/hashes/:slug/manual', hashController.addManualHash);
 router.post('/hashes/:slug/refresh', hashController.refreshStatus);
 router.delete('/hashes/:slug/:hash', hashController.deleteHash);
-
-=======
-router.post('/cache/clear-home', clearHomeCache); // Xóa home page cache ngay lập tức
-router.get('/debug-tmdb', debugTmdb);
-
->>>>>>> main
 // Crawler
 router.get('/crawler/status', adminController.getCrawlerStatus);
 router.get('/crawler/logs', adminController.getCrawlerLogs);

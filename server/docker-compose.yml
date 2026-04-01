@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  mediaflow-proxy:
+    image: mhdzumair/mediaflow-proxy:latest
+    container_name: mediaflow_proxy
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      - API_PASSWORD=super_secret_pchill_jwt_key_2026 # Sync with NGINX_JWT_SECRET
+      - DEBUG=true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

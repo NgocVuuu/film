@@ -55,20 +55,6 @@ export function AdInterstitial() {
         scriptInjected.current = true;
 
         // Extract key từ URL rồi inject atOptions trước (Adsterra Banner yêu cầu)
-<<<<<<< HEAD
-        const key = scriptSrc.match(/\/([a-f0-9]{32})\//)?.[1];
-        if (key) {
-            const optScript = document.createElement('script');
-            optScript.text = `atOptions = {'key':'${key}','format':'iframe','height':300,'width':160,'params':{}};`;
-            containerRef.current.appendChild(optScript);
-        }
-
-        const script = document.createElement('script');
-        script.src = scriptSrc;
-        script.async = true;
-        script.setAttribute('data-cfasync', 'false');
-        containerRef.current.appendChild(script);
-=======
         const key = scriptSrc.match(/\/([a-f0-9]{32})\//)?.[1] || '';
         
         const iframe = document.createElement('iframe');
@@ -101,7 +87,6 @@ export function AdInterstitial() {
         iframe.srcdoc = htmlContent;
         containerRef.current.innerHTML = '';
         containerRef.current.appendChild(iframe);
->>>>>>> main
     }, [visible, scriptSrc]);
 
     if (!visible) return null;

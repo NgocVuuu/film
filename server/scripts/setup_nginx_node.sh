@@ -30,8 +30,24 @@ apt-get update -y
 apt-get upgrade -y
 apt-get install -y curl wget git ufw certbot python3-certbot-nginx
 
-# Cài đặt Nginx tích hợp Lua module
-apt-get install -y nginx libnginx-mod-http-lua lua-cjson
+# Cài đặt Nginx tích hợp Lua module và Docker
+apt-get install -y nginx libnginx-mod-http-lua lua-cjson docker.io docker-compose
+
+# 1.5 Triển khai MediaFlow Proxy thông qua Docker Compose
+echo "[1.5/5] Dockerizing MediaFlow Proxy..."
+cat > /opt/docker-compose.yml << 'EOF_DOCKER'
+version: '3.8'
+services:
+  mediaflow-proxy:
+    image: mhdzumair/mediaflow-proxy:latest
+    container_name: mediaflow_proxy
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      - API_PASSWORD=${NGINX_JWT_SECRET}
+EOF_DOCKER
+cd /opt && docker-compose up -d
 
 # 2. Cấu hình Firewall cơ bản
 echo "[2/5] Đang cấu hình Tường lửa (UFW)..."
@@ -172,6 +188,10 @@ server {
         # [Zero-Disk I/O] Cấm Nginx ghi file đệm ra ổ cứng
         proxy_max_temp_file_size 0;
 
+        # Keep-Alive connection từ Nginx sang MediaFlow để tối ưu CCU
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
         # Cấu hình Buffer đẩy thẳng Media Streams lên RAM
         proxy_buffering on;
         proxy_buffers 32 4m;
@@ -205,31 +225,33 @@ server {
             local cookie_hash = ngx.var.cookie_phash
             local shared_dict = ngx.shared.jwt_cookies
 
-            -- TỰ PHÁT TRIỂN TIẾP LOGIC JWT Ở ĐÂY HOẶC SỬ DỤNG RESTY.JWT
-            -- 1. Nếu Token JWT hợp lệ:
-            --    - Trích xuất "url" HLS từ Payload.
-            --    - Tạo Cookie "phash" mới băm SHA256 gắn 6 tiếng.
-            --    - Set `ngx.var.target_url = payload.url`
-            -- 
-            -- 2. Nếu Token JWT trống nhưng có Cookie Phash:
-            --    - Kiểm tra `shared_dict:get(cookie_hash)`
-            --    - Nếu còn hạn, lôi target_url ra stream cho Smart TV/M3U8.
-            -- 
-            -- 3. Ngược lại: ngx.exit(ngx.HTTP_FORBIDDEN)
-            
-            -- [Giả lập] Bypass check cho mục đích Demo (XÓA DÒNG NÀY Ở PRODUCT)
-            if not token then
+            -- 1. Xác thực Token JWT
+            local jwt_obj = jwt:verify(secret, token)
+            if not jwt_obj.verified then
                  ngx.status = 403
-                 ngx.say("Bạn không có quyền truy cập luồng này.")
+                 ngx.say("Token truy cập không hợp lệ hoặc đã hết hạn.")
                  return ngx.exit(403)
             end
+
+            -- 2. Trích xuất URL
+            local target_url = jwt_obj.payload.url
+            if not target_url then
+                 ngx.status = 400
+                 ngx.say("Thiếu tham số URL trong Token.")
+                 return ngx.exit(400)
+            end
+
+            -- 3. Chuyển hướng âm thầm (Reverse Proxy) tới MediaFlow
+            -- Định dạng MediaFlow yêu cầu header hoặc query parameter
+            -- Ở đây ta dùng proxy_pass qua Nginx upstream để MediaFlow xử lý che IP (Rewrite M3U8)
+            ngx.var.target_url = target_url
         }
 
-        # [CHÚ Ý] Đoạn này hoạt động thật khi Lua giải mã JWT sinh ra Target_URL
-        # proxy_pass \$target_url;
-        
-        # [Fallback Tạm do chưa code trọn bộ Lua JWT plugin]
-        return 200 "Hệ thống Proxy L7 (Zero-Disk) đã hoàn tất luồng. Backend sẽ điều hướng bạn (vui lòng config Lua).";
+        # Chuyển tiếp tới MediaFlow Proxy (Hoạt động port 8888 cài bằng Docker)
+        proxy_pass http://127.0.0.1:8888/proxy/stream?api_password=${NGINX_JWT_SECRET}&d=\$target_url;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
     }
 }
 EOF

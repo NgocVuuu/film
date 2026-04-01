@@ -14,11 +14,6 @@ export function useLongPress(
     const [longPressTriggered, setLongPressTriggered] = useState(false);
     const timeout = useRef<NodeJS.Timeout | undefined>(undefined);
     const target = useRef<any>(null);
-<<<<<<< HEAD
-
-    const start = useCallback(
-        (event: any) => {
-=======
     const startPos = useRef<{x: number, y: number} | null>(null);
 
     const start = useCallback(
@@ -28,8 +23,6 @@ export function useLongPress(
             } else if (event.clientX !== undefined) {
                 startPos.current = { x: event.clientX, y: event.clientY };
             }
-
->>>>>>> main
             if (shouldPreventDefault && event.target) {
                 event.target.addEventListener('touchend', preventDefault, { passive: false });
                 target.current = event.target;
@@ -81,11 +74,6 @@ export function useLongPress(
         e.preventDefault();
     };
 
-<<<<<<< HEAD
-    return {
-        onMouseDown: (e: any) => start(e),
-        onTouchStart: (e: any) => start(e),
-=======
     const move = useCallback(
         (event: any) => {
             if (!startPos.current || !timeout.current) return;
@@ -115,7 +103,6 @@ export function useLongPress(
         onTouchStart: (e: any) => start(e),
         onMouseMove: (e: any) => move(e),
         onTouchMove: (e: any) => move(e),
->>>>>>> main
         onMouseUp: (e: any) => clear(e),
         onMouseLeave: (e: any) => clear(e, false),
         onTouchEnd: (e: any) => clear(e),

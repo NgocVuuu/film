@@ -6,10 +6,7 @@ import { Play, Calendar, Star, Clock, Info, ListPlus, Share2, Download, FolderOp
 import { Button } from '@/components/ui/button';
 import { CommentSection } from '@/components/CommentSection';
 import { AddToListModal } from '@/components/AddToListModal';
-<<<<<<< HEAD
 import RequestMovieButton from '@/components/RequestMovieButton';
-=======
->>>>>>> main
 import { BottomSheet } from '@/components/BottomSheet';
 import { useAuth } from '@/contexts/auth-context';
 import { usePWA } from '@/hooks/usePWA';
@@ -190,15 +187,12 @@ interface MovieDetail {
     time?: string;
     rating_average?: number;
     rating_count?: number;
-<<<<<<< HEAD
     torrents?: {
         magnet: string;
         quality: string;
         size: string;
         seeders: number;
     }[];
-=======
->>>>>>> main
     download_links?: {
         episode: string;
         quality: string;
@@ -644,7 +638,6 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                         <div className="col-span-3 py-10 text-center">
                                             <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto" />
                                         </div>
-<<<<<<< HEAD
                                     )}
                                     {/* 4K Request Button for Premium Users */}
                                     {user?.isPremium && (!movie.torrents || movie.torrents.length === 0) && (
@@ -655,8 +648,6 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                                 is4kRequest={true}
                                             />
                                         </div>
-=======
->>>>>>> main
                                     )}
                                 </div>
                             )}

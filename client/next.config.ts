@@ -86,11 +86,7 @@ const withPWA = withPWAInit({
         handler: "NetworkFirst",
         options: {
           cacheName: "api-cache",
-<<<<<<< HEAD
-          networkTimeoutSeconds: 8,
-=======
           networkTimeoutSeconds: 15,
->>>>>>> main
           expiration: {
             maxEntries: 30,
             maxAgeSeconds: 30 * 60, // 30 min (was 1hr - reduces stale auth)

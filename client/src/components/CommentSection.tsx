@@ -396,7 +396,6 @@ const CommentItem = ({
                         <span className="font-bold text-white text-[13px] md:text-base tracking-tight">
                             {comment.user?.displayName || 'Người dùng ẩn danh'}
                         </span>
-<<<<<<< HEAD
                         {comment.user?.role === 'premium' && (
                             <span className="bg-yellow-500/20 text-yellow-500 text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider border border-yellow-500/20 flex items-center gap-1">
                                 <Star className="w-3 h-3 fill-current" /> VIP
@@ -410,11 +409,6 @@ const CommentItem = ({
                                 {comment.episodeName}
                             </span>
                         )}
-=======
-                        <span className="text-[9px] md:text-xs text-gray-500 font-medium">
-                            {new Date(comment.createdAt).toLocaleDateString('vi-VN')}
-                        </span>
->>>>>>> main
                     </div>
                     {comment.rating && (
                         <div className="flex items-center gap-1.5 bg-yellow-500/10 px-2.5 py-1 rounded-full border border-yellow-500/20 shadow-sm shadow-yellow-500/5">

@@ -102,10 +102,7 @@ export default function VideoPlayer({
     // Track previous episode/movie to detect changes
     const prevEpisodeRef = useRef<{ movie: string, episode: string } | null>(null);
     const savedTimeRef = useRef<number>(0);
-<<<<<<< HEAD
-=======
     const lastSeekTimeRef = useRef<number>(0);
->>>>>>> main
     // Prevent onError from firing multiple times for the same src
     const onErrorFiredRef = useRef(false);
 
@@ -156,10 +153,7 @@ export default function VideoPlayer({
 
     // Timer for hiding controls
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-<<<<<<< HEAD
     const [playPauseFeedback, setPlayPauseFeedback] = useState<'play' | 'pause' | null>(null);
-=======
->>>>>>> main
     const ignoreNextClickRef = useRef(false);
 
     // Watch Progress Hook
@@ -251,36 +245,6 @@ export default function VideoPlayer({
 
         if (activeMenu !== null) {
             setActiveMenu(null);
-            handled = true;
-        }
-
-        if (handled) return;
-
-        if (!showControls && isPlaying) {
-            setShowControls(true);
-            return;
-        }
-
-        togglePlay(e);
-    };
-
-    const handleContainerClick = (e: React.MouseEvent | React.TouchEvent | React.SyntheticEvent) => {
-        if (e) e.stopPropagation();
-
-        if (ignoreNextClickRef.current) {
-            ignoreNextClickRef.current = false;
-            return;
-        }
-
-        let handled = false;
-
-        if (showEpisodePanel) {
-            setShowEpisodePanel(false);
-            handled = true;
-        }
-
-        if (showSettings) {
-            setShowSettings(false);
             handled = true;
         }
 
@@ -416,13 +380,6 @@ export default function VideoPlayer({
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!touchStartRef.current || !containerRef.current) return;
 
-<<<<<<< HEAD
-        const currentY = e.touches[0].clientY;
-        const currentX = e.touches[0].clientX;
-        const deltaY = touchStartRef.current.y - currentY;
-        const deltaX = currentX - touchStartRef.current.x;
-
-=======
         if (e.touches.length === 2 && touchStartRef.current.pinchDist) {
             const dx = e.touches[0].clientX - e.touches[1].clientX;
             const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -443,8 +400,6 @@ export default function VideoPlayer({
         const currentX = e.touches[0].clientX;
         const deltaY = touchStartRef.current.y - currentY;
         const deltaX = currentX - touchStartRef.current.x;
-
->>>>>>> main
         const rect = containerRef.current.getBoundingClientRect();
 
         // Determine gesture direction from accumulated movement
@@ -549,13 +504,8 @@ export default function VideoPlayer({
                         setShowEpisodePanel(false);
                         handled = true;
                     }
-<<<<<<< HEAD
                     if (activeMenu !== null) {
                         setActiveMenu(null);
-=======
-                    if (showSettings) {
-                        setShowSettings(false);
->>>>>>> main
                         handled = true;
                     }
                     
@@ -752,19 +702,11 @@ export default function VideoPlayer({
 
     // Call onError safely after render (not during render) to avoid infinite re-render loops
     useEffect(() => {
-<<<<<<< HEAD
-        if (error && onError && serverName?.startsWith('NC -') && !onErrorFiredRef.current) {
-            onErrorFiredRef.current = true;
-            onError();
-        }
-    }, [error, onError, serverName]);
-=======
         if (error && onError && !onErrorFiredRef.current) {
             onErrorFiredRef.current = true;
             onError();
         }
     }, [error, onError]);
->>>>>>> main
 
     // Track view for anonymous users
     useEffect(() => {
@@ -901,16 +843,16 @@ export default function VideoPlayer({
                 // === Performance & Seeking ===
                 progressive: true, // Crucial: start playing before fragment is fully loaded
                 // === Memory Management (critical for long sessions / PWA) ===
-                maxBufferLength: 60,           // Tăng từ 45→60s: ít bị stall hơn khi CDN chậm
+                maxBufferLength: 60,           // Tăng lên 60s cho 4K
                 backBufferLength: 30,          // 30s: đủ để tua lại mà không nặng RAM mobile
-                maxMaxBufferLength: 120,       // Tăng từ 90→120s: cho phép buffer tối đa 2 phút
-                maxBufferSize: 50 * 1024 * 1024, // 50MB: cân bằng giữa HD quality và RAM mobile
-                fragLoadingTimeOut: 20000,     // Tăng từ 15→20s: CDN chậm có thêm thời gian
-                fragLoadingMaxRetry: 6,        // Tăng từ 5→6 lần retry khi segment lỗi
-                fragLoadingRetryDelay: 1000,   // Thêm: chờ 1s giữa các lần retry
-                appendErrorMaxRetry: 5,        // Tăng từ 3→5
-                levelLoadingTimeOut: 20000,    // Thêm: timeout cho manifest/level
-                manifestLoadingTimeOut: 20000, // Thêm: timeout cho manifest load
+                maxMaxBufferLength: 120,       // Tối đa 2 phút buffer cho 4K
+                maxBufferSize: 250 * 1024 * 1024, // Tăng lên 250MB để chứa đủ buffer 4K Remux (100Mbps)
+                fragLoadingTimeOut: 30000,     // 30s timeout cho fragments 4K nặng
+                fragLoadingMaxRetry: 6,        
+                fragLoadingRetryDelay: 2000,   // Delay 2s khi retry 
+                appendErrorMaxRetry: 5,        
+                levelLoadingTimeOut: 20000,    
+                manifestLoadingTimeOut: 20000, 
             });
             hlsRef.current = hls;
 
@@ -981,10 +923,6 @@ export default function VideoPlayer({
                                 hls.destroy();
                                 setError(true);
                             } else {
-<<<<<<< HEAD
-                                // Segment-level error: try to resume
-                                hls.startLoad();
-=======
                                 // Segment-level error: try to resume with exponential backoff
                                 networkRetryCount++;
                                 if (networkRetryCount <= 3) {
@@ -995,7 +933,6 @@ export default function VideoPlayer({
                                     hls.destroy();
                                     setError(true);
                                 }
->>>>>>> main
                             }
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
@@ -1009,7 +946,6 @@ export default function VideoPlayer({
                 }
             });
 
-<<<<<<< HEAD
             // Lắng nghe Multi-Audio tracks (Thuyết minh/Lồng tiếng kép)
             hls.on(Hls.Events.AUDIO_TRACK_LOADED, () => {
                 const tracks = hlsRef.current?.audioTracks || [];
@@ -1020,11 +956,10 @@ export default function VideoPlayer({
             });
             hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (event, data) => {
                 setCurrentAudioTrack(data.id);
-=======
+            });
             // Reset retry count upon successful network transfer
             hls.on(Hls.Events.FRAG_LOADED, () => {
                 networkRetryCount = 0;
->>>>>>> main
             });
 
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -1198,36 +1133,7 @@ export default function VideoPlayer({
     }, []);
 
 
-<<<<<<< HEAD
-    if (error || (useEmbed && embedUrl)) {
-        // NC source: never iframe (X-Frame-Options blocks streamc.xyz) — onError handled via useEffect
-        if (serverName?.startsWith('NC -') && !useEmbed) {
-            return <div className="w-full h-full bg-black" />;
-        }
-        
-        if (useEmbed && embedUrl) {
-            return (
-                <div className="relative w-full h-full bg-black rounded-xl overflow-hidden border border-white/10">
-                    <iframe
-                        src={embedUrl}
-                        className="w-full h-full"
-                        frameBorder="0"
-                        allowFullScreen
-                        allow="autoplay; encrypted-media; picture-in-picture"
-                    />
-                </div>
-            );
-        }
 
-        return (
-            <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center border border-border rounded-lg gap-4">
-                <p className="text-red-500">Lỗi: Không thể tải tập phim này.</p>
-                <Button onClick={() => window.location.reload()} variant="outline">Tải lại trang</Button>
-            </div>
-        )
-    }
-=======
->>>>>>> main
 
     return (
         <div
@@ -1571,7 +1477,6 @@ export default function VideoPlayer({
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /><line x1="2" y1="20" x2="2.01" y2="20" /></svg>
                         </Button>
 
-<<<<<<< HEAD
                         {/* Subtitles Button logic */}
                         {subtitles && subtitles.length > 0 && (
                             <div className="relative border-r border-white/10 pr-1 mr-1">
@@ -1590,17 +1495,6 @@ export default function VideoPlayer({
                                         <div>
                                             <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Phụ đề</p>
                                             <div className="flex flex-col gap-1">
-=======
-
-                            {/* Settings Popup */}
-                            {showSettings && (
-                                <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-45 max-h-[70vh] overflow-y-auto text-white space-y-3 z-60 shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
-                                    {/* Speed */}
-                                    <div>
-                                        <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tốc độ</p>
-                                        <div className="grid grid-cols-4 gap-1">
-                                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(speed => (
->>>>>>> main
                                                 <button
                                                     onClick={() => changeSubtitle(-1)}
                                                     className={`text-xs p-1.5 rounded text-left ${currentSubtitleIndex === -1 ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
@@ -1772,23 +1666,6 @@ export default function VideoPlayer({
                             </div>
                         )}
 
-<<<<<<< HEAD
-                        <Button variant="ghost" size="icon" onClick={(e) => toggleFullscreen(e)} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center h-8 w-8">
-                            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-=======
-                        {/* Mobile Rotate Button (Force Landscape) - Removed per request */}
-                        {/* <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={toggleLandscape}
-                            className={`text-white hover:text-primary hover:bg-transparent md:hidden ${isLandscape ? 'text-primary' : ''}`}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-                                <path d="M21 3v5h-5" />
-                            </svg>
-                        </Button> */}
-
                         <Button
                             variant="ghost"
                             size="icon"
@@ -1815,7 +1692,6 @@ export default function VideoPlayer({
 
                         <Button variant="ghost" size="icon" onClick={(e) => toggleFullscreen(e)} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center">
                             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
->>>>>>> main
                         </Button>
                     </div>
                 </div>
