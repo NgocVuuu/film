@@ -22,14 +22,19 @@ export function useWatchProgress({
 }: WatchProgressProps) {
     const { user } = useAuth();
     const [initialProgress, setInitialProgress] = useState<number | null>(null);
-    const [progressLoaded, setProgressLoaded] = useState(false);
+    const [loadedEpisode, setLoadedEpisode] = useState<string | null>(null);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     // Store the latest time/duration so flush handlers can access it without stale closure
     const lastKnownRef = useRef<{ currentTime: number; duration: number } | null>(null);
 
+    // Nếu chuyển tập mới, phải reset thời gian xem cũ khẩn cấp bằng Render Phase
+    if (loadedEpisode !== episodeSlug && initialProgress !== null) {
+        setInitialProgress(null);
+    }
+
     // Load initial progress from server
     useEffect(() => {
-        if (!user || !movieSlug || !episodeSlug || progressLoaded) return;
+        if (!user || !movieSlug || !episodeSlug || loadedEpisode === episodeSlug) return;
 
         const loadProgress = async () => {
             try {
@@ -50,12 +55,12 @@ export function useWatchProgress({
             } catch (error) {
                 console.error('Error loading progress:', error);
             } finally {
-                setProgressLoaded(true);
+                setLoadedEpisode(episodeSlug);
             }
         };
 
         loadProgress();
-    }, [user, movieSlug, episodeSlug, progressLoaded]);
+    }, [user, movieSlug, episodeSlug, loadedEpisode]);
 
     // Save progress function
     const saveProgress = async (currentTime: number, duration: number) => {
@@ -176,12 +181,20 @@ export function useWatchProgress({
                 currentTime: last.currentTime,
                 duration: last.duration,
             });
+            // sendBeacon dễ bị chặn bởi CORS/Preflight nếu khác domain.
+            // Giải pháp tối ưu nhất cho React 18 / PWA là dùng fetch với cờ keepalive: true
             const url = `${API_URL}/api/progress/save`;
-            // sendBeacon works even when page is unloading; falls back to fetch if unavailable
-            const blob = new Blob([payload], { type: 'application/json' });
-            if (navigator.sendBeacon && token) {
-                // sendBeacon doesn't support custom headers, so append token as query param
-                navigator.sendBeacon(`${url}?_token=${encodeURIComponent(token)}`, blob);
+            if (token) {
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: payload,
+                    credentials: 'include',
+                    keepalive: true // Cờ quan trọng: Đảm bảo request hoàn thành sau khi Browser tắt
+                }).catch(() => {});
             }
             // Also cancel any pending debounce to avoid double-save when component unmounts normally
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);

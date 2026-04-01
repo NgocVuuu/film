@@ -886,20 +886,33 @@ export default function VideoPlayer({
         video.addEventListener('webkitendfullscreen', () => setIsFullscreen(false)); // iOS native exit
 
         if (Hls.isSupported()) {
+            // Phân tích Mạng LTE/3G
+            const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+            const isWeakNetwork = connection && (connection.effectiveType === '2g' || connection.effectiveType === '3g' || connection.saveData);
+
+            if (isWeakNetwork) {
+                console.warn('[Network] Phát hiện kết nối Thấp (3G/LTE Data Saver), chuyển HLS Mode về Cấu hình Nhỏ Giọt.');
+            }
+
             hls = new Hls({
                 capLevelToPlayerSize: true,
                 autoStartLoad: true,
                 enableWorker: true,
                 // === Performance & Seeking ===
                 progressive: true, // Crucial: start playing before fragment is fully loaded
-                // === Memory Management (critical for long sessions / PWA) ===
-                maxBufferLength: 60,           // Tăng lên 60s cho 4K
-                backBufferLength: 30,          // 30s: đủ để tua lại mà không nặng RAM mobile
-                maxMaxBufferLength: 120,       // Tối đa 2 phút buffer cho 4K
-                maxBufferSize: 250 * 1024 * 1024, // Tăng lên 250MB để chứa đủ buffer 4K Remux (100Mbps)
-                fragLoadingTimeOut: 30000,     // 30s timeout cho fragments 4K nặng
+                
+                // === Điều Tiết Băng Thông CĐ Động (Adaptive Memory) ===
+                maxBufferLength: isWeakNetwork ? 20 : 60,           // Mạng yếu chỉ Load sẵn mồi 20s
+                backBufferLength: isWeakNetwork ? 10 : 30,          // Giảm cache phim đã xem để khỏi nặng RAM PWA
+                maxMaxBufferLength: isWeakNetwork ? 40 : 120,       // Max dặm chỉ 40s
+                maxBufferSize: isWeakNetwork ? 15 * 1024 * 1024 : 250 * 1024 * 1024, // 15MB vs 250MB cho 4K Remux
+
+                // Bắt đầu thấp nếu mạng yếu
+                startLevel: isWeakNetwork ? 0 : -1,
+
+                fragLoadingTimeOut: isWeakNetwork ? 20000 : 30000,  // 30s cho fragments 4K nặng
                 fragLoadingMaxRetry: 6,        
-                fragLoadingRetryDelay: 2000,   // Delay 2s khi retry 
+                fragLoadingRetryDelay: isWeakNetwork ? 1000 : 2000, 
                 appendErrorMaxRetry: 5,        
                 levelLoadingTimeOut: 20000,    
                 manifestLoadingTimeOut: 20000, 
@@ -1188,9 +1201,9 @@ export default function VideoPlayer({
     return (
         <div
             ref={containerRef}
-            className={`relative bg-black border border-border shadow-2xl shadow-primary/10 group select-none overflow-visible transition-all duration-300
+            className={`relative bg-black border border-border shadow-2xl shadow-primary/10 group select-none overflow-hidden transition-all duration-300
                 ${isLandscape
-                    ? 'fixed inset-0 z-9999 w-[100vh] h-[100vw] rotate-90 origin-center top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-none'
+                    ? 'fixed inset-0 z-[9999] w-[100vh] h-[100vw] rotate-90 origin-center top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-none'
                     : 'w-full h-full rounded-lg'
                 }`}
             onMouseMove={handleMouseMove}
@@ -1438,7 +1451,7 @@ export default function VideoPlayer({
             }
 
             {/* Controls Overlay */}
-            <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end px-3 py-3 md:p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end px-2 py-2 sm:px-3 sm:py-3 md:p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
 
                 {/* Progress Bar */}
                 <div
@@ -1482,8 +1495,8 @@ export default function VideoPlayer({
                 </div>
 
                 {/* Main Controls */}
-                <div className="flex items-center justify-between gap-0.5" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-0.5 sm:gap-2 md:gap-4">
+                <div className="flex items-center justify-between gap-2 w-full min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-0.5 sm:gap-2 md:gap-4 flex-1 min-w-0 overflow-hidden">
                         <Button variant="ghost" size="icon" onClick={togglePlay} className="text-white hover:text-primary hover:bg-transparent h-8 w-8">
                             {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
                         </Button>
@@ -1534,12 +1547,12 @@ export default function VideoPlayer({
                             />
                         </div>
 
-                        <span className="text-white text-[9px] sm:text-xs font-mono whitespace-nowrap">
+                        <span className="text-white text-[9px] sm:text-xs font-mono whitespace-nowrap ml-1 pr-2 overflow-visible">
                             {formatTime(currentTime)} / {formatTime(duration)}
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-0.5 sm:gap-1 text-white/80">
+                    <div className="flex items-center justify-end gap-0.5 sm:gap-2 shrink-0 text-white/80">
                         {/* Cast Button */}
                         <Button
                             variant="ghost"
@@ -1784,7 +1797,7 @@ export default function VideoPlayer({
                             <PictureInPicture className="w-5 h-5" />
                         </Button>
 
-                        <Button variant="ghost" size="icon" onClick={(e) => toggleFullscreen(e)} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center">
+                        <Button variant="ghost" size="icon" onClick={(e) => toggleFullscreen(e)} className="text-white hover:text-primary hover:bg-transparent flex items-center justify-center shrink-0">
                             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
                         </Button>
                     </div>
