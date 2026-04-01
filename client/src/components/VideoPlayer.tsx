@@ -1379,19 +1379,7 @@ export default function VideoPlayer({
                             </svg>
                         </Button> */}
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => { e.stopPropagation(); setIsZoomed(!isZoomed); }}
-                            className="text-white hover:text-primary hover:bg-transparent md:hidden flex"
-                            title={isZoomed ? "Thu nhỏ" : "Phóng to"}
-                        >
-                            {isZoomed ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 15 6 6"/><path d="m9 9-6-6"/><path d="M21 16v5h-5"/><path d="M9 3v5H4"/><path d="M21 8V3h-5"/><path d="M3 16v5h5"/><path d="m15 9 6-6"/><path d="m9 15-6 6"/></svg>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 21-6-6m6 6v-4.8m0 4.8h-4.8M3 16.2V21m0 0h4.8M3 21l6-6M21 7.8V3m0 0h-4.8M21 3l-6 6M3 7.8V3m0 0h4.8M3 3l6 6"/></svg>
-                            )}
-                        </Button>
+
 
                         <Button
                             variant="ghost"
