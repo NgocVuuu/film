@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
-import { Play, ArrowLeft, Crown } from 'lucide-react';
+import { Play, ArrowLeft, Crown, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ReportModal } from '@/components/ReportModal';
 import { CommentSection } from '@/components/CommentSection';
 import { DonateButton } from '@/components/DonateButton';
@@ -10,6 +11,8 @@ import Link from 'next/link';
 import { API_URL } from '@/lib/config';
 import { useAuth } from '@/contexts/auth-context';
 import toast from 'react-hot-toast';
+import { io, Socket } from 'socket.io-client';
+import WatchPartyChat from '@/components/WatchPartyChat';
 
 export const runtime = 'edge';
 import { PWAAds } from '@/components/PWAAds';
@@ -80,6 +83,25 @@ export default function WatchPage() {
     const { user } = useAuth();
     const isPremium = user?.subscription?.tier === 'premium' || user?.role === 'admin';
     const [showTabs, setShowTabs] = useState<'comment' | 'rating'>('comment');
+    
+    // Watch Party State
+    const roomParam = searchParams.get('room');
+    const [socket, setSocket] = useState<Socket | null>(null);
+
+    useEffect(() => {
+        if (!roomParam || !user) return;
+        
+        const newSocket = io(API_URL, {
+            withCredentials: true,
+            transports: ['websocket', 'polling']
+        });
+        
+        setSocket(newSocket);
+
+        return () => {
+            newSocket.disconnect();
+        };
+    }, [roomParam, user]);
 
     // Player State
     const [currentEpisode, setCurrentEpisode] = useState<{ name: string; slug: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] } | null>(null);
@@ -483,6 +505,23 @@ export default function WatchPage() {
                         </p>
                     </div>
                     <div className="hidden md:flex items-center gap-4">
+                        {!roomParam && (
+                            <Button 
+                                onClick={() => {
+                                    if (!user) {
+                                        toast.error('Vui lòng đăng nhập để tạo phòng');
+                                        return;
+                                    }
+                                    const roomId = Math.random().toString(36).substring(2, 9);
+                                    router.push(`?room=${roomId}`, { scroll: false });
+                                }}
+                                className="bg-primary/20 text-primary hover:bg-primary/30 border border-primary/50 text-xs font-bold gap-2"
+                                size="sm"
+                            >
+                                <Users className="w-4 h-4" />
+                                Tạo phòng chung
+                            </Button>
+                        )}
                         <DonateButton />
                         <div className="hidden md:flex items-center gap-2">
                             {movie && (
@@ -499,7 +538,7 @@ export default function WatchPage() {
                 </div>
             </div>
 
-            <div className="container mx-auto px-0 md:px-4 py-4 md:py-6 flex flex-col lg:flex-row gap-6">
+            <div className="container mx-auto px-0 md:px-4 py-4 md:py-6 flex flex-col lg:flex-row gap-6 relative">
 
                 {/* 1. MAIN PLAYER (Left/Top) */}
                 <div className="flex-1 w-full min-w-0">
@@ -565,6 +604,8 @@ export default function WatchPage() {
                                         default: true
                                     }] : [])
                                 ]}
+                                socket={socket}
+                                roomId={roomParam}
                                 onError={() => {
                                     // Auto-switch to next available source when current fails
                                     if (availableSources.length > 1) {
@@ -660,9 +701,11 @@ export default function WatchPage() {
                     </div>
                 </div>
 
-                {/* 2. EPISODE SIDEBAR (Right/Bottom) */}
-                <div className="w-full lg:w-96 px-4 md:px-0 space-y-4 shrink-0">
-                    <div className="bg-surface-900/30 rounded-xl border border-white/5 overflow-hidden flex flex-col h-full lg:sticky lg:top-24">
+                {/* 2. SIDEBAR AREA (Right/Bottom) */}
+                <div className="w-full lg:w-96 px-4 md:px-0 space-y-6 shrink-0 flex flex-col lg:sticky lg:top-24">
+
+                    {/* EPISODE LIST */}
+                    <div className="bg-surface-900/30 rounded-xl border border-white/5 overflow-hidden flex flex-col max-h-[600px] shrink-0">
                         <div className="p-4 border-b border-white/5 bg-surface-900/80 backdrop-blur-sm space-y-3">
                             <h3 className="font-bold text-white flex items-center gap-2">
                                 <Play className="w-4 h-4 text-primary fill-current" />

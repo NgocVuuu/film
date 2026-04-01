@@ -192,11 +192,13 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Connection "";
 
-        # Cấu hình Buffer đẩy thẳng Media Streams lên RAM
-        proxy_buffering on;
-        proxy_buffers 32 4m;
-        proxy_buffer_size 8m;
-        proxy_busy_buffers_size 12m;
+        # [Zero-Buffer] Vô hiệu hóa hoàn toàn bộ đệm phản hồi để luồng video đi trực tiếp đồng bộ thời gian thực
+        proxy_buffering off;
+        proxy_set_header X-Accel-Buffering no;
+
+        # Chuyển tiếp các tiêu đề dải byte quan trọng theo đúng kỹ thuật Range Requests
+        proxy_set_header Range \$http_range;
+        proxy_set_header If-Range \$http_if_range;
 
         # Header bảo mật
         add_header Access-Control-Allow-Origin "*";

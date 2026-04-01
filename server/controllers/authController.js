@@ -24,12 +24,32 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Generate JWT token
-const generateToken = (userId) => {
+const generateToken = (userId, sessionId = null) => {
+    const payload = { userId };
+    if (sessionId) payload.sessionId = sessionId;
     return jwt.sign(
-        { userId },
+        payload,
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
+};
+
+// Thuật toán Slot Manager (Giống Netflix)
+const assignSessionSlot = (user, newSessionId) => {
+    let maxDevices = 1; // Default
+    if (user.role === 'admin') {
+        maxDevices = 99; // Mở khóa cho Admin Test thoải mái
+    } else if (user.subscription && user.subscription.tier === 'family' && user.subscription.status === 'active') {
+        maxDevices = 5; // Gói gia đình được 5 Màn hình
+    }
+    
+    if (!user.activeSessions) user.activeSessions = [];
+    user.activeSessions.push({ sessionId: newSessionId, lastActive: new Date() });
+    
+    // Cắt ngọn (FIFO - Xóa thiết bị cũ nhất ở đầu mảng)
+    while (user.activeSessions.length > maxDevices) {
+        user.activeSessions.shift();
+    }
 };
 
 // Google OAuth Login
@@ -101,18 +121,19 @@ exports.googleLogin = async (req, res) => {
                 lastLogin: new Date(),
                 role: isAdmin ? 'admin' : 'user'
             });
-        } else {
-            // Update last login & Admin role if needed
-            const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
             if (adminEmails.includes(user.email) && user.role !== 'admin') {
                 user.role = 'admin';
             }
             user.lastLogin = new Date();
-            await user.save();
         }
 
-        // Generate JWT
-        const token = generateToken(user._id);
+        // Quản lý Đa Thiết Bị theo Tiers
+        const newSessionId = crypto.randomBytes(16).toString('hex');
+        assignSessionSlot(user, newSessionId);
+        await user.save();
+
+        // Generate JWT (Ghim sessionId vào trong)
+        const token = generateToken(user._id, newSessionId);
 
         // Determine environment to set cookie attributes correctly
         // FIX: Check Origin header to force SameSite=None for cross-site requests (Cloudflare Pages -> VPS)
@@ -332,10 +353,14 @@ exports.verifyEmail = async (req, res) => {
         user.isVerified = true;
         user.verificationToken = undefined;
         user.verificationTokenExpire = undefined;
+
+        // Quản lý Đa thiết bị
+        const newSessionId = crypto.randomBytes(16).toString('hex');
+        assignSessionSlot(user, newSessionId);
         await user.save();
 
         // Auto login after verification using existing method logic
-        const jwtToken = generateToken(user._id);
+        const jwtToken = generateToken(user._id, newSessionId);
 
         res.cookie('token', jwtToken, {
             httpOnly: true,
@@ -460,16 +485,7 @@ exports.login = async (req, res) => {
             });
         }
 
-        // Login success
-        const token = generateToken(user._id);
-
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
-
+        // Login success check role
         if (user.isVerified) {
             const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
             if (adminEmails.includes(user.email) && user.role !== 'admin') {
@@ -477,8 +493,21 @@ exports.login = async (req, res) => {
             }
         }
 
+        // Slot Management
+        const newSessionId = crypto.randomBytes(16).toString('hex');
+        assignSessionSlot(user, newSessionId);
+        
+        const token = generateToken(user._id, newSessionId);
+
         user.lastLogin = new Date();
         await user.save();
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         res.json({
             success: true,

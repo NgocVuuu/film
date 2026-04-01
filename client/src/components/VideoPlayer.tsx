@@ -4,13 +4,14 @@ import Hls from 'hls.js';
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize,
     Settings, Loader2, FastForward, Rewind, PictureInPicture,
-    SkipBack, SkipForward, ListVideo, Subtitles, AudioLines, Settings2
+    SkipBack, SkipForward, ListVideo, Subtitles, AudioLines, Settings2, MessageSquare
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useWatchProgress } from '@/hooks/useWatchProgress';
 import axios from 'axios';
 import { API_URL } from '@/lib/config';
+import WatchPartyChat from './WatchPartyChat';
 
 interface WebKitVideoElement extends HTMLVideoElement {
     webkitSupportsPresentationMode?: (mode: string) => boolean;
@@ -54,6 +55,8 @@ interface VideoPlayerProps {
         episodes: { slug: string; name: string }[];
     }[];
     onEpisodeSelect?: (serverName: string, episodeSlug: string) => void;
+    socket?: any;
+    roomId?: string | null;
 }
 
 const formatTime = (seconds: number) => {
@@ -93,6 +96,8 @@ export default function VideoPlayer({
     episodeServers,
     onEpisodeSelect,
     onError,
+    socket,
+    roomId
 }: VideoPlayerProps) {
     const { user } = useAuth();
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -147,6 +152,7 @@ export default function VideoPlayer({
     // Episode panel state
     const [showEpisodePanel, setShowEpisodePanel] = useState(false);
     const [panelServerName, setPanelServerName] = useState<string | null>(null);
+    const [showChat, setShowChat] = useState(false);
 
     // Zoom state
     const [isZoomed, setIsZoomed] = useState(false);
@@ -205,6 +211,47 @@ export default function VideoPlayer({
         }
     }, [isPlaying, showControls, activeMenu]);
 
+    // Socket listeners for Watch Party
+    useEffect(() => {
+        if (!socket || !roomId || !videoRef.current) return;
+
+        const handlePlay = ({ time }: { time: number }) => {
+            if (videoRef.current) {
+                if (Math.abs(videoRef.current.currentTime - time) > 2) {
+                    videoRef.current.currentTime = time;
+                }
+                videoRef.current.play().catch(console.error);
+                setIsPlaying(true);
+            }
+        };
+
+        const handlePause = ({ time }: { time: number }) => {
+            if (videoRef.current) {
+                if (Math.abs(videoRef.current.currentTime - time) > 1) {
+                    videoRef.current.currentTime = time;
+                }
+                videoRef.current.pause();
+                setIsPlaying(false);
+            }
+        };
+
+        const handleSeek = ({ time }: { time: number }) => {
+            if (videoRef.current) {
+                videoRef.current.currentTime = time;
+            }
+        };
+
+        socket.on('wp_play_action', handlePlay);
+        socket.on('wp_pause_action', handlePause);
+        socket.on('wp_seek_action', handleSeek);
+
+        return () => {
+            socket.off('wp_play_action', handlePlay);
+            socket.off('wp_pause_action', handlePause);
+            socket.off('wp_seek_action', handleSeek);
+        };
+    }, [socket, roomId]);
+
     const handleMouseMove = () => {
         if (!showControls) setShowControls(true);
     };
@@ -218,11 +265,13 @@ export default function VideoPlayer({
         if (!videoRef.current.paused) {
             videoRef.current.pause();
             setPlayPauseFeedback('pause');
+            socket?.emit('wp_pause', { roomId, time: videoRef.current.currentTime });
         } else {
             videoRef.current.play().catch(e => {
                 if (e.name !== 'AbortError') console.error('Play error:', e);
             });
             setPlayPauseFeedback('play');
+            socket?.emit('wp_play', { roomId, time: videoRef.current.currentTime });
         }
         setShowControls(true);
         setTimeout(() => setPlayPauseFeedback(null), 500);
@@ -238,8 +287,9 @@ export default function VideoPlayer({
 
         let handled = false;
 
-        if (showEpisodePanel) {
+        if (showEpisodePanel || showChat) {
             setShowEpisodePanel(false);
+            setShowChat(false);
             handled = true;
         }
 
@@ -1271,6 +1321,30 @@ export default function VideoPlayer({
                 </div>
             )}
 
+            {/* Click Catcher for Overlays */}
+            {(showChat || showEpisodePanel) && (
+                <div 
+                    className="absolute inset-0 z-[55] cursor-pointer" 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setShowChat(false);
+                        setShowEpisodePanel(false);
+                    }}
+                />
+            )}
+
+            {/* Watch Party Chat Overlay */}
+            {roomId && socket && (
+                <div className="absolute inset-0 overflow-hidden pointer-events-none z-[60]">
+                    <div className={`absolute top-4 bottom-20 right-4 w-80 max-w-[85vw] flex flex-col pointer-events-auto transition-transform duration-300 ease-in-out will-change-transform shadow-2xl ${showChat ? 'translate-x-0' : 'translate-x-[calc(100%+2rem)]'}`}
+                         onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* We add a close button header in addition to WatchPartyChat's own header for better UX if needed, or rely on WatchPartyChat layout. */}
+                        <WatchPartyChat socket={socket} roomId={roomId} onClose={() => setShowChat(false)} />
+                    </div>
+                </div>
+            )}
+
             {/* In-Player Episode Panel - only visible on landscape/wide screens */}
             {episodeServers && episodeServers.length > 0 && (
                 <div className="absolute inset-0 overflow-hidden pointer-events-none hidden landscape:block md:block z-50">
@@ -1644,6 +1718,26 @@ export default function VideoPlayer({
                             )}
                         </div>
 
+                        {/* Watch Party Chat Button */}
+                        {roomId && socket && (
+                            <div className="hidden sm:block">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowChat(v => !v);
+                                        setShowEpisodePanel(false);
+                                        setActiveMenu(null);
+                                    }}
+                                    className={`text-white hover:text-primary hover:bg-transparent ${showChat ? 'text-primary' : ''} h-8 w-8`}
+                                    title="Lịch sử Chat"
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        )}
+
                         {/* Episode List Button - hidden on portrait mobile */}
                         {episodeServers && episodeServers.length > 0 && (
                             <div className="hidden landscape:block md:block">
@@ -1656,6 +1750,7 @@ export default function VideoPlayer({
                                             setPanelServerName(episodeServers[0].server_name);
                                         }
                                         setShowEpisodePanel(v => !v);
+                                        setShowChat(false);
                                         setActiveMenu(null);
                                     }}
                                     className={`text-white hover:text-primary hover:bg-transparent ${showEpisodePanel ? 'text-primary' : ''} h-8 w-8`}

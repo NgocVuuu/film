@@ -541,7 +541,18 @@ const addLog = (message, type = 'info') => {
 const getLogs = () => logBuffer;
 
 const setupCrawler = () => {
-    console.log('Crawler: Manual Mode Only (Auto-run moved to GitHub Actions).');
+    console.log('[Crawler] Khởi tạo hệ thống tự động cào phim (CronJob)');
+    
+    // Chạy mỗi 6 tiếng một lần (Vào phút 0, giờ 0, 6, 12, 18)
+    cron.schedule('0 */6 * * *', async () => {
+        console.log('[CrawlerCron] Starting scheduled auto-crawl (Every 6 hours)...');
+        // Chỉ cào 5 trang phim mới nhất để tránh spam server
+        await startCrawl({ pages: 5, auto: true });
+        
+        // Tự động giải quyết các request phim pending
+        console.log('[CrawlerCron] Processing pending movie requests...');
+        await processPendingRequests();
+    });
 };
 
 const { Worker } = require('worker_threads');

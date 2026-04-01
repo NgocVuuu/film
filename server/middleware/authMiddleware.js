@@ -34,6 +34,20 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
+        // CHỐNG DÙNG CHUNG TÀI KHOẢN (Multi-Device Slot Limit)
+        if (user.role !== 'admin' && decoded.sessionId) {
+            // Tìm Session này trong Mảng đang cắm trên Server
+            const isValidSession = user.activeSessions && user.activeSessions.some(s => s.sessionId === decoded.sessionId);
+            
+            if (!isValidSession) {
+                console.warn(`[Lưới Lọc Phiên] ID Thiết bị đã bị đào thải (Vượt Quota) khỏi User: ${user.email}`);
+                return res.status(401).json({
+                    success: false,
+                    message: 'Tài khoản của bạn đã bị ngắt do Vượt quá số lượng Thiết bị tối đa cùng xem. Vui lòng đăng nhập lại!'
+                });
+            }
+        }
+
         // Attach user to request
         req.user = user;
         next();
@@ -71,7 +85,13 @@ const optionalAuthMiddleware = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const user = await User.findById(decoded.userId).select('-__v');
             if (user) {
-                req.user = user;
+                // Áp dụng lớp giáp chặn xài chung tài khoản
+                const isValidSession = user.activeSessions && user.activeSessions.some(s => s.sessionId === decoded.sessionId);
+                if (user.role !== 'admin' && decoded.sessionId && !isValidSession) {
+                    // Fail implicitly (Ngầm định văng ra làm User Vô danh không đăng nhập)
+                } else {
+                    req.user = user;
+                }
             }
         }
     } catch (error) {

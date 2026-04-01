@@ -12,11 +12,11 @@ exports.getPlans = async (req, res) => {
                 name: 'Gói 1 Tháng',
                 tier: 'premium',
                 duration: 1,
-                price: 50000,
+                price: 59000,
                 features: [
                     'Xem phim server riêng 4K',
                     'Trải nghiệm không quảng cáo',
-                    'Yêu cầu admin thêm phim 4K'
+                    'Phòng xem chung (Watch Party)'
                 ]
             },
             {
@@ -24,14 +24,13 @@ exports.getPlans = async (req, res) => {
                 name: 'Gói 3 Tháng',
                 tier: 'premium',
                 duration: 3,
-                price: 130000,
-                originalPrice: 150000,
-                badge: 'Tiết kiệm 20k',
+                price: 129000,
+                originalPrice: 177000,
+                badge: 'Tiết kiệm 48k',
                 features: [
                     'Xem phim server riêng 4K',
                     'Trải nghiệm không quảng cáo',
-                    'Yêu cầu admin thêm phim 4K',
-                    'Tiết kiệm 20.000đ'
+                    'Phòng xem chung (Watch Party)'
                 ]
             },
             {
@@ -39,14 +38,13 @@ exports.getPlans = async (req, res) => {
                 name: 'Gói 6 Tháng',
                 tier: 'premium',
                 duration: 6,
-                price: 250000,
-                originalPrice: 300000,
-                badge: 'Phổ biến nhất (Tiết kiệm 50k)',
+                price: 219000,
+                originalPrice: 354000,
+                badge: 'Phổ biến (Tiết kiệm 135k)',
                 features: [
                     'Xem phim server riêng 4K',
                     'Trải nghiệm không quảng cáo',
-                    'Yêu cầu admin thêm phim 4K',
-                    'Tiết kiệm 50.000đ'
+                    'Phòng xem chung (Watch Party)'
                 ]
             },
             {
@@ -54,14 +52,72 @@ exports.getPlans = async (req, res) => {
                 name: 'Gói 1 Năm',
                 tier: 'premium',
                 duration: 12,
-                price: 450000,
-                originalPrice: 600000,
-                badge: 'Siêu Tiết kiệm (Giảm 150k)',
+                price: 359000,
+                originalPrice: 708000,
+                badge: 'Siêu hời (Giảm 50%)',
                 features: [
                     'Xem phim server riêng 4K',
                     'Trải nghiệm không quảng cáo',
-                    'Yêu cầu admin thêm phim 4K',
-                    'Tiết kiệm 150.000đ (Chiết khấu 25%)'
+                    'Phòng xem chung độc quyền'
+                ]
+            },
+            {
+                id: 'family-1m',
+                name: 'Gia Đình 1 Tháng',
+                tier: 'family',
+                duration: 1,
+                price: 159000,
+                badge: '5 Màn hình (Chỉ ~32k/người)',
+                features: [
+                    'Sử dụng Tối đa 5 Thiết bị',
+                    'Xem phim server riêng 4K',
+                    'Kho phim Netflix độc quyền',
+                    'Phòng xem chung (Watch Party)'
+                ]
+            },
+            {
+                id: 'family-3m',
+                name: 'Gia Đình 3 Tháng',
+                tier: 'family',
+                duration: 3,
+                price: 379000,
+                originalPrice: 477000,
+                badge: 'Tiết kiệm 98k',
+                features: [
+                    'Sử dụng Tối đa 5 Thiết bị',
+                    'Xem phim server riêng 4K',
+                    'Kho phim Netflix độc quyền',
+                    'Phòng xem chung (Watch Party)'
+                ]
+            },
+            {
+                id: 'family-6m',
+                name: 'Gia Đình 6 Tháng',
+                tier: 'family',
+                duration: 6,
+                price: 669000,
+                originalPrice: 954000,
+                badge: 'Siêu Rẻ (Giảm 285k)',
+                features: [
+                    'Sử dụng Tối đa 5 Thiết bị',
+                    'Xem phim server riêng 4K',
+                    'Kho phim Netflix độc quyền',
+                    'Phòng xem chung (Watch Party)'
+                ]
+            },
+            {
+                id: 'family-12m',
+                name: 'Gia Đình 1 Năm',
+                tier: 'family',
+                duration: 12,
+                price: 999000,
+                originalPrice: 1908000,
+                badge: 'Mua 1 Tặng 1 (Giảm 1 Triệu)',
+                features: [
+                    'Sử dụng Tối đa 5 Thiết bị',
+                    'Xem phim server riêng 4K',
+                    'Kho phim Netflix độc quyền',
+                    'Phòng xem chung (Watch Party)'
                 ]
             }
         ];

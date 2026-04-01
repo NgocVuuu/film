@@ -48,16 +48,16 @@ exports.getStreamLink = async (req, res) => {
 
         // [BẢO MẬT CẤP ĐỘ 6] VÁ LỖ HỔNG BÀO MÒN BĂNG THÔNG (Slow-Drip Quota Drain)
         // Thay vì chỉ đếm số lượng phim độc lập (Dễ lách bằng cách xem 1 phim 24/7),
-        // Áp dụng Quota cứng Cấp Token: Tối đa 15 lượt xin Link (Mỗi link sống 6 tiếng -> Đủ xem 90 tiếng/ngày).
-        // Vượt quá 15 lượt báo lỗi 429 vĩnh viễn trong ngày.
+        // Áp dụng Quota Dư Xài Cấp Token: Tối đa 100 lượt xin Link (Thỏa sức cày 2 bộ Drama mỗi ngày).
+        // Vượt quá 100 lượt mới báo lỗi (Chỉ có Tool Auto Downloader / IDM Crawl mới chạm mốc này).
         const playCountKey = `user_total_plays_${userId}`;
         let totalPlays = userMagnetCache.get(playCountKey) || 0;
 
-        if (totalPlays >= 15) {
-            console.warn(`[Bandwidth Quota] User ${userId} đã hết lượt request luồng Streaming trong ngày.`);
+        if (totalPlays >= 100) {
+            console.warn(`[Bandwidth Quota] Lưới Lọc FUP: User ${userId} đã Request luồng m3u8 ${totalPlays} lần trong ngày. Khóa hành vi Crawl!`);
             return res.status(429).json({
                 success: false,
-                message: 'Vượt giới hạn FUP (Quá Quota): Bạn đã yêu cầu luồng phát quá số lần cho phép trong ngày. Vui lòng quay lại vào ngày mai để hệ thống phục hồi băng thông!'
+                message: 'Vượt Giới Hạn FUP (Hành vi Bất thường): Bạn đã bật quá 100 tập phim trong 24 giờ qua. Để chống hành vi dùng Tool lưu trữ phim phi pháp, hệ thống xin phép tạm khóa tài khoản của bạn đến ngày mai!'
             });
         }
         userMagnetCache.set(playCountKey, totalPlays + 1);

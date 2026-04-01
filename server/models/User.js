@@ -41,7 +41,7 @@ const userSchema = new mongoose.Schema({
     subscription: {
         tier: {
             type: String,
-            enum: ['free', 'premium'],
+            enum: ['free', 'premium', 'family'],
             default: 'free'
         },
         status: {
@@ -62,6 +62,10 @@ const userSchema = new mongoose.Schema({
     },
     verificationToken: String,
     verificationTokenExpire: Date,
+    activeSessions: [{
+        sessionId: String,
+        lastActive: { type: Date, default: Date.now }
+    }],
     lastLogin: Date
 }, {
     timestamps: true

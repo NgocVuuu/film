@@ -89,6 +89,9 @@ io.use(async (socket, next) => {
     }
 });
 
+// Mảng lưu trạng thái các phòng Watch Party trong RAM
+const wpRooms = {};
+
 // Socket.io Connection Handler
 io.on('connection', (socket) => {
     const user = socket.user;
@@ -174,8 +177,72 @@ io.on('connection', (socket) => {
         }
     });
 
+    // --- WATCH PARTY LOGIC ---
+    socket.on('wp_join_room', ({ roomId, user: sender }) => {
+        socket.join(`wp_${roomId}`);
+        if (!wpRooms[roomId]) {
+            wpRooms[roomId] = {
+                host: socket.id,
+                hostUser: sender,
+                users: []
+            };
+        }
+        
+        // Ensure user is not duplicated
+        const existingUser = wpRooms[roomId].users.find(u => u.id === socket.id);
+        if (!existingUser) {
+            wpRooms[roomId].users.push({ id: socket.id, ...sender });
+        }
+
+        io.to(`wp_${roomId}`).emit('wp_room_update', wpRooms[roomId]);
+    });
+
+    socket.on('wp_play', ({ roomId, time }) => {
+        const room = wpRooms[roomId];
+        if (room && room.host === socket.id) {
+            socket.to(`wp_${roomId}`).emit('wp_play_action', { time });
+        }
+    });
+
+    socket.on('wp_pause', ({ roomId, time }) => {
+        const room = wpRooms[roomId];
+        if (room && room.host === socket.id) {
+            socket.to(`wp_${roomId}`).emit('wp_pause_action', { time });
+        }
+    });
+
+    socket.on('wp_seek', ({ roomId, time }) => {
+        const room = wpRooms[roomId];
+        if (room && room.host === socket.id) {
+            socket.to(`wp_${roomId}`).emit('wp_seek_action', { time });
+        }
+    });
+
+    socket.on('wp_chat', ({ roomId, message, sender }) => {
+        io.to(`wp_${roomId}`).emit('wp_chat_message', { sender, message, time: new Date() });
+    });
+
     socket.on('disconnect', () => {
         console.log(`[Socket] Disconnected: ${user.displayName}`);
+        
+        // Remove from WP rooms
+        for (const roomId in wpRooms) {
+            const room = wpRooms[roomId];
+            const userIndex = room.users.findIndex(u => u.id === socket.id);
+            if (userIndex !== -1) {
+                room.users.splice(userIndex, 1);
+                if (room.host === socket.id) {
+                    if (room.users.length > 0) {
+                        room.host = room.users[0].id;
+                        room.hostUser = room.users[0];
+                    } else {
+                        delete wpRooms[roomId];
+                        continue;
+                    }
+                }
+                io.to(`wp_${roomId}`).emit('wp_room_update', wpRooms[roomId]);
+            }
+        }
     });
 });
 
