@@ -1240,7 +1240,7 @@ export default function VideoPlayer({
                 </div>
 
                 {/* Main Controls */}
-                <div className="flex items-center justify-between gap-0.5 w-full min-w-0" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between gap-2 w-full min-w-0" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-0.5 sm:gap-2 md:gap-4 flex-1 min-w-0 overflow-hidden">
                         <Button variant="ghost" size="icon" onClick={togglePlay} className="text-white hover:text-primary hover:bg-transparent">
                             {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
@@ -1292,7 +1292,7 @@ export default function VideoPlayer({
                             />
                         </div>
 
-                        <span className="text-white text-[9px] sm:text-xs font-mono whitespace-nowrap ml-1 overflow-visible">
+                        <span className="text-white text-[9px] sm:text-xs font-mono whitespace-nowrap ml-1 pr-2 overflow-visible">
                             {formatTime(currentTime)} / {formatTime(duration)}
                         </span>
                     </div>
