@@ -52,8 +52,11 @@ const BackgroundSlide = memo(({ movie }: { movie: Movie }) => (
             fill
             sizes="100vw"
         />
-        <div className="absolute inset-0 bg-linear-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
-        <div className="absolute inset-0 bg-linear-to-r from-[#050505]/90 via-[#050505]/50 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
+        {/* On tablet, create a stronger bottom gradient to host the text. On desktop, create a horizontal gradient */}
+        <div className="absolute inset-y-0 left-0 w-full lg:w-2/3 bg-gradient-to-r from-[#050505] via-[#050505]/80 to-transparent hidden md:block"></div>
+        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent hidden md:block lg:hidden"></div>
+
         {movie.progress && movie.progress.percentage > 0 && (
             <div className="absolute bottom-0 left-0 w-full h-1.5 bg-gray-700/30 z-20">
                 <div
@@ -459,7 +462,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             {/* Mobile layout: poster overlay, info below, centered, with short description */}
             <div 
                 ref={contentWrapperRef}
-                className="relative md:absolute md:inset-0 z-20 container mx-auto px-4 flex flex-col justify-start md:justify-center pt-28 md:pt-40 pb-12 md:pb-32"
+                className="relative md:absolute md:inset-0 z-20 container mx-auto px-6 lg:px-12 flex flex-col justify-start md:justify-end lg:justify-center pt-28 md:pt-0 pb-12 md:pb-[160px] lg:pb-0"
                 style={{
                     opacity: 1,
                     willChange: 'opacity'
@@ -571,12 +574,12 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                 {/* Desktop: original layout */}
                 <div 
                     ref={desktopTextRef}
-                    className="max-w-2xl space-y-4 md:space-y-6 animate-fade-in-up hidden md:block"
+                    className="w-full md:max-w-xl lg:max-w-3xl space-y-4 md:space-y-6 animate-fade-in-up hidden md:block"
                 >
-                    <span className="text-gold-500 font-bold tracking-widest text-xs md:text-sm uppercase border border-gold-500/50 px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-black/40 backdrop-blur-md shadow-glow inline-block">
+                    <span className="text-gold-500 font-bold tracking-widest text-xs md:text-sm uppercase border border-gold-500/50 px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-black/40 backdrop-blur-md shadow-[0_0_15px_rgba(234,179,8,0.2)] inline-block">
                         #{currentIndex + 1} Phim Nổi Bật
                     </span>
-                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-black leading-snug font-heading line-clamp-1 bg-linear-to-b from-white via-amber-100 to-amber-400 bg-clip-text text-transparent filter-[drop-shadow(0_2px_12px_rgba(0,0,0,1))_drop-shadow(0_0_30px_rgba(234,179,8,0.25))]">
+                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold leading-tight font-heading line-clamp-2 md:line-clamp-2 bg-gradient-to-b from-white via-amber-50 to-amber-200 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
                         {currentMovie.name}
                     </h1>
                     <p className="text-sm md:text-base text-gray-400 font-light tracking-wide flex items-center gap-3">
@@ -590,15 +593,15 @@ export function HeroSlider({ movies }: HeroSliderProps) {
                     </p>
                     {/* Short description for desktop */}
                     {currentMovie.content && (
-                        <div className="text-sm text-gray-400 font-normal mb-2 bg-black/30 rounded-lg px-4 py-2 backdrop-blur-sm">
-                            <div className="line-clamp-2 overflow-hidden">
+                        <div className="text-sm md:text-[15px] leading-relaxed text-gray-300 font-normal mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                            <div className="line-clamp-3 md:line-clamp-3 overflow-hidden">
                                 {currentMovie.content.replace(/<[^>]*>/g, '')}
                             </div>
                         </div>
                     )}
-                    <div className="flex flex-wrap gap-3 pt-4">
+                    <div className="flex flex-wrap gap-3 pt-2">
                         <Link href={`/movie/${currentMovie.slug}/watch`}>
-                            <Button size="lg" className="bg-gold-gradient text-black hover:brightness-110 font-bold text-base md:text-lg px-6 md:px-8 py-6 rounded-xl shadow-glow flex items-center gap-2 transform hover:scale-105 transition-all duration-300 border-none">
+                            <Button size="lg" className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-base md:text-lg px-6 md:px-8 py-6 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.4)] flex items-center gap-2 transform hover:scale-105 transition-all duration-300 border-none">
                                 <Play fill="black" className="w-5 h-5" />
                                 XEM NGAY
                             </Button>
@@ -628,7 +631,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             </button>
 
             {/* Thumbnail Pagination — trending-style skewed mini cards, max 10, bottom right */}
-            <div className="absolute bottom-4 md:bottom-6 right-3 md:right-8 z-30 hidden md:flex gap-1.5 items-end">
+            <div className="absolute bottom-4 md:bottom-8 right-3 md:right-8 z-30 hidden md:flex gap-2 lg:gap-3 items-end overflow-hidden max-w-[50vw] lg:max-w-[60vw]">
                 {movies.slice(0, 10).map((movie, idx) => {
                     const isActive = idx === currentIndex;
                     return (
