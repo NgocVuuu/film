@@ -26,6 +26,7 @@ export function useWatchProgress({
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     // Store the latest time/duration so flush handlers can access it without stale closure
     const lastKnownRef = useRef<{ currentTime: number; duration: number } | null>(null);
+    const lastSavedTimeRef = useRef<number>(0);
 
     // Nếu chuyển tập mới, phải reset thời gian xem cũ khẩn cấp bằng Render Phase
     if (loadedEpisode !== episodeSlug && initialProgress !== null) {
@@ -154,15 +155,28 @@ export function useWatchProgress({
         }
     };
 
-    // Debounced save - saves after user stops seeking for 2 seconds
+    // Debounced and Throttled save - saves after user stops seeking for 2s, 
+    // OR every 15 seconds during continuous playback to ensure progress is captured
     const debouncedSave = (currentTime: number, duration: number) => {
         lastKnownRef.current = { currentTime, duration };
+        const now = Date.now();
+
+        // Throttle: If we haven't saved in 15 seconds, save immediately
+        if (now - lastSavedTimeRef.current >= 15000) {
+            lastSavedTimeRef.current = now;
+            saveProgress(currentTime, duration);
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            return;
+        }
+
+        // Debounce: Always reset the 2-second timer
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
         }
         saveTimeoutRef.current = setTimeout(() => {
+            lastSavedTimeRef.current = Date.now();
             saveProgress(currentTime, duration);
-        }, 2000); // Reduced to 2s for better UI responsiveness
+        }, 2000); // 2s after last timeupdate (paused or stopped seeking)
     };
 
     // Instant save on tab close / visibility hidden using sendBeacon so it survives page unload

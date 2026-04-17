@@ -46,7 +46,7 @@ const watchProgressSchema = new mongoose.Schema({
 });
 
 // Compound index for faster queries
-watchProgressSchema.index({ userId: 1, movieSlug: 1, episodeSlug: 1 }, { unique: true });
+watchProgressSchema.index({ userId: 1, movieSlug: 1, episodeSlug: 1, serverName: 1 }, { unique: true });
 watchProgressSchema.index({ userId: 1, lastWatched: -1 });
 
 module.exports = mongoose.model('WatchProgress', watchProgressSchema);

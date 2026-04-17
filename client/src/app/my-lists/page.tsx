@@ -140,7 +140,7 @@ export default function MyListsPage() {
                         </Button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 md:gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-6">
                         {lists.map(list => (
                             <Link 
                                 key={list._id} 
@@ -159,7 +159,7 @@ export default function MyListsPage() {
                                                 />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center bg-white/5">
-                                                    <Film className="w-8 h-8 text-white/10" />
+                                                    <Film className="w-6 h-6 md:w-8 md:h-8 text-white/10" />
                                                 </div>
                                             )}
                                         </div>
@@ -167,22 +167,22 @@ export default function MyListsPage() {
                                 </div>
                                 
                                 {/* Gradient Overlay & Content */}
-                                <div className="absolute inset-0 bg-linear-to-t from-black via-black/60 to-transparent flex flex-col justify-end p-3 md:p-4">
-                                    <div className="flex items-end justify-between gap-2">
+                                <div className="absolute inset-0 bg-linear-to-t from-black via-black/60 to-transparent flex flex-col justify-end p-2.5 md:p-4">
+                                    <div className="flex items-start justify-between gap-1.5 md:gap-2">
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-white text-base md:text-lg truncate group-hover:text-primary transition-colors mb-0.5 md:mb-1">{list.name}</h3>
-                                            <div className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs text-gray-300">
-                                                <span className="bg-white/10 px-1.5 py-0.5 rounded text-white/90 font-medium">{list.count} phim</span>
-                                                <span className="text-gray-500">•</span>
-                                                <span className="text-gray-400">{new Date(list.createdAt).toLocaleDateString('vi-VN')}</span>
+                                            <h3 className="font-bold text-white text-sm md:text-lg truncate group-hover:text-primary transition-colors mb-0.5 md:mb-1">{list.name}</h3>
+                                            <div className="flex items-center flex-wrap gap-1 md:gap-2 text-[9px] md:text-xs text-gray-300">
+                                                <span className="bg-white/10 px-1.5 py-0.5 rounded text-white/90 font-medium whitespace-nowrap">{list.count} phim</span>
+                                                <span className="text-gray-500 hidden min-[360px]:inline">•</span>
+                                                <span className="text-gray-400 truncate">{new Date(list.createdAt).toLocaleDateString('vi-VN')}</span>
                                             </div>
                                         </div>
                                         <button 
                                             onClick={(e) => handleDeleteList(list._id, e)}
-                                            className="text-white/50 hover:text-red-500 transition-colors p-1.5 md:p-2 hover:bg-white/10 rounded-full shrink-0 z-10"
+                                            className="text-white/50 hover:text-red-500 flex-shrink-0 transition-colors p-1 md:p-2 hover:bg-white/10 rounded-full z-10"
                                             title="Xóa danh sách"
                                         >
-                                            <Trash2 className="w-4 h-4 md:w-5 md:h-5 " />
+                                            <Trash2 className="w-3.5 h-3.5 md:w-5 md:h-5" />
                                         </button>
                                     </div>
                                 </div>
