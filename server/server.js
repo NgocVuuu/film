@@ -53,10 +53,19 @@ const allowedOrigins = [
     (process.env.CLIENT_URL || '').replace(/\/$/, '')
 ].filter(Boolean);
 
+const checkOrigin = function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.match(/^http:\/\/localhost:\d+$/) || origin.match(/^http:\/\/127\.0\.0\.1:\d+$/) || origin.match(/^http:\/\/10\.0\.2\.2:\d+$/)) {
+        callback(null, true);
+    } else {
+        callback(new Error('Not allowed by CORS'));
+    }
+};
+
 // Socket.io
 const io = new SocketIO(httpServer, {
     cors: {
-        origin: allowedOrigins,
+        origin: checkOrigin,
         credentials: true
     }
 });
@@ -248,7 +257,7 @@ io.on('connection', (socket) => {
 
 // Middleware
 app.use(cors({
-    origin: allowedOrigins,
+    origin: checkOrigin,
     credentials: true
 }));
 // Capture raw body for sendBeacon requests (Content-Type: application/octet-stream or text/plain)

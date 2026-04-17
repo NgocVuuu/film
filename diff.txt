@@ -1,0 +1,210 @@
+﻿diff --cc client/src/components/VideoPlayer.tsx
+index 4ae7ac3,4aad785..0000000
+--- a/client/src/components/VideoPlayer.tsx
++++ b/client/src/components/VideoPlayer.tsx
+@@@ -890,16 -735,20 +898,33 @@@ export default function VideoPlayer(
+                  capLevelToPlayerSize: true,
+                  autoStartLoad: true,
+                  enableWorker: true,
+++<<<<<<< HEAD
+ +                // === Performance & Seeking ===
+ +                progressive: true, // Crucial: start playing before fragment is fully loaded
+ +                // === Memory Management (critical for long sessions / PWA) ===
+ +                maxBufferLength: 60,           // T─âng l├¬n 60s cho 4K
+ +                backBufferLength: 30,          // 30s: ─æß╗º ─æß╗â tua lß║íi m├á kh├┤ng nß║╖ng RAM mobile
+ +                maxMaxBufferLength: 120,       // Tß╗æi ─æa 2 ph├║t buffer cho 4K
+ +                maxBufferSize: 250 * 1024 * 1024, // T─âng l├¬n 250MB ─æß╗â chß╗⌐a ─æß╗º buffer 4K Remux (100Mbps)
+ +                fragLoadingTimeOut: 30000,     // 30s timeout cho fragments 4K nß║╖ng
+ +                fragLoadingMaxRetry: 6,        
+ +                fragLoadingRetryDelay: 2000,   // Delay 2s khi retry 
+++=======
++                 progressive: true, 
++                 
++                 // === ─Éiß╗üu Tiß║┐t B─âng Th├┤ng C─É ─Éß╗Öng (Adaptive Memory) ===
++                 maxBufferLength: isWeakNetwork ? 20 : 60,           // Mß║íng yß║┐u chß╗ë Load sß║╡n mß╗ôi 20s
++                 backBufferLength: isWeakNetwork ? 10 : 30,          // Giß║úm cache phim ─æ├ú xem ─æß╗â khß╗Åi nß║╖ng RAM PWA
++                 maxMaxBufferLength: isWeakNetwork ? 40 : 120,       // Max dß║╖m chß╗ë 40s (─Éß╗í tß╗æn Data Lte cß╗ºa kh├ích)
++                 maxBufferSize: isWeakNetwork ? 15 * 1024 * 1024 : 50 * 1024 * 1024, // 15MB vs 50MB
++ 
++                 // Bß║»t ─æß║ºu thß║Ñp nß║┐u mß║íng yß║┐u
++                 startLevel: isWeakNetwork ? 0 : -1,
++ 
++                 fragLoadingTimeOut: 20000,     
++                 fragLoadingMaxRetry: 6,        
++                 fragLoadingRetryDelay: 1000,   
+++>>>>>>> main
+                  appendErrorMaxRetry: 5,        
+                  levelLoadingTimeOut: 20000,    
+                  manifestLoadingTimeOut: 20000, 
+@@@ -1482,17 -1240,17 +1507,24 @@@
+                  </div>
+  
+                  {/* Main Controls */}
+++<<<<<<< HEAD
+ +                <div className="flex items-center justify-between gap-0.5" onClick={(e) => e.stopPropagation()}>
+ +                    <div className="flex items-center gap-0.5 sm:gap-2 md:gap-4">
+ +                        <Button variant="ghost" size="icon" onClick={togglePlay} className="text-white hover:text-primary hover:bg-transparent h-8 w-8">
+ +                            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
+++=======
++                 <div className="flex items-center justify-between gap-2 w-full min-w-0" onClick={(e) => e.stopPropagation()}>
++                     <div className="flex items-center gap-0.5 sm:gap-2 md:gap-4 flex-1 min-w-0 overflow-hidden">
++                         <Button variant="ghost" size="icon" onClick={togglePlay} className="text-white hover:text-primary hover:bg-transparent">
++                             {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
+++>>>>>>> main
+                          </Button>
+  
+ -                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime -= 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent">
+ -                            <Rewind className="w-5 h-5" />
+ +                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime -= 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent h-8 w-8">
+ +                            <Rewind className="w-4 h-4" />
+                          </Button>
+ -                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime += 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent">
+ -                            <FastForward className="w-5 h-5" />
+ +                        <Button variant="ghost" size="icon" onClick={() => { if (videoRef.current) videoRef.current.currentTime += 10; }} className="hidden md:flex text-white/70 hover:text-white hover:bg-transparent h-8 w-8">
+ +                            <FastForward className="w-4 h-4" />
+                          </Button>
+  
+                          <div className="flex items-center gap-1 border-l border-white/10 ml-1 sm:ml-2 pl-1 sm:pl-2">
+@@@ -1539,112 -1297,40 +1571,126 @@@
+                          </span>
+                      </div>
+  
+++<<<<<<< HEAD
+ +                    <div className="flex items-center gap-0.5 sm:gap-1 text-white/80">
+ +                        {/* Cast Button */}
+ +                        <Button
+ +                            variant="ghost"
+ +                            size="icon"
+ +                            onClick={(e) => { e.stopPropagation(); triggerCast(); }}
+ +                            className="text-white hover:text-primary hover:bg-transparent transition-all hidden md:flex h-8 w-8"
+ +                            title="Truyß╗ün l├¬n TV (Cast/AirPlay)"
+ +                        >
+ +                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /><line x1="2" y1="20" x2="2.01" y2="20" /></svg>
+ +                        </Button>
+++=======
++                     <div className="flex items-center justify-end gap-0.5 sm:gap-2 shrink-0">
++                         {/* Settings Button logic */}
++                         <div className="relative">
++                             <Button
++                                 variant="ghost"
++                                 size="icon"
++                                 onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); }}
++                                 className={`text-white hover:text-primary hover:bg-transparent ${showSettings ? 'rotate-90 text-primary' : ''} transition-all`}
++                             >
++                                 <Settings className="w-5 h-5" />
++                             </Button>
+++>>>>>>> main
+  
+ -
+ -                            {/* Settings Popup */}
+ -                            {showSettings && (
+ -                                <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-45 max-h-[70vh] overflow-y-auto text-white space-y-3 z-60 shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+ -                                    {/* Speed */}
+ -                                    <div>
+ -                                        <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Tß╗æc ─æß╗Ö</p>
+ -                                        <div className="grid grid-cols-4 gap-1">
+ -                                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(speed => (
+ +                        {/* Subtitles Button logic */}
+ +                        {subtitles && subtitles.length > 0 && (
+ +                            <div className="relative border-r border-white/10 pr-1 mr-1">
+ +                                <Button
+ +                                    variant="ghost"
+ +                                    size="icon"
+ +                                    onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === 'subtitles' ? null : 'subtitles'); }}
+ +                                    className={`text-white hover:text-primary hover:bg-transparent ${activeMenu === 'subtitles' ? 'text-primary' : ''} transition-all h-8 w-8`}
+ +                                    title="T├╣y chß╗ìn phß╗Ñ ─æß╗ü"
+ +                                >
+ +                                    <Subtitles className="w-4 h-4" />
+ +                                </Button>
+ +                                {/* Subtitles Popup */}
+ +                                {activeMenu === 'subtitles' && (
+ +                                    <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+ +                                        <div>
+ +                                            <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Phß╗Ñ ─æß╗ü</p>
+ +                                            <div className="flex flex-col gap-1">
+                                                  <button
+ -                                                    key={speed}
+ -                                                    onClick={() => changeSpeed(speed)}
+ -                                                    className={`text-xs p-1 rounded ${playbackSpeed === speed ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
+ +                                                    onClick={() => changeSubtitle(-1)}
+ +                                                    className={`text-xs p-1.5 rounded text-left ${currentSubtitleIndex === -1 ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
+                                                  >
+ -                                                    {speed}x
+ +                                                    Tß║»t phß╗Ñ ─æß╗ü
+                                                  </button>
+ -                                            ))}
+ +                                                {subtitles.map((sub: any, idx: number) => (
+ +                                                    <button
+ +                                                        key={idx}
+ +                                                        onClick={() => changeSubtitle(idx)}
+ +                                                        className={`text-xs p-1.5 rounded text-left truncate ${currentSubtitleIndex === idx ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
+ +                                                    >
+ +                                                        {sub.label || sub.lang || `Phß╗Ñ ─æß╗ü ${idx + 1}`}
+ +                                                    </button>
+ +                                                ))}
+ +                                            </div>
+                                          </div>
+                                      </div>
+ +                                )}
+ +                            </div>
+ +                        )}
+  
+ -                                    {/* Quality */}
+ -                                    {qualityLevels.length > 0 && (
+ +                        {/* Audio Tracks Button logic */}
+ +                        {audioTracks.length > 0 && (
+ +                            <div className="relative border-r border-white/10 pr-1 mr-1">
+ +                                <Button
+ +                                    variant="ghost"
+ +                                    size="icon"
+ +                                    onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === 'audio' ? null : 'audio'); }}
+ +                                    className={`text-white hover:text-primary hover:bg-transparent ${activeMenu === 'audio' ? 'text-primary' : ''} transition-all h-8 w-8`}
+ +                                    title="T├╣y chß╗ìn ├óm thanh"
+ +                                >
+ +                                    <AudioLines className="w-4 h-4" />
+ +                                </Button>
+ +                                {/* Audio Popup */}
+ +                                {activeMenu === 'audio' && (
+ +                                    <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+ +                                        <div>
+ +                                            <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">├ém thanh</p>
+ +                                            <div className="flex flex-col gap-1">
+ +                                                {audioTracks.map(track => (
+ +                                                    <button
+ +                                                        key={track.id}
+ +                                                        onClick={() => changeAudioTrack(track.id)}
+ +                                                        className={`text-xs p-1.5 rounded text-left truncate ${currentAudioTrack === track.id ? 'bg-primary text-black' : 'hover:bg-white/10'}`}
+ +                                                    >
+ +                                                        {track.name || track.lang || `K├¬nh ${track.id + 1}`}
+ +                                                    </button>
+ +                                                ))}
+ +                                            </div>
+ +                                        </div>
+ +                                    </div>
+ +                                )}
+ +                            </div>
+ +                        )}
+ +
+ +                        {/* Quality Button logic */}
+ +                        {qualityLevels.length > 0 && (
+ +                            <div className="relative">
+ +                                <Button
+ +                                    variant="ghost"
+ +                                    size="icon"
+ +                                    onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === 'quality' ? null : 'quality'); }}
+ +                                    className={`text-white hover:text-primary hover:bg-transparent ${activeMenu === 'quality' ? 'text-primary' : ''} transition-all h-8 w-8`}
+ +                                    title="T├╣y chß╗ìn chß║Ñt l╞░ß╗úng"
+ +                                >
+ +                                    <Settings2 className="w-4 h-4" />
+ +                                    {currentQuality !== -1 && (
+ +                                        <span className="absolute -top-1 -right-1 bg-primary text-black text-[8px] font-bold px-1 rounded">
+ +                                            {qualityLevels.find(q => q.index === currentQuality)?.height}p
+ +                                        </span>
+ +                                    )}
+ +                                </Button>
+ +                                {/* Quality Popup */}
+ +                                {activeMenu === 'quality' && (
+ +                                    <div className={`absolute bottom-12 right-0 bg-black/95 border border-white/20 rounded-lg p-2.5 min-w-[180px] max-h-[70vh] overflow-y-auto text-white space-y-3 z-[60] shadow-2xl custom-scrollbar ${isLandscape ? '-rotate-90 origin-bottom-right translate-x-full' : ''}`}>
+                                          <div>
+                                              <p className="text-xs text-secondary/70 mb-2 uppercase font-bold">Chß║Ñt l╞░ß╗úng</p>
+                                              <div className="flex flex-col gap-1">

@@ -101,7 +101,7 @@ export function MovieCard({ movie, isEditing }: MovieCardProps) {
 
                 {/* Progress Bar */}
                 {movie.progress && movie.progress.percentage > 0 && (
-                    <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gray-700/50 z-20">
+                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-700/50 z-20">
                         <div
                             className="h-full bg-primary"
                             style={{ width: `${Math.min(movie.progress.percentage, 100)}%` }}
