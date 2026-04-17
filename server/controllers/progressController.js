@@ -41,7 +41,8 @@ exports.saveProgress = async (req, res) => {
         let progress = await WatchProgress.findOne({
             userId,
             movieSlug,
-            episodeSlug
+            episodeSlug,
+            serverName
         });
 
         const completed = duration > 0 && currentTime >= duration * 0.9; // 90% completion
