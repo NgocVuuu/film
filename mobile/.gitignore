@@ -5,12 +5,10 @@
 *.swp
 .DS_Store
 .atom/
-.build/
 .buildlog/
 .history
 .svn/
-.swiftpm/
-migrate_working_dir/
+.vscode/
 
 # IntelliJ related
 *.iml
@@ -18,20 +16,21 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# The .vscode folder contains project-specific workspace settings
+# .vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
-/coverage/
+
+# Web related
+lib/generated_plugin_registrant.dart
 
 # Symbolication related
 app.*.symbols
@@ -43,3 +42,27 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Windows and Linux specific generated files
+*.obj
+*.exe
+*.dll
+*.lib
+*.so
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/windows/flutter/ephemeral/.plugin_symlinks/
+
+# macOS specific generated files
+**/macos/Flutter/ephemeral/
+
+# iOS related
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/ephemeral/
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+**/ios/Runner.xcworkspace/xcuserdata/
+
+# Gradle wrapper (Some projects track this, but we'll ignore downloaded ones if needed)
+/android/local.properties
