@@ -209,10 +209,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Hero Slider (allTrending)
                   HeroSlider(movies: moviesProvider.getList('allTrending')),
 
-                  // Lá»‹ch sá»­ xem phim (Tiáº¿p tá»¥c xem)
+                  // Lá»‹ch sá»­ xem phim (Tiếp tục xem)
                   if (historyProvider.history.isNotEmpty)
                     HistoryCarousel(
-                      title: 'Tiáº¿p tá»¥c xem',
+                      title: 'Tiếp tục xem',
                       history: historyProvider.history,
                     ),
 
@@ -232,20 +232,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
 
                   // Phim ráº¡p
-                  MovieCarousel(title: 'Phim láº» chiáº¿u ráº¡p Ä‘áº³ng cáº¥p nháº¥t', movies: moviesProvider.getList('featuredMovies')),
-                  MovieCarousel(title: 'Phim ráº¡p sáº¯p chiáº¿u', movies: moviesProvider.getList('upcomingMovies')),
+                  MovieCarousel(title: 'Phim lẻ chiếu rạp đẳng cấp nhất', movies: moviesProvider.getList('featuredMovies')),
+                  MovieCarousel(title: 'Phim rạp sắp chiếu', movies: moviesProvider.getList('upcomingMovies')),
 
                   // Section Trending (Bo gÃ³c + LinearGradient VÃ ng)
-                  TrendingCarousel(title: 'Phim bá»™ ná»•i báº­t', movies: moviesProvider.getList('seriesTrending')),
-                  TrendingCarousel(title: 'Phim láº» ná»•i báº­t', movies: moviesProvider.getList('movieTrending')),
+                  TrendingCarousel(title: 'Phim bộ nổi bật', movies: moviesProvider.getList('seriesTrending')),
+                  TrendingCarousel(title: 'Phim lẻ nổi bật', movies: moviesProvider.getList('movieTrending')),
 
                   // Äá» cá»­
                   MovieCarousel(title: 'Phim ná»•i báº­t Ä‘á» cá»­ cho báº¡n', movies: moviesProvider.getList('allTrending').reversed.toList()),
 
                   // CÃ¡c thá»ƒ loáº¡i khÃ¡c
-                  MovieCarousel(title: 'Top Anime & Hoáº¡t hÃ¬nh Hot nháº¥t', movies: moviesProvider.getList('hotAnimeMovies')),
-                  MovieCarousel(title: 'Hoáº¡t hÃ¬nh TiÃªn Hiá»‡p Trung Quá»‘c Ä‘á»‰nh nháº¥t', movies: moviesProvider.getList('xianxiaMovies')),
-                  MovieCarousel(title: 'SiÃªu pháº©m Trung Quá»‘c hot nháº¥t', movies: moviesProvider.getList('chinaMovies')),
+                  MovieCarousel(title: 'Top Anime & Hoạt hình Hot nhất', movies: moviesProvider.getList('hotAnimeMovies')),
+                  MovieCarousel(title: 'Hoạt hình Tiên Hiệp Trung Quốc đỉnh nhất', movies: moviesProvider.getList('xianxiaMovies')),
+                  MovieCarousel(title: 'Siêu phẩm Trung Quốc hot nhất', movies: moviesProvider.getList('chinaMovies')),
                   MovieCarousel(title: 'Phim HÃ n Quá»‘c chÃ¢m ngÃ²i cáº£m xÃºc', movies: moviesProvider.getList('koreaMovies')),
                   MovieCarousel(title: 'HÃ nh Ä‘á»™ng ngháº¹t thá»Ÿ vÃ  ká»‹ch tÃ­nh', movies: moviesProvider.getList('actionMovies')),
                   MovieCarousel(title: 'Phim má»›i cáº­p nháº­t hÃ ng ngÃ y', movies: moviesProvider.getList('latestMovies')),

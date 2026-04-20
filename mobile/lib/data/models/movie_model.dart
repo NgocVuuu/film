@@ -1,3 +1,6 @@
+﻿import 'package:flutter/foundation.dart';
+import '../../core/api/api_client.dart';
+
 class EpisodeData {
   final String name;
   final String slug;
@@ -107,19 +110,25 @@ class Movie {
   static String? _fixImageUrl(dynamic url) {
     if (url == null || url.toString().isEmpty) return null;
     String finalUrl = url.toString();
-    
-    // Xử lý link thiếu domain
+
+    // Xá» lÃ½ link thiáº¿u domain
     if (!finalUrl.startsWith('http') && !finalUrl.startsWith('//')) {
       if (finalUrl.startsWith('/')) {
         finalUrl = 'https://phimimg.com$finalUrl';
       } else {
-        // Thử fix domain nếu format quen thuộc
+        // Thá» fix domain náº¿u format quen thuá»™c
         finalUrl = 'https://phimimg.com/$finalUrl';
       }
     } else if (finalUrl.startsWith('//')) {
       finalUrl = 'https:$finalUrl';
     }
-    
+
+    if (kIsWeb) {
+      final encodedUrl = Uri.encodeComponent(finalUrl);
+      return '${ApiClient.baseUrl}/proxy/image?url=$encodedUrl';
+    }
+
     return finalUrl;
   }
 }
+

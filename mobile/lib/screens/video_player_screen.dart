@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:better_player/better_player.dart';
+import 'package:chewie/chewie.dart';
+import 'package:video_player/video_player.dart';
 import 'package:provider/provider.dart';
 import '../data/models/movie_model.dart';
 import '../core/theme/app_colors.dart';
@@ -23,7 +24,8 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  late BetterPlayerController _betterPlayerController;
+  VideoPlayerController? _videoPlayerController;
+  ChewieController? _chewieController;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -33,59 +35,57 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _initializePlayer();
   }
 
-  void _initializePlayer() {
+  Future<void> _initializePlayer() async {
     try {
       final url = widget.episodeUrl;
-      
+
       if (url == null || url.isEmpty) {
-        setState(() {
-          _errorMessage = 'Liên kết video không hợp lệ.';
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Liên kết video không hợp lệ.';
+            _isLoading = false;
+          });
+        }
         return;
       }
 
-      BetterPlayerConfiguration betterPlayerConfiguration = BetterPlayerConfiguration(
+      _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(url));
+
+      await _videoPlayerController!.initialize();
+
+      _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController!,
         aspectRatio: 16 / 9,
-        fit: BoxFit.contain,
         autoPlay: true,
         looping: false,
         deviceOrientationsAfterFullScreen: [DeviceOrientation.portraitUp],
-        deviceOrientationsOnFullScreen: [
+        deviceOrientationsOnEnterFullScreen: [
           DeviceOrientation.landscapeLeft,
           DeviceOrientation.landscapeRight
         ],
-        fullScreenAspectRatio: 16 / 9,
-        controlsConfiguration: BetterPlayerControlsConfiguration(
-          progressBarPlayedColor: AppColors.primary,
-          progressBarHandleColor: AppColors.primary,
-          progressBarBufferedColor: Colors.white54,
-          progressBarBackgroundColor: Colors.white24,
-          loadingColor: AppColors.primary,
-          enableSkips: true,
+        materialProgressColors: ChewieProgressColors(
+          playedColor: AppColors.primary,
+          handleColor: AppColors.primary,
+          bufferedColor: Colors.white54,
+          backgroundColor: Colors.white24,
+        ),
+        cupertinoProgressColors: ChewieProgressColors(
+          playedColor: AppColors.primary,
+          handleColor: AppColors.primary,
+          bufferedColor: Colors.white54,
+          backgroundColor: Colors.white24,
         ),
       );
 
-      BetterPlayerDataSource dataSource = BetterPlayerDataSource(
-        BetterPlayerDataSourceType.network,
-        url,
-      );
-
-      _betterPlayerController = BetterPlayerController(betterPlayerConfiguration);
-      _betterPlayerController.setupDataSource(dataSource).then((_) {
-         if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-         }
-      });
-      
-      _betterPlayerController.addEventsListener((BetterPlayerEvent event) {
-        if (event.betterPlayerEventType == BetterPlayerEventType.progress) {
-             _saveProgress();
-        }
+      _videoPlayerController!.addListener(() {
+        _saveProgress();
       });
 
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -97,10 +97,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   void _saveProgress() {
-    if (!mounted || _betterPlayerController.videoPlayerController?.value.initialized != true) return;
-    
-    final position = _betterPlayerController.videoPlayerController?.value.position.inSeconds.toDouble() ?? 0;
-    final duration = _betterPlayerController.videoPlayerController?.value.duration?.inSeconds.toDouble() ?? 0;
+    if (!mounted || _videoPlayerController?.value.isInitialized != true) return;
+
+    final position = _videoPlayerController?.value.position.inSeconds.toDouble() ?? 0;
+    final duration = _videoPlayerController?.value.duration.inSeconds.toDouble() ?? 0;
 
     if (duration > 0) {
       double progress = position / duration;
@@ -115,7 +115,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   void dispose() {
-    _betterPlayerController.dispose();
+    _videoPlayerController?.removeListener(_saveProgress);
+    _videoPlayerController?.dispose();
+    _chewieController?.dispose();
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.dispose();
   }
@@ -139,7 +141,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               ? const CircularProgressIndicator(color: AppColors.primary)
               : _errorMessage != null
                   ? Text(_errorMessage!, style: const TextStyle(color: Colors.red))
-                  : BetterPlayer(controller: _betterPlayerController),
+                  : _chewieController != null &&
+                          _chewieController!.videoPlayerController.value.isInitialized
+                      ? Chewie(controller: _chewieController!)
+                      : const Text('Đang khởi tạo...', style: TextStyle(color: Colors.white)),
         ),
       ),
     );

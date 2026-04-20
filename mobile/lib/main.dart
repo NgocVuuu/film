@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'core/theme/app_colors.dart';
 import 'providers/movies_provider.dart';
 import 'providers/watch_history_provider.dart';
@@ -28,7 +29,11 @@ class MyApp extends StatelessWidget {
           scaffoldBackgroundColor: AppColors.background,
           brightness: Brightness.dark,
           primaryColor: AppColors.primary,
-          fontFamily: 'Roboto',
+          textTheme: GoogleFonts.geistTextTheme().apply(
+            bodyColor: Colors.white,
+            displayColor: Colors.white,
+          ),
+          fontFamily: GoogleFonts.geist().fontFamily,
         ),
         home: const MainScreen(),
       ),

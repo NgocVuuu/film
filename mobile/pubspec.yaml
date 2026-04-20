@@ -1,4 +1,4 @@
-﻿name: mobile
+name: mobile
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -39,7 +39,9 @@ dependencies:
   provider: ^6.1.5+1
   flutter_html: ^3.0.0
   shared_preferences: ^2.5.5
-  better_player: ^0.0.84
+  chewie: ^1.13.1
+  video_player: ^2.11.1
+  google_fonts: ^8.0.2
 
 dev_dependencies:
   flutter_test:
