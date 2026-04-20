@@ -303,9 +303,7 @@ app.use('/api', limiter);
 mongoose.connect(MONGO_URI, {
     serverSelectionTimeoutMS: 30000, 
     socketTimeoutMS: 45000,
-    connectTimeoutMS: 30000,
-    keepAlive: true,
-    keepAliveInitialDelay: 300000
+    connectTimeoutMS: 30000
 })
     .then(() => {
         console.log('Đã kết nối MongoDB');
