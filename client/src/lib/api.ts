@@ -2,14 +2,22 @@ import { API_URL } from './config';
 
 export const getAuthToken = () => {
     if (typeof window !== 'undefined') {
-        return localStorage.getItem('token');
+        const token = localStorage.getItem('token');
+        if (!token || token === 'null' || token === 'undefined') {
+            return null;
+        }
+        return token;
     }
     return null;
 };
 
 export const setAuthToken = (token: string) => {
     if (typeof window !== 'undefined') {
-        localStorage.setItem('token', token);
+        if (!token || token === 'null' || token === 'undefined') {
+            localStorage.removeItem('token');
+        } else {
+            localStorage.setItem('token', token);
+        }
     }
 };
 

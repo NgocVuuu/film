@@ -13,8 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'react-hot-toast';
-import { API_URL } from '@/lib/config';
-import { getAuthToken } from '@/lib/api';
+import { customFetch } from '@/lib/api';
 
 interface Feedback {
     _id: string;
@@ -44,12 +43,7 @@ export default function AdminFeedbackPage() {
 
     const fetchFeedbacks = async () => {
         try {
-            const token = getAuthToken();
-            const response = await fetch(`${API_URL}/api/admin/feedback`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await customFetch(`/api/admin/feedback`);
             const data = await response.json();
             if (data.success) {
                 setFeedbacks(data.data);
@@ -64,13 +58,8 @@ export default function AdminFeedbackPage() {
 
     const handleUpdateStatus = async (id: string, status: string) => {
         try {
-            const token = getAuthToken();
-            const response = await fetch(`${API_URL}/api/admin/feedback/${id}/status`, {
+            const response = await customFetch(`/api/admin/feedback/${id}/status`, {
                 method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify({ status })
             });
             const data = await response.json();
@@ -86,12 +75,8 @@ export default function AdminFeedbackPage() {
     const handleDelete = async (id: string) => {
         if (!confirm('Bạn có chắc chắn muốn xóa góp ý này?')) return;
         try {
-            const token = getAuthToken();
-            const response = await fetch(`${API_URL}/api/admin/feedback/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            const response = await customFetch(`/api/admin/feedback/${id}`, {
+                method: 'DELETE'
             });
             const data = await response.json();
             if (data.success) {

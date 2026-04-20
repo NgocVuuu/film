@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { getAuthToken } from '@/lib/api';
+import { customFetch, getAuthToken } from '@/lib/api';
 import { API_URL } from '@/lib/config';
 import { io, Socket } from 'socket.io-client';
 import { MessageCircle, Send, User, Search, Circle } from 'lucide-react';
@@ -52,10 +52,7 @@ export default function AdminChatPage() {
 
     const fetchConversations = useCallback(async () => {
         try {
-            const token = getAuthToken();
-            const res = await fetch(`${API_URL}/api/chat/admin/all`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await customFetch(`/api/chat/admin/all`);
             const data = await res.json();
             if (data.success) setConversations(data.data);
         } catch {
@@ -68,10 +65,7 @@ export default function AdminChatPage() {
     const fetchMessages = useCallback(async (convId: string) => {
         setMsgLoading(true);
         try {
-            const token = getAuthToken();
-            const res = await fetch(`${API_URL}/api/chat/${convId}/messages`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await customFetch(`/api/chat/${convId}/messages`);
             const data = await res.json();
             if (data.success) setMessages(data.data);
         } catch {
