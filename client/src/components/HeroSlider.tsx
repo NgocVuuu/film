@@ -631,19 +631,17 @@ export function HeroSlider({ movies }: HeroSliderProps) {
             </button>
 
             {/* Thumbnail Pagination — trending-style skewed mini cards, max 10, bottom right */}
-            <div className="absolute bottom-4 md:bottom-8 right-3 md:right-8 z-30 hidden md:flex gap-2 lg:gap-3 items-end overflow-hidden max-w-[50vw] lg:max-w-[60vw]">
+            <div className="absolute bottom-4 md:bottom-8 right-3 md:right-8 z-30 hidden md:flex gap-1.5 lg:gap-2 items-end justify-end max-w-[85vw] lg:max-w-[65vw] pt-6 pl-4">
                 {movies.slice(0, 10).map((movie, idx) => {
                     const isActive = idx === currentIndex;
                     return (
                         <button
                             key={idx}
                             onClick={() => setCurrentIndex(idx)}
-                            className={`relative shrink-0 -skew-x-6 rounded-lg overflow-hidden focus:outline-none transition-all duration-300 bg-black ${
-                                isActive ? 'scale-[1.08] -translate-y-2' : 'scale-100 hover:scale-[1.03] hover:-translate-y-1'
+                            className={`relative shrink-0 -skew-x-6 rounded-lg overflow-hidden focus:outline-none transition-all duration-300 bg-black w-[44px] h-[60px] lg:w-[60px] lg:h-[80px] xl:w-[72px] xl:h-[96px] ${
+                                isActive ? 'scale-[1.15] -translate-y-2 lg:-translate-y-3 z-10' : 'scale-100 hover:scale-[1.05] hover:-translate-y-1 z-0'
                             }`}
                             style={{
-                                width: '72px',
-                                height: '96px',
                                 borderWidth: '2px',
                                 borderStyle: 'solid',
                                 borderColor: isActive ? '#eab308' : 'rgba(255,255,255,0.25)',
