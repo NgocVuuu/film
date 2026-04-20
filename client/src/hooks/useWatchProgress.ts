@@ -65,7 +65,8 @@ export function useWatchProgress({
 
     // Save progress function
     const saveProgress = async (currentTime: number, duration: number) => {
-        if (!movieSlug || !episodeSlug || currentTime < 5) return;
+        // Prevent saving if we haven't loaded the server's initial progress yet to avoid overwrites
+        if (!movieSlug || !episodeSlug || currentTime < 5 || loadedEpisode !== episodeSlug) return;
 
         // 1. Save to LocalStorage for History Page (Immediate UI update)
         try {
@@ -183,7 +184,7 @@ export function useWatchProgress({
     useEffect(() => {
         const flushViaBeacon = () => {
             const last = lastKnownRef.current;
-            if (!last || !user || !movieSlug || !episodeSlug || !serverName) return;
+            if (!last || !user || !movieSlug || !episodeSlug || !serverName || last.currentTime < 5 || loadedEpisode !== episodeSlug) return;
             const token = getAuthToken();
             const payload = JSON.stringify({
                 movieSlug,
@@ -195,8 +196,6 @@ export function useWatchProgress({
                 currentTime: last.currentTime,
                 duration: last.duration,
             });
-            // sendBeacon dễ bị chặn bởi CORS/Preflight nếu khác domain.
-            // Giải pháp tối ưu nhất cho React 18 / PWA là dùng fetch với cờ keepalive: true
             const url = `${API_URL}/api/progress/save`;
             if (token) {
                 fetch(url, {
@@ -210,7 +209,6 @@ export function useWatchProgress({
                     keepalive: true // Cờ quan trọng: Đảm bảo request hoàn thành sau khi Browser tắt
                 }).catch(() => {});
             }
-            // Also cancel any pending debounce to avoid double-save when component unmounts normally
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         };
 
@@ -225,11 +223,10 @@ export function useWatchProgress({
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('beforeunload', handleBeforeUnload);
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-            }
+            // Save on SPA navigation unmount
+            flushViaBeacon();
         };
-    }, []);
+    }, [user, movieSlug, episodeSlug, serverName, movieName, movieThumb, episodeName]);
 
     // Provide an explicit flush function so Parent can call it with the current exact time
     const flushSave = (currentTime: number, duration: number) => {
