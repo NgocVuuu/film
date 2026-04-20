@@ -48,11 +48,9 @@ exports.saveProgress = async (req, res) => {
         const completed = duration > 0 && currentTime >= duration * 0.9; // 90% completion
 
         if (progress) {
-            // Only update if the incoming position is ahead of what's stored,
-            // OR if it was recently watched (within 10s) — avoids older-device overwrites
-            const incomingIsNewer = currentTime > progress.currentTime ||
-                (progress.lastWatched && (Date.now() - new Date(progress.lastWatched).getTime()) > 10000);
-            if (incomingIsNewer) {
+            // Always update progress unless the new time is somehow magically 0 and we already have a long progress recorded
+            // The client already blocks currentTime < 5, so we should trust the client for seeks backwards or forwards.
+            if (currentTime >= 5 || progress.currentTime < 5) {
                 progress.currentTime = currentTime;
                 progress.duration = duration;
                 progress.completed = completed;

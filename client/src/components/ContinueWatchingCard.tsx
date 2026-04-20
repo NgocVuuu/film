@@ -59,12 +59,12 @@ export function ContinueWatchingCard({ movie, onRemove }: ContinueWatchingCardPr
                 </div>
 
                 {/* Episode Badge with Progress */}
-                <div className="absolute top-2 left-2 flex flex-col gap-1 z-20">
-                    <div className="bg-black/70 backdrop-blur-sm text-white text-[10px] font-medium px-1.5 py-0.5 rounded border border-white/10">
+                <div className="absolute top-2 left-2 flex flex-col items-start gap-1 z-20 max-w-[75%]">
+                    <div className="bg-black/70 backdrop-blur-sm text-white text-[10px] font-medium px-1.5 py-0.5 rounded border border-white/10 truncate w-full">
                         <Clock className="w-3 h-3 inline mr-1" />
                         {movie.progress.episodeName}
                     </div>
-                    <div className="bg-primary/90 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    <div className="bg-primary/90 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
                         {movie.progress.percentage}%
                     </div>
                 </div>
@@ -84,17 +84,12 @@ export function ContinueWatchingCard({ movie, onRemove }: ContinueWatchingCardPr
                         <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                 )}
-
-                {/* Status Badge */}
-                <div className={`absolute ${onRemove ? 'top-10' : 'top-2'} right-2 bg-primary/90 text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm z-20 uppercase tracking-tight`}>
-                    Xem tiếp
-                </div>
             </div>
 
             {/* Content */}
             <div className="absolute bottom-0 left-0 w-full p-3 bg-gradient-to-t from-black via-black/80 to-transparent pt-6">
                 <div className="truncate marquee-container">
-                    <h3 className="text-sm font-bold text-white group-hover:text-primary transition-colors uppercase leading-tight hover-marquee">
+                    <h3 className="text-xs font-semibold text-white group-hover:text-primary transition-colors leading-tight hover-marquee">
                         {movie.name}
                     </h3>
                 </div>
