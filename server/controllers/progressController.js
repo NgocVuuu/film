@@ -37,13 +37,20 @@ exports.saveProgress = async (req, res) => {
 
         console.log('[saveProgress] Request:', { userId, movieSlug, episodeSlug, currentTime, duration });
 
-        // Check if progress already exists
-        let progress = await WatchProgress.findOne({
+        // Check if progress already exists for this episode, ignoring serverName so progress is shared between servers
+        const allProgress = await WatchProgress.find({
             userId,
             movieSlug,
-            episodeSlug,
-            serverName
-        });
+            episodeSlug
+        }).sort({ lastWatched: -1 });
+
+        let progress = allProgress[0];
+
+        // Cleanup duplicates from the old schema where serverName was separate
+        if (allProgress.length > 1) {
+            const idsToDelete = allProgress.slice(1).map(p => p._id);
+            await WatchProgress.deleteMany({ _id: { $in: idsToDelete } });
+        }
 
         const completed = duration > 0 && currentTime >= duration * 0.9; // 90% completion
 

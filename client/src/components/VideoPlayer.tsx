@@ -631,6 +631,15 @@ export default function VideoPlayer({
         }
     }, [user, movieSlug, episodeSlug]);
 
+    // Ensure initialProgress is applied even if it loads after video metadata
+    useEffect(() => {
+        const video = videoRef.current;
+        const isSameEpisode = prevEpisodeRef.current?.movie === movieSlug && prevEpisodeRef.current?.episode === episodeSlug;
+        if (video && initialProgress !== null && initialProgress > 10 && video.currentTime < 5 && !isSameEpisode) {
+            video.currentTime = initialProgress;
+        }
+    }, [initialProgress, movieSlug, episodeSlug]);
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
