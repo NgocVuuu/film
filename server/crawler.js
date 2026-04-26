@@ -503,6 +503,8 @@ async function syncAll(options = {}) {
             currentPage = page;
             if (!isRunning) break;
 
+            addLog(`Crawling page ${page}...`, 'info');
+
             // Sequential adapters per page to be gentle
             // Order: OPHIM -> NGUONC -> KKPHIM
             // This ensures KKPHIM (Priority 1) metadata overwrites others if they exist
@@ -511,12 +513,14 @@ async function syncAll(options = {}) {
             const countKK = await syncPage(ADAPTERS.KKPHIM, page);
 
             totalProcessed += (countOP + countKK + countNC);
+            addLog(`Page ${page} completed. Found ${countOP + countKK + countNC} movies.`, 'success');
 
             // Small break between pages
             if (isFull || (toPage - fromPage > 1)) await sleep(1000);
         }
 
         console.log(`Sync Completed. Total movies processed: ${totalProcessed}`);
+        addLog(`Sync Completed. Total movies processed: ${totalProcessed}`, 'success');
         return totalProcessed;
     } finally {
         isRunning = false;
@@ -593,10 +597,12 @@ async function syncSpecificMovie(slug, sourceName = null) {
         const sources = [ADAPTERS.KKPHIM, ADAPTERS.NGUONC, ADAPTERS.OPHIM];
 
         for (const adapter of sources) {
+            addLog(`[FETCH-SPECIFIC] Trying ${adapter.name}... cho phim ${slug}`, 'info');
             console.log(`[FETCH-SPECIFIC] Trying ${adapter.name}...`);
             const result = await processMovie(adapter, slug, 0);
 
             if (result.success) {
+                addLog(`[FETCH-SPECIFIC] ✓ Successfully fetched from ${adapter.name}: ${result.name}`, 'success');
                 console.log(`[FETCH-SPECIFIC] ✓ Successfully fetched from ${adapter.name}: ${result.name}`);
                 return { success: true, source: adapter.name, movie: result };
             }
@@ -605,6 +611,7 @@ async function syncSpecificMovie(slug, sourceName = null) {
             await sleep(500);
         }
 
+        addLog(`[FETCH-SPECIFIC] ✗ Failed to fetch ${slug} from all sources`, 'error');
         console.log(`[FETCH-SPECIFIC] ✗ Failed to fetch ${slug} from all sources`);
         return { success: false, error: 'Không tìm thấy phim từ bất kỳ nguồn nào (OPHIM, KKPHIM, NGUONC)' };
 
