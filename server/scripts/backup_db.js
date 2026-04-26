@@ -31,13 +31,30 @@ const backup = async () => {
 
         for (const collection of collections) {
             const name = collection.name;
-            const data = await mongoose.connection.db.collection(name).find({}).toArray();
+            const cursor = mongoose.connection.db.collection(name).find({});
+            
+            const filePath = path.join(backupPath, `${name}.json`);
+            const writeStream = fs.createWriteStream(filePath);
+            
+            writeStream.write('[\n');
+            let isFirst = true;
+            let count = 0;
+            
+            while (await cursor.hasNext()) {
+                const doc = await cursor.next();
+                if (!isFirst) {
+                    writeStream.write(',\n');
+                }
+                writeStream.write(JSON.stringify(doc));
+                isFirst = false;
+                count++;
+            }
+            writeStream.write('\n]');
+            writeStream.end();
 
-            fs.writeFileSync(
-                path.join(backupPath, `${name}.json`),
-                JSON.stringify(data, null, 2)
-            );
-            console.log(`Backed up ${name}: ${data.length} documents`);
+            await new Promise((resolve) => writeStream.on('finish', resolve));
+
+            console.log(`Backed up ${name}: ${count} documents`);
         }
 
         console.log(`Backup completed successfully to ${backupPath}`);
