@@ -64,7 +64,7 @@ export function useWatchProgress({
     }, [user, movieSlug, episodeSlug, loadedEpisode]);
 
     // Save progress function
-    const saveProgress = async (currentTime: number, duration: number) => {
+    const saveProgress = async (currentTime: number, duration: number, isUnmounting = false) => {
         // Prevent saving if we haven't loaded the server's initial progress yet to avoid overwrites
         if (!movieSlug || !episodeSlug || currentTime < 5 || loadedEpisode !== episodeSlug) return;
 
@@ -73,11 +73,9 @@ export function useWatchProgress({
             const history = JSON.parse(localStorage.getItem('history') || '[]');
             const percentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-            // Allow update if movie exists in history
             const existingIndex = history.findIndex((h: { slug?: string }) => h.slug === movieSlug);
 
             if (existingIndex !== -1) {
-                // Update existing
                 history[existingIndex] = {
                     ...history[existingIndex],
                     progress: {
@@ -91,78 +89,73 @@ export function useWatchProgress({
                     viewedAt: new Date().toISOString()
                 };
 
-                // Move to top
                 const item = history.splice(existingIndex, 1)[0];
                 history.unshift(item);
-
                 localStorage.setItem('history', JSON.stringify(history));
-            } else {
-                // If not in history (e.g. direct link), maybe add it? 
-                // For now, let's assume MovieDetail added it. 
-                // If we want to be robust, we could add a basic entry here, but we might lack thumb/name if props aren't full.
-                // Given VideoPlayerProps has movieName/Thumb, we can add it!
-                if (movieName) {
-                    const newItem = {
-                        _id: movieSlug, // fallback id
-                        name: movieName,
-                        origin_name: '',
-                        slug: movieSlug,
-                        thumb_url: movieThumb || '',
-                        year: new Date().getFullYear(),
-                        viewedAt: new Date().toISOString(),
-                        progress: {
-                            currentTime,
-                            duration,
-                            percentage,
-                            episodeSlug,
-                            episodeName: episodeName || '',
-                            serverName: serverName || '',
-                        }
-                    };
-                    history.unshift(newItem);
-                    localStorage.setItem('history', JSON.stringify(history.slice(0, 50)));
-                }
+            } else if (movieName) {
+                const newItem = {
+                    _id: movieSlug,
+                    name: movieName,
+                    origin_name: '',
+                    slug: movieSlug,
+                    thumb_url: movieThumb || '',
+                    year: new Date().getFullYear(),
+                    viewedAt: new Date().toISOString(),
+                    progress: {
+                        currentTime,
+                        duration,
+                        percentage,
+                        episodeSlug,
+                        episodeName: episodeName || '',
+                        serverName: serverName || '',
+                    }
+                };
+                history.unshift(newItem);
+                localStorage.setItem('history', JSON.stringify(history.slice(0, 50)));
             }
         } catch (e) {
             console.error('Error saving local history:', e);
         }
 
         // 2. Save to API (if user logged in)
-        if (user && serverName) {
-            try {
-                const response = await customFetch(`/api/progress/save`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        movieSlug,
-                        movieName,
-                        movieThumb,
-                        episodeSlug,
-                        episodeName,
-                        serverName,
-                        currentTime,
-                        duration
-                    })
+        if (serverName) {
+            const token = getAuthToken();
+            if (token) {
+                const payload = JSON.stringify({
+                    movieSlug,
+                    movieName,
+                    movieThumb,
+                    episodeSlug,
+                    episodeName,
+                    serverName,
+                    currentTime,
+                    duration
                 });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    console.error('[saveProgress] API Error:', data);
+                
+                try {
+                    // Use standard fetch if unmounting to utilize keepalive
+                    fetch(`${API_URL}/api/progress/save`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: payload,
+                        credentials: 'include',
+                        keepalive: isUnmounting // Ensure request finishes if tab closes
+                    }).catch(() => {});
+                } catch (error) {
+                    console.error('[saveProgress] Network error:', error);
                 }
-            } catch (error) {
-                console.error('[saveProgress] Network error:', error);
             }
         }
     };
 
-    // Debounced and Throttled save - saves after user stops seeking for 2s, 
-    // OR every 15 seconds during continuous playback to ensure progress is captured
+    // Debounced and Throttled save
     const debouncedSave = (currentTime: number, duration: number) => {
         lastKnownRef.current = { currentTime, duration };
         const now = Date.now();
 
-        // Throttle: If we haven't saved in 15 seconds, save immediately
         if (now - lastSavedTimeRef.current >= 15000) {
             lastSavedTimeRef.current = now;
             saveProgress(currentTime, duration);
@@ -170,45 +163,19 @@ export function useWatchProgress({
             return;
         }
 
-        // Debounce: Always reset the 2-second timer
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-        }
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => {
             lastSavedTimeRef.current = Date.now();
             saveProgress(currentTime, duration);
-        }, 2000); // 2s after last timeupdate (paused or stopped seeking)
+        }, 2000);
     };
 
-    // Instant save on tab close / visibility hidden using sendBeacon so it survives page unload
+    // Instant save on tab close / visibility hidden using keepalive fetch
     useEffect(() => {
         const flushViaBeacon = () => {
             const last = lastKnownRef.current;
-            if (!last || !user || !movieSlug || !episodeSlug || !serverName || last.currentTime < 5 || loadedEpisode !== episodeSlug) return;
-            const token = getAuthToken();
-            const payload = JSON.stringify({
-                movieSlug,
-                movieName,
-                movieThumb,
-                episodeSlug,
-                episodeName,
-                serverName,
-                currentTime: last.currentTime,
-                duration: last.duration,
-            });
-            const url = `${API_URL}/api/progress/save`;
-            if (token) {
-                fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: payload,
-                    credentials: 'include',
-                    keepalive: true // Cờ quan trọng: Đảm bảo request hoàn thành sau khi Browser tắt
-                }).catch(() => {});
-            }
+            if (!last || !movieSlug || !episodeSlug || !serverName || last.currentTime < 5 || loadedEpisode !== episodeSlug) return;
+            saveProgress(last.currentTime, last.duration, true);
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         };
 
@@ -223,10 +190,10 @@ export function useWatchProgress({
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('beforeunload', handleBeforeUnload);
-            // Save on SPA navigation unmount
+            // Save on SPA navigation unmount (e.g. changing episodes)
             flushViaBeacon();
         };
-    }, [user, movieSlug, episodeSlug, serverName, movieName, movieThumb, episodeName]);
+    }, [movieSlug, episodeSlug, serverName, movieName, movieThumb, episodeName, loadedEpisode]);
 
     // Provide an explicit flush function so Parent can call it with the current exact time
     const flushSave = (currentTime: number, duration: number) => {

@@ -233,7 +233,7 @@ export default function VideoPlayer({
             if (onTimeUpdate) onTimeUpdate(time);
 
             // Auto-save progress (debounced)
-            if (user && movieSlug && episodeSlug) {
+            if (movieSlug && episodeSlug) {
                 debouncedSave(time, dur);
             }
 

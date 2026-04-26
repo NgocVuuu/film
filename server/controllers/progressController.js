@@ -62,10 +62,10 @@ exports.saveProgress = async (req, res) => {
                 progress.duration = duration;
                 progress.completed = completed;
                 progress.lastWatched = new Date();
-                progress.movieName = movieName || progress.movieName;
-                progress.movieThumb = movieThumb || progress.movieThumb;
-                progress.episodeName = episodeName || progress.episodeName;
-                progress.serverName = serverName;
+                if (movieName) progress.movieName = movieName;
+                if (movieThumb) progress.movieThumb = movieThumb;
+                if (episodeName) progress.episodeName = episodeName;
+                if (serverName) progress.serverName = serverName;
                 await progress.save();
             }
         } else {
@@ -201,8 +201,7 @@ exports.getContinueWatching = async (req, res) => {
         const progress = await WatchProgress.aggregate([
             {
                 $match: {
-                    userId: userId,
-                    completed: false // Only incomplete episodes
+                    userId: userId
                 }
             },
             {

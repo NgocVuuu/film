@@ -419,6 +419,24 @@ async function processMovie(adapter, slug, retryCount = 0) {
             }
         }
 
+        // Consolidate languages from all available episodes and original metadata
+        let availableLangs = new Set();
+        const originalLang = (movie.lang || '').toLowerCase();
+        if (originalLang.includes('vietsub')) availableLangs.add('Vietsub');
+        if (originalLang.includes('thuyết minh')) availableLangs.add('Thuyết Minh');
+        if (originalLang.includes('lồng tiếng')) availableLangs.add('Lồng Tiếng');
+
+        finalEpisodes.forEach(ep => {
+            const sn = (ep.server_name || '').toLowerCase();
+            if (sn.includes('vietsub')) availableLangs.add('Vietsub');
+            if (sn.includes('thuyết minh')) availableLangs.add('Thuyết Minh');
+            if (sn.includes('lồng tiếng')) availableLangs.add('Lồng Tiếng');
+        });
+
+        if (availableLangs.size > 0) {
+            coreData.lang = Array.from(availableLangs).join(' + ');
+        }
+
         const updatePayload = {
             ...coreData,
             episodes: finalEpisodes
