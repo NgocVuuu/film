@@ -99,8 +99,11 @@ export function MoodPicker() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6 pointer-events-none flex justify-center">
-      <div className="bg-surface-900/90 backdrop-blur-2xl border border-white/10 p-5 md:p-6 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.8)] pointer-events-auto max-w-2xl w-full animate-fade-in-up relative overflow-hidden transition-all duration-500">
+    <div className="fixed inset-0 z-[100] p-4 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+      {/* Overlay to close when clicking outside */}
+      <div className="absolute inset-0" onClick={handleDismiss}></div>
+      
+      <div className="bg-surface-900/95 backdrop-blur-2xl border border-white/10 p-6 md:p-8 rounded-[32px] shadow-[0_0_50px_rgba(0,0,0,0.8)] pointer-events-auto max-w-2xl w-full relative overflow-hidden z-10 scale-100 transition-all duration-500 animate-in zoom-in-95">
         {/* Glow effect */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent blur-xl rounded-full"></div>
         

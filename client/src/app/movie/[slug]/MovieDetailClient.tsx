@@ -649,6 +649,10 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                         </button>
                     </div>
 
+                    <Link href="/drama" className="flex items-center justify-center gap-2 py-2.5 mt-3 rounded-xl bg-gradient-to-r from-orange-500/10 to-rose-500/10 border border-orange-500/20 hover:from-orange-500/20 hover:to-rose-500/20 transition-all duration-300 text-xs font-bold text-orange-400 active:scale-95 shadow-sm hover:shadow-[0_0_15px_rgba(249,115,22,0.15)]">
+                        <span className="text-sm drop-shadow-md">🔥</span> Vào Góc Drama
+                    </Link>
+
                     {/* 7. Tabs (Actors & Recommendations) */}
                     <div className="pt-4 space-y-6">
                         <div className="flex items-center gap-8 border-b border-white/5 px-2">
@@ -883,8 +887,8 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                             </div>
                                         </button>
                                         
-                                        <Link href="/drama" className="flex items-center gap-2 text-sm font-semibold text-primary hover:text-gold-400 mt-auto mb-3 transition-colors ml-2">
-                                            Vào góc Chê Phim <ChevronDown className="w-4 h-4 -rotate-90" />
+                                        <Link href="/drama" className="flex items-center gap-2 text-sm font-bold text-orange-500 hover:text-orange-400 mt-auto mb-3 transition-colors ml-2 drop-shadow-md">
+                                            <span className="text-lg">🔥</span> Vào Góc Drama <ChevronDown className="w-4 h-4 -rotate-90" />
                                         </Link>
                                     </div>
 
