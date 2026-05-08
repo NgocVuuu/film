@@ -247,6 +247,7 @@ export function CommentSection({
                             setNewComment={setNewComment}
                             submitting={submitting}
                             contentValid={contentValid}
+                            type={type}
                         />
                     )}
 
@@ -336,6 +337,7 @@ export function CommentSection({
                         setNewComment={setNewComment}
                         submitting={submitting}
                         contentValid={contentValid}
+                        type={type}
                     />
                 </div>
             )}
@@ -490,7 +492,8 @@ const RenderForm = ({
     newComment,
     setNewComment,
     submitting,
-    contentValid
+    contentValid,
+    type
 }: {
     hideForm: boolean,
     onlyWithRating: boolean,
@@ -506,7 +509,8 @@ const RenderForm = ({
     newComment: string,
     setNewComment: (val: string) => void,
     submitting: boolean,
-    contentValid: () => boolean
+    contentValid: () => boolean,
+    type: string
 }) => {
     if (hideForm) return null;
     if (onlyWithRating && hideRatingForm) return null; 
@@ -557,7 +561,7 @@ const RenderForm = ({
                                 type="submit"
                                 disabled={submitting || !contentValid()}
                                 className="bg-primary hover:bg-gold-600 text-black p-0 w-10 h-10 rounded-xl shrink-0"
-                                title={onlyWithRating ? "Gửi đánh giá" : "Gửi bình luận"}
+                                title={onlyWithRating || type === 'rating' ? "Gửi đánh giá" : "Gửi bình luận"}
                             >
                                 {submitting ? (
                                     <div className="animate-spin w-4 h-4 border-2 border-black border-t-transparent rounded-full" />
@@ -629,9 +633,9 @@ const RenderForm = ({
                             disabled={submitting || !contentValid()}
                             className="bg-primary hover:bg-gold-600 text-black font-extrabold px-5 rounded-xl h-9 text-xs"
                         >
-                            {submitting ? (onlyWithRating ? 'Đang gửi đánh giá...' : 'Đang gửi...') : (
+                            {submitting ? ((onlyWithRating || type === 'rating') ? 'Đang gửi đánh giá...' : 'Đang gửi...') : (
                                 <>
-                                    <Send className="w-3.5 h-3.5 mr-1.5" /> {onlyWithRating ? 'GỬI ĐÁNH GIÁ' : 'GỬI BÌNH LUẬN'}
+                                    <Send className="w-3.5 h-3.5 mr-1.5" /> {(onlyWithRating || type === 'rating') ? 'GỬI ĐÁNH GIÁ' : 'GỬI BÌNH LUẬN'}
                                 </>
                             )}
                         </Button>
