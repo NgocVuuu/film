@@ -433,7 +433,7 @@ export default function WatchPage() {
                             {currentEpisode ? `Đang xem: ${currentEpisode.name}` : movie.origin_name}
                         </p>
                     </div>
-                    <div className="hidden md:flex items-center gap-4">
+                    <div className="flex items-center gap-2 md:gap-4">
                         {!roomParam && (
                             <button 
                                 onClick={() => {
@@ -444,13 +444,16 @@ export default function WatchPage() {
                                     const roomId = Math.random().toString(36).substring(2, 9);
                                     router.push(`?room=${roomId}`, { scroll: false });
                                 }}
-                                className="flex items-center bg-primary/20 text-primary hover:bg-primary/30 border border-primary/50 text-xs font-bold gap-2 px-3 py-1.5 rounded-lg transition-colors"
+                                className="flex items-center bg-primary/20 text-primary hover:bg-primary/30 border border-primary/50 text-xs font-bold gap-1 md:gap-2 px-2 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors whitespace-nowrap"
                             >
-                                <Users className="w-4 h-4" />
-                                Tạo phòng chung
+                                <Users className="w-3 h-3 md:w-4 md:h-4" />
+                                <span className="hidden sm:inline">Tạo phòng chung</span>
+                                <span className="sm:hidden">Tạo phòng</span>
                             </button>
                         )}
-                        <DonateButton />
+                        <div className="hidden md:block">
+                            <DonateButton />
+                        </div>
                         <div className="hidden md:flex items-center gap-2">
                             {movie && (
                                 <ReportModal

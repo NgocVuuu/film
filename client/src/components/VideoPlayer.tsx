@@ -240,6 +240,11 @@ export default function VideoPlayer({
             handled = true;
         }
 
+        if (showChat) {
+            setShowChat(false);
+            handled = true;
+        }
+
         if (showSettings) {
             setShowSettings(false);
             handled = true;
@@ -502,6 +507,10 @@ export default function VideoPlayer({
                     let handled = false;
                     if (showEpisodePanel) {
                         setShowEpisodePanel(false);
+                        handled = true;
+                    }
+                    if (showChat) {
+                        setShowChat(false);
                         handled = true;
                     }
                     if (showSettings) {
@@ -1501,6 +1510,10 @@ export default function VideoPlayer({
                         e.stopPropagation();
                         setShowChat(false);
                     }} 
+                    onTouchStart={(e) => {
+                        e.stopPropagation();
+                        setShowChat(false);
+                    }}
                 />
             )}
             

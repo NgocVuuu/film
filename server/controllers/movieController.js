@@ -8,6 +8,7 @@ const homeCache = new NodeCache({ stdTTL: 1800 }); // 30 minutes home page cache
 
 const { attachProgressToMovies } = require('../utils/movieUtils');
 const { syncSpecificMovie } = require('../crawler');
+const { cache: apiCache } = require('../middleware/cacheMiddleware');
 
 const multiSourceSearch = async (keyword) => {
     const cacheKey = `search_${keyword}`;
@@ -1307,40 +1308,62 @@ const reactToMovie = async (req, res) => {
         if (!movie) return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
 
         const existingReaction = await MovieReaction.findOne({ user: userId, movieSlug: slug });
+        let fireDelta = 0;
+        let trashDelta = 0;
 
         if (!type) {
             // Remove reaction
             if (existingReaction) {
-                if (existingReaction.type === 'fire') movie.fire_count = Math.max(0, (movie.fire_count || 0) - 1);
-                if (existingReaction.type === 'trash') movie.trash_count = Math.max(0, (movie.trash_count || 0) - 1);
+                if (existingReaction.type === 'fire') { fireDelta = -1; movie.fire_count = Math.max(0, (movie.fire_count || 0) - 1); }
+                if (existingReaction.type === 'trash') { trashDelta = -1; movie.trash_count = Math.max(0, (movie.trash_count || 0) - 1); }
                 await existingReaction.deleteOne();
-                await movie.save();
             }
-            return res.json({ success: true, fire_count: movie.fire_count, trash_count: movie.trash_count, userReaction: null });
-        }
-
-        if (existingReaction) {
-            if (existingReaction.type === type) {
-                return res.json({ success: true, fire_count: movie.fire_count, trash_count: movie.trash_count, userReaction: existingReaction.type });
-            }
-            // Change reaction
-            if (existingReaction.type === 'fire') movie.fire_count = Math.max(0, (movie.fire_count || 0) - 1);
-            if (existingReaction.type === 'trash') movie.trash_count = Math.max(0, (movie.trash_count || 0) - 1);
-            
-            existingReaction.type = type;
-            await existingReaction.save();
-            
-            if (type === 'fire') movie.fire_count = (movie.fire_count || 0) + 1;
-            if (type === 'trash') movie.trash_count = (movie.trash_count || 0) + 1;
         } else {
-            // New reaction
-            await MovieReaction.create({ user: userId, movieSlug: slug, type });
-            if (type === 'fire') movie.fire_count = (movie.fire_count || 0) + 1;
-            if (type === 'trash') movie.trash_count = (movie.trash_count || 0) + 1;
+            if (existingReaction) {
+                if (existingReaction.type !== type) {
+                    // Change reaction
+                    if (existingReaction.type === 'fire') { fireDelta = -1; movie.fire_count = Math.max(0, (movie.fire_count || 0) - 1); }
+                    if (existingReaction.type === 'trash') { trashDelta = -1; movie.trash_count = Math.max(0, (movie.trash_count || 0) - 1); }
+                    
+                    existingReaction.type = type;
+                    await existingReaction.save();
+                    
+                    if (type === 'fire') { fireDelta += 1; movie.fire_count = (movie.fire_count || 0) + 1; }
+                    if (type === 'trash') { trashDelta += 1; movie.trash_count = (movie.trash_count || 0) + 1; }
+                }
+            } else {
+                // New reaction
+                try {
+                    await MovieReaction.create({ user: userId, movieSlug: slug, type });
+                    if (type === 'fire') { fireDelta = 1; movie.fire_count = (movie.fire_count || 0) + 1; }
+                    if (type === 'trash') { trashDelta = 1; movie.trash_count = (movie.trash_count || 0) + 1; }
+                } catch (e) {
+                    if (e.code === 11000) {
+                        return res.json({ success: true, fire_count: movie.fire_count, trash_count: movie.trash_count, userReaction: type });
+                    }
+                    throw e;
+                }
+            }
         }
 
-        await movie.save();
-        res.json({ success: true, fire_count: movie.fire_count, trash_count: movie.trash_count, userReaction: type });
+        if (fireDelta !== 0 || trashDelta !== 0) {
+            await Movie.updateOne({ _id: movie._id }, { $inc: { fire_count: fireDelta, trash_count: trashDelta } });
+            
+            // Tự động clear cache liên quan / Auto clear cache for movie & drama lists
+            if (apiCache) {
+                const keysToClear = [];
+                for (const k of apiCache.keys()) {
+                    if (k.includes(`/api/movie/${slug}`) || k.includes('/api/movies/drama-ranking') || k.includes(`/api/movies/${slug}`)) {
+                        keysToClear.push(k);
+                    }
+                }
+                if (keysToClear.length > 0) {
+                    apiCache.del(keysToClear);
+                }
+            }
+        }
+
+        res.json({ success: true, fire_count: Math.max(0, movie.fire_count || 0), trash_count: Math.max(0, movie.trash_count || 0), userReaction: type || null });
     } catch (error) {
         console.error('Error reacting to movie:', error);
         res.status(500).json({ success: false, message: 'Lỗi server' });

@@ -20,6 +20,9 @@ const movieReactionSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Prevent duplicate reactions
+movieReactionSchema.index({ user: 1, movieSlug: 1 }, { unique: true });
+
 // Ensure a user can only have one reaction per movie
 movieReactionSchema.index({ user: 1, movieSlug: 1 }, { unique: true });
 
