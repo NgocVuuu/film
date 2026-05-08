@@ -22,6 +22,7 @@ export function AdInterstitial() {
     const scriptInjected = useRef(false);
 
     const scriptSrc = process.env.NEXT_PUBLIC_AD_INTERSTITIAL_SCRIPT;
+    const isPremium = user?.isPremium;
 
     // Đếm số trang đã visit trong session, trigger khi đủ threshold
     useEffect(() => {
@@ -68,7 +69,7 @@ export function AdInterstitial() {
         containerRef.current.appendChild(iframe);
     }, [visible, scriptSrc]);
 
-    if (!visible) return null;
+    if (!visible || isPremium) return null;
 
     const canClose = countdown <= 0;
 
@@ -121,4 +122,7 @@ export function AdInterstitial() {
         </div>
     );
 }
+
+
+
 

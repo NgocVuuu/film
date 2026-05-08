@@ -8,6 +8,7 @@ import { ToastProvider } from "@/components/toast-provider";
 import { AuthProvider } from "@/contexts/auth-context";
 import ChatWidget from "@/components/ChatWidget";
 import { AdInterstitial } from "@/components/AdInterstitial";
+import { GlobalPopunder } from "@/components/GlobalPopunder";
 import { QuickViewProvider } from "@/contexts/QuickViewContext";
 
 const geistSans = Geist({
@@ -104,7 +105,7 @@ export default function RootLayout({
           src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"
           strategy="beforeInteractive"
         />
-      <Script src="https://pl28880625.profitablecpmratenetwork.com/76/ce/82/76ce828afa458f5b89f1dcae1ea7ccd1.js" strategy="afterInteractive" />
+      
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${dancingScript.variable} antialiased min-h-screen flex flex-col bg-deep-black text-foreground overflow-x-hidden`}
@@ -120,6 +121,9 @@ export default function RootLayout({
             </Suspense>
             <Suspense fallback={null}>
               <AdInterstitial />
+              </Suspense>
+              <Suspense fallback={null}>
+                <GlobalPopunder />
             </Suspense>
             <ToastProvider />
           </QuickViewProvider>
@@ -128,4 +132,6 @@ export default function RootLayout({
     </html>
   );
 }
+
+
 
