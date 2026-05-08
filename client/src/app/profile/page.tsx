@@ -194,7 +194,7 @@ function ProfileContent() {
                                 <p className="text-gray-500 text-xs leading-relaxed font-vietnamese">
                                     {user.isPremium
                                         ? 'Cảm ơn bạn đã "nuôi" ad! Nhờ bạn mà server vẫn chạy phà phà, cùng tận hưởng đặc quyền thôi nào! ✨🙏'
-                                        : '🚧 Tính năng User Premium đang được phát triển. Sẽ sớm ra mắt!'}
+                                        : 'Donate bất kỳ để được ẩn quảng cáo trong 1 tháng. Cảm ơn bạn đã ủng hộ Pchill!'}
                                 </p>
                             </div>
                             {/* Hidden: Nâng cấp / Gia hạn button */}
@@ -304,13 +304,20 @@ function ProfileContent() {
                                         <Crown className={`w-8 h-8 ${user.isPremium ? 'text-yellow-500' : 'text-gray-600'}`} />
                                     </div>
                                     <div className="relative z-10">
-                                        <p className={`text-sm font-bold mb-1 ${user.isPremium ? 'text-yellow-400' : 'text-gray-300'}`}>
-                                            {user.isPremium ? 'Thành viên Premium' : 'Thành viên Miễn phí'}
-                                        </p>
+                                        <div className="flex items-center justify-between gap-2 mb-1">
+                                            <p className={`text-sm font-bold ${user.isPremium ? 'text-yellow-400' : 'text-gray-300'}`}>
+                                                {user.isPremium ? 'Thành viên Premium' : 'Thành viên Miễn phí'}
+                                            </p>
+                                            {user.isPremium && user.subscription?.endDate && (
+                                                <p className="text-[10px] text-yellow-500/70 font-medium shrink-0">
+                                                    Hết hạn: {new Date(user.subscription.endDate).toLocaleDateString('vi-VN')}
+                                                </p>
+                                            )}
+                                        </div>
                                         <p className="text-xs text-gray-500 leading-normal font-vietnamese">
                                             {user.isPremium
                                                 ? 'Cảm ơn bạn đã "nuôi" ad! Nhờ bạn mà server vẫn chạy phà phà, cùng tận hưởng đặc quyền thôi nào! ✨🙏'
-                                                : '🚧 Tính năng User Premium đang được phát triển. Sẽ sớm ra mắt!'}
+                                                : '💝 Donate bất kỳ số tiền nào để được ẩn quảng cáo trong 1 tháng. Cảm ơn bạn đã ủng hộ Pchill!'}
                                         </p>
                                     </div>
                                 </div>
