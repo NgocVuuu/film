@@ -63,28 +63,7 @@ export function AdInterstitial() {
         iframe.style.height = "100%";
         iframe.style.border = "none";
         
-        const htmlContent = `
-            <!DOCTYPE html>
-            <html>
-                <head>
-                    <style>body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background-color: transparent; overflow: hidden; }</style>
-                </head>
-                <body>
-                    <script>
-                        var atOptions = {
-                            'key': '${key}',
-                            'format': 'iframe',
-                            'height': 300,
-                            'width': 160,
-                            'params': {}
-                        };
-                    </script>
-                    <script type="text/javascript" src="${scriptSrc}"></script>
-                </body>
-            </html>
-        `;
-
-        iframe.srcdoc = htmlContent;
+        iframe.src = `/ad-slot.html?key=${key}&w=300&h=250&src=${encodeURIComponent(scriptSrc)}`;
         containerRef.current.innerHTML = '';
         containerRef.current.appendChild(iframe);
     }, [visible, scriptSrc]);
@@ -142,3 +121,4 @@ export function AdInterstitial() {
         </div>
     );
 }
+
