@@ -48,7 +48,7 @@ export function UpdatedTodayBoard() {
     const diff = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 60000); // minutes
     if (diff < 60) return `${diff} phút trước`;
     const hours = Math.floor(diff / 60);
-    if (hours < 24) return `${hours} giờ trước`;
+    if (hours < 24) return `${hours}h trước`;
     return 'Hôm nay';
   };
 
@@ -59,7 +59,7 @@ export function UpdatedTodayBoard() {
           <Clock className="w-5 h-5 text-primary" />
           Mới cập nhật hôm nay
         </h2>
-        <Link href="/danh-sach/phim-moi" className="text-xs font-semibold text-primary hover:text-gold-400 flex items-center transition-colors">
+        <Link href="/moi-cap-nhat" className="text-xs font-semibold text-primary hover:text-gold-400 flex items-center transition-colors">
           Xem tất cả <ChevronRight className="w-4 h-4 ml-0.5" />
         </Link>
       </div>
