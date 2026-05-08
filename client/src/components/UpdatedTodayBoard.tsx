@@ -20,7 +20,7 @@ export function UpdatedTodayBoard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/movies/updated-today`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/movies/updated-today`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
