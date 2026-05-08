@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
 import LoadingScreen from '@/components/LoadingScreen';
+import { Pagination } from '@/components/Pagination';
 import { API_URL } from '@/lib/config';
 
 interface Movie {
@@ -101,29 +102,7 @@ function CategoryPageContent() {
                             ))}
                         </div>
 
-                        {totalPages > 1 && (
-                            <div className="flex justify-center gap-2 mt-8">
-                                {page > 1 && (
-                                    <a
-                                        href={`/the-loai/${categorySlug}?page=${page - 1}`}
-                                        className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors"
-                                    >
-                                        Trang trước
-                                    </a>
-                                )}
-                                <span className="px-4 py-2 bg-primary text-black rounded font-bold">
-                                    {page} / {totalPages}
-                                </span>
-                                {page < totalPages && (
-                                    <a
-                                        href={`/the-loai/${categorySlug}?page=${page + 1}`}
-                                        className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors"
-                                    >
-                                        Trang sau
-                                    </a>
-                                )}
-                            </div>
-                        )}
+                        <Pagination currentPage={page} totalPages={totalPages} baseUrl={`/the-loai/${categorySlug}`} />
                     </>
                 ) : (
                     <p className="text-center text-gray-400 py-20">Không tìm thấy phim nào</p>

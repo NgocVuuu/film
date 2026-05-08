@@ -1287,7 +1287,7 @@ const getUpdatedTodayMovies = async (req, res) => {
         })
         .sort({ updatedAt: -1 })
         .limit(20)
-        .select('name origin_name slug thumb_url quality episode_current updatedAt')
+        .select('name origin_name slug thumb_url quality episode_current updatedAt year lang')
         .lean();
 
         res.json({ success: true, data: movies });

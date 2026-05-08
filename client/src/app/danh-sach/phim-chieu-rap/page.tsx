@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { MovieCard } from '@/components/MovieCard';
 import LoadingScreen from '@/components/LoadingScreen';
 import { PWAAds } from '@/components/PWAAds';
+import { Pagination } from '@/components/Pagination';
 import { API_URL } from '@/lib/config';
 
 interface Movie {
@@ -108,21 +109,7 @@ function PhimChieuRapContent() {
                             ))}
                         </div>
                         <PWAAds variant="inline" />
-                        {totalPages > 1 && (
-                            <div className="flex justify-center gap-2 mt-8">
-                                {page > 1 && (
-                                    <a href={pageUrl(page - 1)} className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors">
-                                        Trang trước
-                                    </a>
-                                )}
-                                <span className="px-4 py-2 bg-primary text-black rounded font-bold">{page} / {totalPages}</span>
-                                {page < totalPages && (
-                                    <a href={pageUrl(page + 1)} className="px-4 py-2 bg-white/10 hover:bg-primary hover:text-black rounded transition-colors">
-                                        Trang sau
-                                    </a>
-                                )}
-                            </div>
-                        )}
+                        <Pagination currentPage={page} totalPages={totalPages} baseUrl="/danh-sach/phim-chieu-rap" />
                     </>
                 ) : (
                     <p className="text-center text-gray-400 py-20">Không tìm thấy phim nào</p>
