@@ -3,7 +3,7 @@ const router = express.Router();
 const movieController = require('../controllers/movieController');
 
 const { cacheMiddleware } = require('../middleware/cacheMiddleware');
-const { optionalAuthMiddleware } = require('../middleware/authMiddleware');
+const { authMiddleware, optionalAuthMiddleware } = require('../middleware/authMiddleware');
 
 // Sitemap Data - Cache for 1 hour (3600s) - returns all slugs for SEO
 router.get('/movies/sitemap', cacheMiddleware(3600), movieController.getMoviesForSitemap);
@@ -31,5 +31,18 @@ router.get('/movies/korean-drama-2016', cacheMiddleware(600), movieController.ge
 
 // Sad / Healing Movies Collection
 router.get('/movies/sad-movies', cacheMiddleware(600), movieController.getSadMovies);
+
+// Random Movie By Mood
+router.get('/movies/random', movieController.getRandomMovieByMood);
+
+// Updated Today Movies
+router.get('/movies/updated-today', cacheMiddleware(300), movieController.getUpdatedTodayMovies);
+
+// Movie Reactions
+router.post('/movies/:slug/react', authMiddleware, movieController.reactToMovie);
+router.get('/movies/:slug/reaction', authMiddleware, movieController.getUserReaction);
+
+// Drama Ranking
+router.get('/movies/drama-ranking', cacheMiddleware(300), movieController.getDramaRanking);
 
 module.exports = router;

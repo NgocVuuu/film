@@ -24,6 +24,10 @@ const movieSchema = new mongoose.Schema({
   view: { type: Number, default: 0 },
   rating_average: { type: Number, default: 0 }, // 0-5 scale
   rating_count: { type: Number, default: 0 },
+  
+  // Reactions
+  fire_count: { type: Number, default: 0 },
+  trash_count: { type: Number, default: 0 },
 
   // Array types
   actor: [{ type: String }],

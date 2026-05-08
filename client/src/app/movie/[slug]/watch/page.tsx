@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
 import { Play, ArrowLeft } from 'lucide-react';
 import { ReportModal } from '@/components/ReportModal';
@@ -8,9 +8,11 @@ import { CommentSection } from '@/components/CommentSection';
 import { DonateButton } from '@/components/DonateButton';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
-
-export const runtime = 'edge';
+import { io, Socket } from 'socket.io-client';
+import { useAuth } from '@/contexts/auth-context';
 import { PWAAds } from '@/components/PWAAds';
+import { Users } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 
 
@@ -51,9 +53,14 @@ interface MovieDetail {
 export default function WatchPage() {
     const { slug } = useParams();
     const searchParams = useSearchParams();
+    const router = useRouter();
+    const { user } = useAuth();
     const [movie, setMovie] = useState<MovieDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [showTabs, setShowTabs] = useState<'comment' | 'rating'>('comment');
+
+    // Watch Party State
+    const [socket, setSocket] = useState<Socket | null>(null);
 
     // Player State
     const [currentEpisode, setCurrentEpisode] = useState<{ name: string; slug: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] } | null>(null);
@@ -76,6 +83,19 @@ export default function WatchPage() {
     const episodeParam = searchParams.get('episode');
     const timestampParam = searchParams.get('t');
     const serverParam = searchParams.get('server');
+    const roomParam = searchParams.get('room');
+
+    useEffect(() => {
+        const newSocket = io(API_URL, {
+            path: '/socket.io',
+            transports: ['websocket', 'polling']
+        });
+        setSocket(newSocket);
+        
+        return () => {
+            newSocket.disconnect();
+        };
+    }, []);
 
     useEffect(() => {
         if (!slug) return;
@@ -414,6 +434,22 @@ export default function WatchPage() {
                         </p>
                     </div>
                     <div className="hidden md:flex items-center gap-4">
+                        {!roomParam && (
+                            <button 
+                                onClick={() => {
+                                    if (!user) {
+                                        toast.error('Vui lòng đăng nhập để tạo phòng');
+                                        return;
+                                    }
+                                    const roomId = Math.random().toString(36).substring(2, 9);
+                                    router.push(`?room=${roomId}`, { scroll: false });
+                                }}
+                                className="flex items-center bg-primary/20 text-primary hover:bg-primary/30 border border-primary/50 text-xs font-bold gap-2 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                                <Users className="w-4 h-4" />
+                                Tạo phòng chung
+                            </button>
+                        )}
                         <DonateButton />
                         <div className="hidden md:flex items-center gap-2">
                             {movie && (
@@ -443,6 +479,8 @@ export default function WatchPage() {
                     <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
                         {currentEpisode ? (
                             <VideoPlayer
+                                socket={socket}
+                                roomId={roomParam}
                                 src={currentEpisode.link_m3u8}
                                 poster={movie.poster_url}
                                 embedUrl={currentEpisode.link_embed}

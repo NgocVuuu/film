@@ -44,7 +44,7 @@ const commentSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['comment', 'rating'],
+        enum: ['comment', 'rating', 'drama'],
         default: 'comment',
         index: true
     }

@@ -15,6 +15,8 @@ import { DCUBanner } from '@/components/DCUBanner';
 import { StephenChowBanner } from '@/components/StephenChowBanner';
 import { KoreanDrama2016Banner } from '@/components/KoreanDrama2016Banner';
 import { SadMoviesBanner } from '@/components/SadMoviesBanner';
+import { MoodPicker } from '@/components/MoodPicker';
+import { UpdatedTodayBoard } from '@/components/UpdatedTodayBoard';
 import {
   Carousel,
   CarouselContent,
@@ -244,6 +246,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-deep-black text-foreground pb-20">
+      <MoodPicker />
 
       {/* Hero Slider Section */}
       {allTrending.length > 0 && (
@@ -257,6 +260,10 @@ export default function Home() {
           Chủ đề đang hot
         </h2>
         <UniverseBannersCarousel />
+      </div>
+
+      <div className="container mx-auto px-4 relative z-20 mb-6">
+        <UpdatedTodayBoard />
       </div>
 
       {/* Carousel Sections */}

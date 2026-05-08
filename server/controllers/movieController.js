@@ -1,4 +1,5 @@
 const Movie = require('../models/Movie');
+const MovieReaction = require('../models/MovieReaction');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const NodeCache = require('node-cache');
@@ -163,7 +164,7 @@ const getTmdbTrendingMovies = async () => {
             try {
                 const fallbackQuery = {
                     isActive: { $ne: false },
-                    year: { $gte: minYear }
+                    year: { $gte: currentYear - 3 }
                 };
                 if (countrySlug) fallbackQuery['country.slug'] = countrySlug;
                 
@@ -1242,6 +1243,141 @@ const clearHomeCache = (req, res) => {
     res.json({ success: true, message: 'Đã xóa home cache. Trang chủ sẽ fetch dữ liệu mới từ Atlas.' });
 };
 
+// Random Movie By Mood
+const getRandomMovieByMood = async (req, res) => {
+    try {
+        const { mood } = req.query;
+        let query = { isActive: { $ne: false } };
+
+        if (mood === 'funny') {
+            query['$and'] = [
+                { 'category.slug': 'hai-huoc' },
+                { 'category.slug': { $ne: 'hoat-hinh' } }
+            ];
+        } else if (mood === '18plus') {
+            query['category.slug'] = { $in: ['phim-18', '18'] };
+        } else if (mood === 'brain') {
+            query['category.slug'] = { $in: ['tam-ly', 'bi-an', 'trinh-tham', 'giau-nghe'] };
+        }
+
+        const count = await Movie.countDocuments(query);
+        if (count === 0) {
+            return res.json({ success: false, message: 'Không tìm thấy phim' });
+        }
+        
+        const randomIndex = Math.floor(Math.random() * count);
+        const randomMovie = await Movie.findOne(query).skip(randomIndex).select('slug name').lean();
+
+        res.json({ success: true, data: randomMovie });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+// Updated Today Movies
+const getUpdatedTodayMovies = async (req, res) => {
+    try {
+        // Get movies updated within the last 24 hours
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const movies = await Movie.find({ 
+            isActive: { $ne: false },
+            updatedAt: { $gte: oneDayAgo }
+        })
+        .sort({ updatedAt: -1 })
+        .limit(20)
+        .select('name origin_name slug thumb_url quality episode_current updatedAt')
+        .lean();
+
+        res.json({ success: true, data: movies });
+    } catch (error) {
+        console.error('Error fetching updated today movies:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+// Movie Reactions
+const reactToMovie = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const { type } = req.body; // 'fire', 'trash', or null (to remove)
+        const userId = req.user.id;
+
+        const movie = await Movie.findOne({ slug });
+        if (!movie) return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
+
+        const existingReaction = await MovieReaction.findOne({ user: userId, movieSlug: slug });
+
+        if (!type) {
+            // Remove reaction
+            if (existingReaction) {
+                if (existingReaction.type === 'fire') movie.fire_count = Math.max(0, (movie.fire_count || 0) - 1);
+                if (existingReaction.type === 'trash') movie.trash_count = Math.max(0, (movie.trash_count || 0) - 1);
+                await existingReaction.deleteOne();
+                await movie.save();
+            }
+            return res.json({ success: true, fire_count: movie.fire_count, trash_count: movie.trash_count, userReaction: null });
+        }
+
+        if (existingReaction) {
+            if (existingReaction.type === type) {
+                return res.json({ success: true, fire_count: movie.fire_count, trash_count: movie.trash_count, userReaction: existingReaction.type });
+            }
+            // Change reaction
+            if (existingReaction.type === 'fire') movie.fire_count = Math.max(0, (movie.fire_count || 0) - 1);
+            if (existingReaction.type === 'trash') movie.trash_count = Math.max(0, (movie.trash_count || 0) - 1);
+            
+            existingReaction.type = type;
+            await existingReaction.save();
+            
+            if (type === 'fire') movie.fire_count = (movie.fire_count || 0) + 1;
+            if (type === 'trash') movie.trash_count = (movie.trash_count || 0) + 1;
+        } else {
+            // New reaction
+            await MovieReaction.create({ user: userId, movieSlug: slug, type });
+            if (type === 'fire') movie.fire_count = (movie.fire_count || 0) + 1;
+            if (type === 'trash') movie.trash_count = (movie.trash_count || 0) + 1;
+        }
+
+        await movie.save();
+        res.json({ success: true, fire_count: movie.fire_count, trash_count: movie.trash_count, userReaction: type });
+    } catch (error) {
+        console.error('Error reacting to movie:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+const getUserReaction = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const userId = req.user.id;
+
+        const reaction = await MovieReaction.findOne({ user: userId, movieSlug: slug });
+        res.json({ success: true, data: reaction ? reaction.type : null });
+    } catch (error) {
+        console.error('Error getting user reaction:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
+const getDramaRanking = async (req, res) => {
+    try {
+        const type = req.query.type === 'fire' ? 'fire' : 'trash';
+        const sortField = type === 'fire' ? 'fire_count' : 'trash_count';
+        
+        const movies = await Movie.find({ [sortField]: { $gt: 0 } })
+            .sort({ [sortField]: -1 })
+            .limit(20)
+            .select('name origin_name slug thumb_url fire_count trash_count content year quality')
+            .lean();
+            
+        res.json({ success: true, data: movies });
+    } catch (error) {
+        console.error('Error getting drama ranking:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
 module.exports = {
     getHomeData,
     getMovies,
@@ -1256,4 +1392,9 @@ module.exports = {
     getStephenChowMovies,
     getKoreanDrama2016Movies,
     getSadMovies,
+    getRandomMovieByMood,
+    getUpdatedTodayMovies,
+    reactToMovie,
+    getUserReaction,
+    getDramaRanking,
 };

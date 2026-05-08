@@ -186,6 +186,8 @@ interface MovieDetail {
     time?: string;
     rating_average?: number;
     rating_count?: number;
+    fire_count?: number;
+    trash_count?: number;
     download_links?: {
         episode: string;
         quality: string;
@@ -212,6 +214,11 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     const [showListModal, setShowListModal] = useState(false);
     const [relatedMovies, setRelatedMovies] = useState<RelatedMovie[]>([]);
 
+    // Reactions
+    const [fireCount, setFireCount] = useState(initialMovie?.fire_count || 0);
+    const [trashCount, setTrashCount] = useState(initialMovie?.trash_count || 0);
+    const [userReaction, setUserReaction] = useState<'fire' | 'trash' | null>(null);
+
     // Mobile States
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isListOpen, setIsListOpen] = useState(false);
@@ -227,6 +234,8 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
         // If we have initial data (from server), we only need to sync favorites and history
         if (initialMovie && !movie) {
             setMovie(initialMovie);
+            setFireCount(initialMovie.fire_count || 0);
+            setTrashCount(initialMovie.trash_count || 0);
             setLoading(false);
         }
 
@@ -239,6 +248,8 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                     const data = await res.json();
                     if (data.success) {
                         setMovie(data.data);
+                        setFireCount(data.data.fire_count || 0);
+                        setTrashCount(data.data.trash_count || 0);
                         processUserData(data.data);
                         if (Array.isArray(data.related) && data.related.length > 0) {
                             setRelatedMovies(data.related);
@@ -283,8 +294,14 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                 const favRes = await fetch(`${API_URL}/api/favorites/${movieData.slug}/check`, { credentials: 'include', headers });
                 const favData = await favRes.json();
                 setIsFavorite(favData.isFavorite);
+
+                const reactionRes = await fetch(`${API_URL}/api/movies/${movieData.slug}/reaction`, { credentials: 'include', headers });
+                const reactionData = await reactionRes.json();
+                if (reactionData.success) {
+                    setUserReaction(reactionData.data);
+                }
             } catch (e) {
-                console.error('Error checking favorite:', e);
+                console.error('Error fetching user data:', e);
             }
         } else {
             const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
@@ -437,6 +454,36 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
         }
     };
 
+    const handleReaction = async (type: 'fire' | 'trash') => {
+        if (!user) {
+            toast.error('Vui lòng đăng nhập để chê/khen phim');
+            return;
+        }
+        if (!movie) return;
+
+        const newReaction = userReaction === type ? null : type;
+        
+        try {
+            const token = getAuthToken();
+            const res = await fetch(`${API_URL}/api/movies/${movie.slug}/react`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ type: newReaction })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setFireCount(data.fire_count);
+                setTrashCount(data.trash_count);
+                setUserReaction(data.userReaction);
+            }
+        } catch (e) {
+            toast.error('Lỗi khi vote phim');
+        }
+    };
+
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-deep-black text-primary animate-pulse">Đang tải dữ liệu phim...</div>;
     if (!movie && !loading) return <div className="min-h-screen flex items-center justify-center bg-deep-black text-red-500">Khong tim thay phim/Not Found</div>;
     if (!movie) return null;
@@ -572,6 +619,33 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                 <Share2 className="w-5 h-5 text-gray-400" />
                             </div>
                             <span className="text-[9px] font-medium text-gray-500 uppercase">CHIA SẺ</span>
+                        </button>
+                    </div>
+
+                    {/* Reactions / Drama block Mobile */}
+                    <div className="flex gap-3 pt-2">
+                        <button 
+                            onClick={() => handleReaction('fire')}
+                            className={cn("flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border transition-all duration-300 active:scale-95 group relative overflow-hidden", userReaction === 'fire' ? "bg-gradient-to-r from-orange-500/20 to-red-500/10 border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.2)]" : "bg-gradient-to-br from-surface-800 to-surface-900 border-white/5")}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                            <span className="text-xl drop-shadow-md group-hover:scale-110 transition-transform origin-bottom duration-300">🔥</span>
+                            <div className="text-left leading-tight relative z-10">
+                                <div className={cn("text-[11px] font-black tracking-wide", userReaction === 'fire' ? "text-orange-500" : "text-gray-300 group-hover:text-orange-400 transition-colors")}>Bánh cuốn!</div>
+                                <div className="text-[10px] text-gray-500 font-medium">{fireCount} vote</div>
+                            </div>
+                        </button>
+
+                        <button 
+                            onClick={() => handleReaction('trash')}
+                            className={cn("flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border transition-all duration-300 active:scale-95 group relative overflow-hidden", userReaction === 'trash' ? "bg-gradient-to-r from-red-500/20 to-rose-500/10 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]" : "bg-gradient-to-br from-surface-800 to-surface-900 border-white/5")}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                            <span className="text-xl drop-shadow-md group-hover:scale-110 group-hover:-rotate-12 transition-transform origin-bottom duration-300">🍅</span>
+                            <div className="text-left leading-tight relative z-10">
+                                <div className={cn("text-[11px] font-black tracking-wide", userReaction === 'trash' ? "text-red-500" : "text-gray-300 group-hover:text-red-400 transition-colors")}>Rác phẩm!</div>
+                                <div className="text-[10px] text-gray-500 font-medium">{trashCount} vote</div>
+                            </div>
                         </button>
                     </div>
 
@@ -781,6 +855,37 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                             <Share2 className="mr-2 w-4 h-4 md:w-5 md:h-5 shrink-0" />
                                             Chia Sẻ
                                         </Button>
+                                    </div>
+
+                                    {/* Reactions / Drama block */}
+                                    <div className="flex flex-wrap gap-4 pt-6 justify-center md:justify-start">
+                                        <button 
+                                            onClick={() => handleReaction('fire')}
+                                            className={cn("flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all duration-300 hover:scale-[1.03] active:scale-95 group relative overflow-hidden", userReaction === 'fire' ? "bg-gradient-to-r from-orange-500/20 to-red-500/10 border-orange-500/50 shadow-[0_0_20px_rgba(249,115,22,0.2)]" : "bg-gradient-to-br from-surface-800 to-surface-900 border-white/5 hover:border-orange-500/30 hover:shadow-[0_0_15px_rgba(249,115,22,0.1)]")}
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                                            <span className="text-2xl drop-shadow-lg group-hover:scale-110 transition-transform origin-bottom duration-300">🔥</span>
+                                            <div className="text-left relative z-10">
+                                                <div className={cn("text-sm font-black tracking-wide", userReaction === 'fire' ? "text-orange-500" : "text-gray-300 group-hover:text-orange-400 transition-colors")}>Bánh cuốn quá!</div>
+                                                <div className="text-xs text-gray-500 font-medium">{fireCount} lượt vote</div>
+                                            </div>
+                                        </button>
+
+                                        <button 
+                                            onClick={() => handleReaction('trash')}
+                                            className={cn("flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all duration-300 hover:scale-[1.03] active:scale-95 group relative overflow-hidden", userReaction === 'trash' ? "bg-gradient-to-r from-red-500/20 to-rose-500/10 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "bg-gradient-to-br from-surface-800 to-surface-900 border-white/5 hover:border-red-500/30 hover:shadow-[0_0_15px_rgba(239,68,68,0.1)]")}
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                                            <span className="text-2xl drop-shadow-lg group-hover:scale-110 group-hover:-rotate-12 transition-transform origin-bottom duration-300">🍅</span>
+                                            <div className="text-left relative z-10">
+                                                <div className={cn("text-sm font-black tracking-wide", userReaction === 'trash' ? "text-red-500" : "text-gray-300 group-hover:text-red-400 transition-colors")}>Rác phẩm!</div>
+                                                <div className="text-xs text-gray-500 font-medium">{trashCount} lượt vote</div>
+                                            </div>
+                                        </button>
+                                        
+                                        <Link href="/drama" className="flex items-center gap-2 text-sm font-semibold text-primary hover:text-gold-400 mt-auto mb-3 transition-colors ml-2">
+                                            Vào góc Chê Phim <ChevronDown className="w-4 h-4 -rotate-90" />
+                                        </Link>
                                     </div>
 
                                     {/* Cast Preview (Mobile/Tablet only maybe? Keeping simple) */}
