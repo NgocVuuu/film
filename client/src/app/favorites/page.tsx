@@ -46,47 +46,67 @@ export default function FavoritesPage() {
     const [favorites, setFavorites] = useState<Movie[]>([]);
     const { user, loading: authLoading } = useAuth();
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    const fetchFavorites = async (pageToLoad: number = 1, isLoadMore: boolean = false) => {
+        if (!isLoadMore) setLoading(true);
+        else setLoadingMore(true);
+
+        if (user) {
+            try {
+                const token = getAuthToken();
+                const headers: Record<string, string> = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                const res = await fetch(`${API_URL}/api/favorites?page=${pageToLoad}&limit=20`, { credentials: 'include', headers });
+                const data = await res.json();
+                if (data.success) {
+                    const mapped = data.data.map((fav: FavoriteResponse) => ({
+                        _id: fav.movie?._id || fav.movieSlug,
+                        name: fav.movie?.name || fav.movieName || '',
+                        origin_name: fav.movie?.origin_name || '',
+                        slug: fav.movieSlug || fav.movie?.slug || '',
+                        thumb_url: fav.movie?.thumb_url || fav.thumbUrl || '',
+                        year: fav.movie?.year || new Date().getFullYear(),
+                        episode_current: fav.movie?.episode_current,
+                        quality: fav.movie?.quality
+                    }));
+                    
+                    if (isLoadMore) {
+                        setFavorites(prev => [...prev, ...mapped]);
+                    } else {
+                        setFavorites(mapped);
+                    }
+                    
+                    setTotalPages(data.pagination?.totalPages || 1);
+                    setPage(pageToLoad);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        } else {
+            const stored = JSON.parse(localStorage.getItem('favorites') || '[]');
+            setFavorites(stored);
+        }
+        
+        setLoading(false);
+        setLoadingMore(false);
+    };
 
     useEffect(() => {
         if (authLoading) return;
-
-        const fetchData = async () => {
-            setLoading(true);
-            if (user) {
-                try {
-                    const token = getAuthToken();
-                    const headers: Record<string, string> = {};
-                    if (token) {
-                        headers['Authorization'] = `Bearer ${token}`;
-                    }
-                    const res = await fetch(`${API_URL}/api/favorites`, { credentials: 'include', headers });
-                    const data = await res.json();
-                    if (data.success) {
-                        // Backend returns favorites which has 'movie' populated. Map it to flat structure or meaningful structure
-                        const mapped = data.data.map((fav: FavoriteResponse) => ({
-                            _id: fav.movie?._id || fav.movieSlug,
-                            name: fav.movie?.name || fav.movieName || '',
-                            origin_name: fav.movie?.origin_name || '',
-                            slug: fav.movieSlug || fav.movie?.slug || '',
-                            thumb_url: fav.movie?.thumb_url || fav.thumbUrl || '',
-                            year: fav.movie?.year || new Date().getFullYear(),
-                            episode_current: fav.movie?.episode_current,
-                            quality: fav.movie?.quality
-                        }));
-                        setFavorites(mapped);
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-            } else {
-                const stored = JSON.parse(localStorage.getItem('favorites') || '[]');
-                setFavorites(stored);
-            }
-            setLoading(false);
-        };
-
-        fetchData();
+        fetchFavorites(1, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, authLoading]);
+
+    const handleLoadMore = () => {
+        if (page < totalPages) {
+            fetchFavorites(page + 1, true);
+        }
+    };
 
     const removeFavorite = async (slug: string) => {
         if (user) {
@@ -155,6 +175,23 @@ export default function FavoritesPage() {
                                 )}
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {favorites.length > 0 && page < totalPages && (
+                    <div className="mt-8 flex justify-center">
+                        <Button 
+                            onClick={handleLoadMore} 
+                            disabled={loadingMore}
+                            className="bg-primary text-black hover:bg-primary/80 px-8 py-2 font-medium"
+                        >
+                            {loadingMore ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Đang tải...
+                                </>
+                            ) : 'Xem thêm'}
+                        </Button>
                     </div>
                 )}
             </div>
