@@ -44,20 +44,15 @@ export function PWAAds({ variant = 'home' }: PWAAdsProps) {
         const key = scriptSrc.match(/\/([a-f0-9]{32})\//)?.[1];
         if (!key) return;
 
-        // Dùng iframe riêng để cô lập atOptions — tránh bị ghi đè bởi banner khác cùng trang
+        // Dùng iframe truy cập local html để cô lập atOptions & giữ Referrer xịn (domain pchill.online)
         const iframe = document.createElement('iframe');
         iframe.style.cssText = `border:none;width:${adDimensions.width}px;height:${adDimensions.height}px;display:block;`;
         iframe.setAttribute('scrolling', 'no');
+        
+        // Trang ad-slot.html sẽ chịu trách nhiệm gen atOptions và document.write()
+        iframe.src = `/ad-slot.html?key=${key}&w=${adDimensions.width}&h=${adDimensions.height}&src=${encodeURIComponent(scriptSrc)}`;
+        
         containerRef.current.appendChild(iframe);
-
-        const doc = iframe.contentDocument;
-        if (!doc) return;
-        doc.open();
-        doc.write(
-            `<script>atOptions={'key':'${key}','format':'iframe','height':${adDimensions.height},'width':${adDimensions.width},'params':{}};` +
-            `\x3C/script><script src="${scriptSrc}" data-cfasync="false">\x3C/script>`
-        );
-        doc.close();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loading]);
 
@@ -114,3 +109,4 @@ export function PWAAds({ variant = 'home' }: PWAAdsProps) {
         </div>
     );
 }
+

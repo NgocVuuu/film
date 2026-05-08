@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advertisement</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background-color: transparent; 
+            overflow: hidden; 
+        }
+    </style>
+</head>
+<body>
+    <script>
+        var urlParams = new URLSearchParams(window.location.search);
+        var adKey = urlParams.get('key');
+        var adWidth = urlParams.get('w') || '300';
+        var adHeight = urlParams.get('h') || '250';
+        var adSrc = urlParams.get('src');
+
+        // Khởi tạo biến toàn cục atOptions theo yêu cầu của các trang mạng quảng cáo (như Adsterra)
+        if (adKey && adSrc) {
+            window.atOptions = {
+                'key': adKey,
+                'format': 'iframe',
+                'height': parseInt(adHeight, 10),
+                'width': parseInt(adWidth, 10),
+                'params': {}
+            };
+            
+            // Sử dụng document.write để load script quảng cáo, vì nó là trang html độc lập (không bị block bởi React)
+            document.write('<scr' + 'ipt type="text/javascript" src="' + adSrc + '"></scr' + 'ipt>');
+        } else {
+            console.warn('Thiếu thông số id hoặc script cho quảng cáo.');
+        }
+    </script>
+</body>
+</html>
