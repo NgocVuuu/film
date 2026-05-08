@@ -124,7 +124,9 @@ const getTmdbTrendingMovies = async () => {
                 tmdbData = res.data.results || [];
                 if (tmdbData.length > 0) searchCache.set(cacheKey, tmdbData, 1800);
             }
-            if (!tmdbData || tmdbData.length === 0) return [];
+            if (!tmdbData || tmdbData.length === 0) {
+                throw new Error("TMDB returned empty results");
+            }
 
             const tmdbTitles = tmdbData.map(m => m.title || m.name).filter(Boolean);
             const tmdbOriginalTitles = tmdbData.map(m => m.original_title || m.original_name).filter(Boolean);
@@ -157,7 +159,24 @@ const getTmdbTrendingMovies = async () => {
             }).slice(0, limit);
         } catch (err) {
             console.error(`[TMDB] ${cacheKey} error:`, err.message);
-            return [];
+            // Local Fallback: If TMDB fails, get top viewed movies from local DB
+            try {
+                const fallbackQuery = {
+                    isActive: { $ne: false },
+                    year: { $gte: minYear }
+                };
+                if (countrySlug) fallbackQuery['country.slug'] = countrySlug;
+                
+                const fallbackMatches = await Movie.find(fallbackQuery)
+                    .sort({ view: -1, updatedAt: -1 })
+                    .limit(limit)
+                    .select('-episodes -director -actor').lean();
+                    
+                return fallbackMatches;
+            } catch (fallbackErr) {
+                console.error(`[TMDB Fallback] error:`, fallbackErr.message);
+                return [];
+            }
         }
     };
 
