@@ -97,18 +97,20 @@ export default function WatchPage() {
     useEffect(() => {
         if (!movie || !movie.episodes) return;
 
+        // Filter out NguonC entirely
+        const validEpisodes = movie.episodes.filter(ep => !ep.server_name.startsWith('NC -'));
+
         // 1. Identify Sources
         const sources = new Set<string>();
-        movie.episodes.forEach((ep: Episode) => {
+        validEpisodes.forEach((ep: Episode) => {
             const name = ep.server_name;
-            if (name.startsWith('NC -')) sources.add('NguonC');
-            else if (name.startsWith('KK -')) sources.add('KKPhim');
+            if (name.startsWith('KK -')) sources.add('KKPhim');
             else if (name.startsWith('OP -')) sources.add('Ophim');
             else sources.add('Khác');
         });
 
         // Priority Order
-        const sourceOrder = ['KKPhim', 'NguonC', 'Ophim', 'Khác'];
+        const sourceOrder = ['KKPhim', 'Ophim', 'Khác'];
         const sortedSources = Array.from(sources).sort((a, b) => {
             return sourceOrder.indexOf(a) - sourceOrder.indexOf(b);
         });
@@ -118,13 +120,12 @@ export default function WatchPage() {
         // 2. Set Default Source
         let activeSource = currentSource;
         if ((!activeSource || !sources.has(activeSource)) && sortedSources.length > 0) {
-            if (serverParam && movie?.episodes) {
+            if (serverParam && validEpisodes.length > 0) {
                 // Find which prefix this exact serverParam belongs to
-                const matchedServer = movie.episodes.find(ep => ep.server_name === serverParam);
+                const matchedServer = validEpisodes.find(ep => ep.server_name === serverParam);
                 if (matchedServer) {
                     const name = matchedServer.server_name;
-                    if (name.startsWith('NC -')) activeSource = 'NguonC';
-                    else if (name.startsWith('KK -')) activeSource = 'KKPhim';
+                    if (name.startsWith('KK -')) activeSource = 'KKPhim';
                     else if (name.startsWith('OP -')) activeSource = 'Ophim';
                     else activeSource = 'Khác';
                 }
@@ -138,17 +139,15 @@ export default function WatchPage() {
         // 3. Filter Servers
         if (activeSource) {
             const prefixMap: Record<string, string> = {
-                'NguonC': 'NC -',
                 'KKPhim': 'KK -',
                 'Ophim': 'OP -',
                 'Khác': ''
             };
-            const prefix = prefixMap[activeSource];
+            const prefix = prefixMap[activeSource] || '';
 
-            const filtered = movie.episodes.filter((ep: Episode) => {
+            const filtered = validEpisodes.filter((ep: Episode) => {
                 if (activeSource === 'Khác') {
-                    return !ep.server_name.startsWith('NC -') &&
-                        !ep.server_name.startsWith('KK -') &&
+                    return !ep.server_name.startsWith('KK -') &&
                         !ep.server_name.startsWith('OP -');
                 }
                 return ep.server_name.startsWith(prefix);
@@ -174,8 +173,8 @@ export default function WatchPage() {
                 // Try to find episode from URL param
                 if (episodeParam) {
                     // Try to match serverParam first if provided (check full movie episodes list too)
-                    if (serverParam && movie?.episodes) {
-                        const targetServer = movie.episodes.find(s => s.server_name === serverParam);
+                    if (serverParam && validEpisodes.length > 0) {
+                        const targetServer = validEpisodes.find(s => s.server_name === serverParam);
                         if (targetServer) {
                             const found = targetServer.server_data.find((ep: { slug: string }) => ep.slug === episodeParam);
                             if (found) {
@@ -200,8 +199,8 @@ export default function WatchPage() {
 
                 // If not found or no param, but we have serverParam, try to pick first ep of that exact server
                 // We check against all movie episodes because `filtered` might just be a broad category prefix
-                if (!selectedEpisode && serverParam && movie?.episodes) {
-                    const targetServer = movie.episodes.find(s => s.server_name === serverParam);
+                if (!selectedEpisode && serverParam && validEpisodes.length > 0) {
+                    const targetServer = validEpisodes.find(s => s.server_name === serverParam);
                     if (targetServer && targetServer.server_data.length > 0) {
                         selectedEpisode = targetServer.server_data[0];
                         selectedServer = targetServer.server_name;
@@ -330,17 +329,16 @@ export default function WatchPage() {
         // Auto-switch to same episode on new source if we have a currentEpisode
         if (movie?.episodes) {
             const prefixMap: Record<string, string> = {
-                'NguonC': 'NC -',
                 'KKPhim': 'KK -',
                 'Ophim': 'OP -',
                 'Khác': ''
             };
-            const prefix = prefixMap[newSource];
+            const prefix = prefixMap[newSource] || '';
 
             const targetServers = movie.episodes.filter((ep: Episode) => {
+                if (ep.server_name.startsWith('NC -')) return false; // Ignore NguonC
                 if (newSource === 'Khác') {
-                    return !ep.server_name.startsWith('NC -') &&
-                        !ep.server_name.startsWith('KK -') &&
+                    return !ep.server_name.startsWith('KK -') &&
                         !ep.server_name.startsWith('OP -');
                 }
                 return ep.server_name.startsWith(prefix);
