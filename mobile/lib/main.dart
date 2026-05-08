@@ -5,6 +5,8 @@ import 'core/theme/app_colors.dart';
 import 'providers/movies_provider.dart';
 import 'providers/watch_history_provider.dart';
 import 'providers/bookmark_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/notification_provider.dart';
 import 'screens/main_screen.dart';
 
 void main() {
@@ -18,6 +20,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, NotificationProvider>(
+          create: (context) => NotificationProvider(Provider.of<AuthProvider>(context, listen: false)),
+          update: (context, auth, previous) => NotificationProvider(auth),
+        ),
         ChangeNotifierProvider(create: (_) => MoviesProvider()),
         ChangeNotifierProvider(create: (_) => WatchHistoryProvider()),
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),

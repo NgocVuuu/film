@@ -42,11 +42,20 @@ class MoviesProvider extends ChangeNotifier {
     }
   }
 
-  // Search movies
+  // Search movies (Keyword hybrid search)
   Future<List<Movie>> searchMovies(String keyword) async {
     if (keyword.isEmpty) return [];
     try {
       return await _repository.searchMovies(keyword);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Filter movies (Advanced Search)
+  Future<List<Movie>> filterMovies(Map<String, dynamic> params) async {
+    try {
+      return await _repository.filterMovies(params);
     } catch (e) {
       return [];
     }

@@ -60,4 +60,18 @@ class MovieRepository {
       throw Exception('Lỗi API tìm kiếm: $e');
     }
   }
+
+  Future<List<Movie>> filterMovies(Map<String, dynamic> params) async {
+    try {
+      final response = await _apiClient.dio.get('/movies', queryParameters: params);
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final List<dynamic> dataList = response.data['data'] ?? [];
+        return dataList.map((json) => Movie.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Lỗi API lọc phim: $e');
+    }
+  }
 }
