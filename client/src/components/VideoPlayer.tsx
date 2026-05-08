@@ -4,11 +4,12 @@ import Hls from 'hls.js';
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize,
     Settings, Loader2, FastForward, Rewind, PictureInPicture,
-    SkipBack, SkipForward, ListVideo
+    SkipBack, SkipForward, ListVideo, MessageSquare
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useWatchProgress } from '@/hooks/useWatchProgress';
+import WatchPartyChat from './WatchPartyChat';
 
 interface WebKitVideoElement extends HTMLVideoElement {
     webkitSupportsPresentationMode?: (mode: string) => boolean;
@@ -17,6 +18,8 @@ interface WebKitVideoElement extends HTMLVideoElement {
 }
 
 interface VideoPlayerProps {
+    socket?: any;
+    roomId?: string | null;
     src: string;
     poster?: string;
     embedUrl?: string;
@@ -65,6 +68,8 @@ const formatTime = (seconds: number) => {
 };
 
 export default function VideoPlayer({
+    socket,
+    roomId,
     src,
     poster,
     embedUrl,
@@ -131,6 +136,9 @@ export default function VideoPlayer({
     const [showEpisodePanel, setShowEpisodePanel] = useState(false);
     const [panelServerName, setPanelServerName] = useState<string | null>(null);
 
+    // Watch Party Chat
+    const [showChat, setShowChat] = useState(false);
+
     // Zoom state
     const [isZoomed, setIsZoomed] = useState(false);
 
@@ -147,6 +155,43 @@ export default function VideoPlayer({
         episodeName,
         serverName
     });
+
+    // Socket listeners for Watch Party
+    useEffect(() => {
+        if (!socket || !roomId || !videoRef.current) return;
+
+        const handlePlay = (data: { time: number }) => {
+            if (videoRef.current) {
+                videoRef.current.currentTime = data.time;
+                videoRef.current.play();
+                setIsPlaying(true);
+            }
+        };
+
+        const handlePause = (data: { time: number }) => {
+            if (videoRef.current) {
+                videoRef.current.currentTime = data.time;
+                videoRef.current.pause();
+                setIsPlaying(false);
+            }
+        };
+
+        const handleSeek = (data: { time: number }) => {
+            if (videoRef.current) {
+                videoRef.current.currentTime = data.time;
+            }
+        };
+
+        socket.on('wp_play_action', handlePlay);
+        socket.on('wp_pause_action', handlePause);
+        socket.on('wp_seek_action', handleSeek);
+
+        return () => {
+            socket.off('wp_play_action', handlePlay);
+            socket.off('wp_pause_action', handlePause);
+            socket.off('wp_seek_action', handleSeek);
+        };
+    }, [socket, roomId]);
 
     // -- Logic --
 
@@ -170,10 +215,12 @@ export default function VideoPlayer({
 
         if (!videoRef.current.paused) {
             videoRef.current.pause();
+            socket?.emit('wp_pause', { roomId, time: videoRef.current.currentTime });
         } else {
             videoRef.current.play().catch(e => {
                 if (e.name !== 'AbortError') console.error('Play error:', e);
             });
+            socket?.emit('wp_play', { roomId, time: videoRef.current.currentTime });
         }
         setShowControls(true);
     };
@@ -259,6 +306,7 @@ export default function VideoPlayer({
         if (videoRef.current) {
             videoRef.current.currentTime = scrubTime;
             setCurrentTime(scrubTime);
+            socket?.emit('wp_seek', { roomId, time: scrubTime });
         }
     };
 
@@ -289,6 +337,7 @@ export default function VideoPlayer({
         const newTime = Math.max(0, Math.min(videoDuration, currentVideoTime + seconds));
         videoRef.current.currentTime = newTime;
         setCurrentTime(newTime);
+        socket?.emit('wp_seek', { roomId, time: newTime });
 
         // Show feedback
         setSeekFeedback({
@@ -1004,7 +1053,7 @@ export default function VideoPlayer({
     return (
         <div
             ref={containerRef}
-            className={`relative bg-black border border-border shadow-2xl shadow-primary/10 group select-none overflow-hidden transition-all duration-300
+            className={`relative bg-black border border-border shadow-2xl shadow-primary/10 group select-none overflow-hidden transition-all duration-300 flex flex-row
                 ${isLandscape
                     ? 'fixed inset-0 z-[9999] w-[100vh] h-[100vw] rotate-90 origin-center top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-none'
                     : 'w-full h-full rounded-lg'
@@ -1020,6 +1069,8 @@ export default function VideoPlayer({
                 touchAction: 'none' // Important for gestures
             }}
         >
+            {/* Main Player Area Wrapper */}
+            <div className="relative flex-1 h-full min-w-0">
             <video
                 ref={videoRef}
                 poster={poster}
@@ -1173,6 +1224,8 @@ export default function VideoPlayer({
                     </div>
                 </div>
             )}
+
+            {/* Watch Party Chat Area has been moved to the end of flex container */}
 
             {/* Loading Spinner */}
             {isLoading && (
@@ -1365,6 +1418,26 @@ export default function VideoPlayer({
                             )}
                         </div>
 
+                        {/* Watch Party Chat Button */}
+                        {roomId && socket && (
+                            <div className="hidden sm:block">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowChat(v => !v);
+                                        setShowEpisodePanel(false);
+                                        setShowSettings(false);
+                                    }}
+                                    className={`text-white hover:text-primary hover:bg-transparent ${showChat ? 'text-primary' : ''}`}
+                                    title="Lịch sử Chat"
+                                >
+                                    <MessageSquare className="w-5 h-5" />
+                                </Button>
+                            </div>
+                        )}
+
                         {/* Episode List Button - hidden on portrait mobile */}
                         {episodeServers && episodeServers.length > 0 && (
                             <div className="hidden landscape:block md:block">
@@ -1378,6 +1451,7 @@ export default function VideoPlayer({
                                         }
                                         setShowEpisodePanel(v => !v);
                                         setShowSettings(false);
+                                        setShowChat(false);
                                     }}
                                     className={`text-white hover:text-primary hover:bg-transparent ${showEpisodePanel ? 'text-primary' : ''}`}
                                     title="Danh sách tập"
@@ -1418,6 +1492,31 @@ export default function VideoPlayer({
                     </div>
                 </div>
             </div>
+
+            {/* Click outside to close chat interceptor */}
+            {roomId && socket && showChat && (
+                <div 
+                    className="absolute inset-0 z-[60] cursor-pointer" 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setShowChat(false);
+                    }} 
+                />
+            )}
+            
+            </div> {/* End Main Player Area Wrapper */}
+
+            {/* Watch Party Chat Area */}
+            {roomId && socket && (
+                <div 
+                    className={`h-full shrink-0 z-50 transition-all duration-300 ease-in-out bg-black/90 backdrop-blur-md border-l border-white/10 overflow-hidden ${showChat ? 'w-80 opacity-100 pointer-events-auto shadow-[-10px_0_30px_rgba(0,0,0,0.5)]' : 'w-0 opacity-0 pointer-events-none'}`}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="w-80 h-full flex flex-col">
+                        <WatchPartyChat socket={socket} roomId={roomId} onClose={() => setShowChat(false)} />
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
