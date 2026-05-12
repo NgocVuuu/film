@@ -331,6 +331,11 @@ export default function WatchPage() {
         setCurrentEpisode(episode);
         setShouldAutoPlay(true);
 
+        // Reset pre-roll cho mỗi lần đổi tập
+        if (!isSameEpisode) {
+            setAdDismissed(false);
+        }
+
         // Restore time if switching versions of the same episode
         if (isSameEpisode) {
             setStartTime(playerTime);
@@ -487,6 +492,7 @@ export default function WatchPage() {
                         {/* Pre-roll ad overlay — auto-hidden for premium users */}
                         {currentEpisode && !adDismissed && (
                             <PreRollAd
+                                key={currentEpisode.slug}
                                 onDismiss={() => setAdDismissed(true)}
                                 poster={movie.poster_url}
                             />
