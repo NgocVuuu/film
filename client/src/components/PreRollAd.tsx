@@ -7,7 +7,7 @@ import { X, SkipForward } from 'lucide-react';
 // ── Config ───────────────────────────────────────────────────────────────────
 // Set NEXT_PUBLIC_AD_PREROLL_URL to the Monetag / Adsterra video ad URL.
 // If blank the component silently skips (returns null immediately after auth).
-const SKIP_AFTER_SEC = 5; // seconds before the skip button unlocks
+const SKIP_AFTER_SEC = 5; // Đồng bộ với Hilltop VAST "Bỏ qua độ trễ đầu video" = 5s
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface PreRollAdProps {
