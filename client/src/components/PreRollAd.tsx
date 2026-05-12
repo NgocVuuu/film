@@ -73,8 +73,8 @@ export function PreRollAd({ onDismiss, poster }: PreRollAdProps) {
         iframe.setAttribute('allowfullscreen', 'true');
         iframe.setAttribute('allow', 'autoplay; fullscreen');
         iframe.setAttribute('scrolling', 'no');
-        // Sandbox: allow autoplay scripts but block top-nav pop-unders
-        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms');
+        // Bỏ allow-same-origin để SW của trang cha không can thiệp vào request trong iframe
+        iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-forms allow-top-navigation-by-user-activation');
         iframe.onload = () => setAdLoaded(true);
 
         containerRef.current.appendChild(iframe);
