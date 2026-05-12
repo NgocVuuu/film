@@ -173,6 +173,7 @@ export default function VideoPlayer({
 
     // Auto Join & Sync (Chỉ chạy 1 lần khi có socket và roomId)
     const hasJoinedRef = useRef(false);
+    const pendingSyncRef = useRef<{time: number, isPlaying: boolean} | null>(null);
     useEffect(() => {
         if (!socket || !roomId || !userRef.current || hasJoinedRef.current) return;
         
@@ -242,14 +243,18 @@ export default function VideoPlayer({
         // Nhận trạng thái sync từ Host
         socket.on('wp_sync_state_action', (state: any) => {
             if (videoRef.current) {
-                // Đảm bảo không tự sync với chính mình
-                videoRef.current.currentTime = state.time;
-                if (state.isPlaying) {
-                    videoRef.current.play().catch(e => console.error(e));
-                    setIsPlaying(true);
+                if (videoRef.current.readyState >= 1) { // HAVE_METADATA
+                    videoRef.current.currentTime = state.time;
+                    if (state.isPlaying) {
+                        videoRef.current.play().catch(e => console.error(e));
+                        setIsPlaying(true);
+                    } else {
+                        videoRef.current.pause();
+                        setIsPlaying(false);
+                    }
                 } else {
-                    videoRef.current.pause();
-                    setIsPlaying(false);
+                    // Video chưa load xong, lưu vào pending để set sau khi loadedmetadata
+                    pendingSyncRef.current = { time: state.time, isPlaying: state.isPlaying };
                 }
             }
             // Nếu Host đang xem tập khác, tự chuyển sang tập đó
@@ -851,7 +856,17 @@ export default function VideoPlayer({
             // 2. startTime from URL param
             // 3. saved progress (initialProgress)
 
-            if (isSameEpisode && savedTimeRef.current > 0) {
+            if (pendingSyncRef.current) {
+                // Ưu tiên sync từ phòng Watch Party nếu vừa join
+                video.currentTime = pendingSyncRef.current.time;
+                if (pendingSyncRef.current.isPlaying) {
+                    video.play().catch(e => {
+                        if (e.name !== 'AbortError') console.error('Play error after sync:', e);
+                    });
+                    setIsPlaying(true);
+                }
+                pendingSyncRef.current = null;
+            } else if (isSameEpisode && savedTimeRef.current > 0) {
                 // Restore time when switching source (Vietsub <-> Thuyết minh)
                 video.currentTime = savedTimeRef.current;
             } else {
@@ -1623,7 +1638,11 @@ export default function VideoPlayer({
 
             {/* Watch Party Chat Area */}
             {showChat && roomId && (
-                <div className="absolute top-4 right-4 md:right-16 md:bottom-16 w-72 md:w-80 h-[60%] md:h-[400px] max-h-[80vh] z-50 animate-in slide-in-from-right-4 fade-in duration-200">
+                <div 
+                    className="absolute top-4 right-4 md:right-16 md:bottom-16 w-72 md:w-80 h-[60%] md:h-[400px] max-h-[80vh] z-[70] animate-in slide-in-from-right-4 fade-in duration-200"
+                    onClick={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                >
                     <WatchPartyChat 
                         socket={socket} 
                         roomId={roomId} 
