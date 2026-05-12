@@ -11,6 +11,7 @@ import { API_URL } from '@/lib/config';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '@/contexts/auth-context';
 import { PWAAds } from '@/components/PWAAds';
+import { PreRollAd } from '@/components/PreRollAd';
 import { Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -68,6 +69,9 @@ export default function WatchPage() {
     const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
     const [startTime, setStartTime] = useState<number>(0);
     const [playerTime, setPlayerTime] = useState<number>(0);
+
+    // Pre-roll ad: true = ad dismissed, player shown; false = ad showing
+    const [adDismissed, setAdDismissed] = useState(false);
 
     // Source State
     const [availableSources, setAvailableSources] = useState<string[]>([]);
@@ -479,7 +483,15 @@ export default function WatchPage() {
                         <PWAAds variant="watch" />
                     </div>
 
-                    <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
+                    <div className="aspect-video bg-black md:rounded-xl overflow-hidden shadow-2xl border-t border-b md:border border-white/10 relative">
+                        {/* Pre-roll ad overlay — auto-hidden for premium users */}
+                        {currentEpisode && !adDismissed && (
+                            <PreRollAd
+                                onDismiss={() => setAdDismissed(true)}
+                                poster={movie.poster_url}
+                            />
+                        )}
+
                         {currentEpisode ? (
                             <VideoPlayer
                                 socket={socket}
@@ -487,7 +499,7 @@ export default function WatchPage() {
                                 src={currentEpisode.link_m3u8}
                                 poster={movie.poster_url}
                                 embedUrl={currentEpisode.link_embed}
-                                autoPlay={shouldAutoPlay}
+                                autoPlay={shouldAutoPlay && adDismissed}
                                 movieSlug={movie.slug}
                                 movieName={movie.name}
                                 movieThumb={movie.thumb_url}

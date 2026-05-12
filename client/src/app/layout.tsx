@@ -88,6 +88,8 @@ export default function RootLayout({
   return (
     <html lang="vi" className="dark">
       <head>
+        {/* Monetag site verification */}
+        <meta name="monetag" content="26e1e1d22ee4c5614e8de995adabf77a" />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-RNRM206SY8"
           strategy="afterInteractive"
