@@ -171,17 +171,16 @@ export default function VideoPlayer({
         userRef.current = user;
     }, [user]);
 
-    // Auto Join & Sync (Chỉ chạy 1 lần khi có socket và roomId)
+    // Auto Join & Sync (Chỉ chạy 1 lần khi có socket, roomId và user đã tải xong)
     const hasJoinedRef = useRef(false);
     const pendingSyncRef = useRef<{time: number, isPlaying: boolean} | null>(null);
     useEffect(() => {
-        if (!socket || !roomId || !userRef.current || hasJoinedRef.current) return;
+        if (!socket || !roomId || !user || hasJoinedRef.current) return;
         
         hasJoinedRef.current = true;
-        const u = userRef.current;
         
         // Tự động join phòng
-        socket.emit('wp_join_room', { roomId, user: { displayName: u.displayName, avatar: u.avatar } });
+        socket.emit('wp_join_room', { roomId, user: { displayName: user.displayName, avatar: user.avatar } });
         
         // Vừa join xong thì xin sync từ Host (nếu mình là guest)
         socket.emit('wp_request_sync', { roomId });
@@ -190,7 +189,7 @@ export default function VideoPlayer({
         return () => {
             hasJoinedRef.current = false;
         };
-    }, [socket, roomId]);
+    }, [socket, roomId, user]);
 
     // Socket listeners for Watch Party
     useEffect(() => {
@@ -800,10 +799,10 @@ export default function VideoPlayer({
     useEffect(() => {
         const video = videoRef.current;
         const isSameEpisode = prevEpisodeRef.current?.movie === movieSlug && prevEpisodeRef.current?.episode === episodeSlug;
-        if (video && initialProgress !== null && initialProgress > 10 && video.currentTime < 5 && !isSameEpisode) {
+        if (!roomId && video && initialProgress !== null && initialProgress > 10 && video.currentTime < 5 && !isSameEpisode) {
             video.currentTime = initialProgress;
         }
-    }, [initialProgress, movieSlug, episodeSlug]);
+    }, [initialProgress, movieSlug, episodeSlug, roomId]);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -874,7 +873,8 @@ export default function VideoPlayer({
                 savedTimeRef.current = 0; // Reset saved time for safety
                 if (startTime > 0) {
                     video.currentTime = startTime;
-                } else if (initialProgress !== null && initialProgress > 10) {
+                } else if (!roomId && initialProgress !== null && initialProgress > 10) {
+                    // Cập nhật tiến độ lưu cá nhân (bỏ qua nếu đang Watch Party)
                     video.currentTime = initialProgress;
                 } else {
                     // Force reset to 0 in case the `<video>` element retained its currentTime
