@@ -5,11 +5,11 @@ import { useAuth } from '@/contexts/auth-context';
 import { X, SkipForward } from 'lucide-react';
 
 // ── Config ───────────────────────────────────────────────────────────────────
-// Ưu tiên env var, fallback về URL hardcode để tránh lỗi NEXT_PUBLIC_ không bake vào bundle
-const AD_PREROLL_URL =
-    process.env.NEXT_PUBLIC_AD_PREROLL_URL ||
-    'https://difficultblock.com/d-mUFVzKd.GENav/ZJG_Uc/ke/mn9/uNZbUBl/kOPPTecfwgMZz/cpyvNajOEHt/NLzWAEzUN/zVIT2oNsQB';
-const SKIP_AFTER_SEC = 5; // Đồng bộ với Hilltop VAST "Bỏ qua độ trễ đầu video" = 5s
+// ⚠️ VAST URL không dùng được với iframe — cần lấy Mã HTML từ Hilltop dashboard
+// Để trống = pre-roll tắt hoàn toàn (tạm thời)
+const AD_PREROLL_URL = process.env.NEXT_PUBLIC_AD_PREROLL_URL ||
+    'https://difficultblock.com/d/mjF/z.dgGQN/vVZTG/UZ/feJmy9/uzZOUClIk_PMT/cfwmMtzzczy-NTjsETtoNtzLAozWNpzGIh2bNzQP';
+const SKIP_AFTER_SEC = 7; // Đồng bộ với Hilltop VAST "Bỏ qua độ trễ đầu video" = 7s
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface PreRollAdProps {
