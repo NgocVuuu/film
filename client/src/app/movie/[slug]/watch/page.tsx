@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
-import { Play, ArrowLeft } from 'lucide-react';
+import { Play, ArrowLeft, Share2 } from 'lucide-react';
 import { ReportModal } from '@/components/ReportModal';
 import { CommentSection } from '@/components/CommentSection';
 import { DonateButton } from '@/components/DonateButton';
@@ -90,8 +90,14 @@ export default function WatchPage() {
     const roomParam = searchParams.get('room');
 
     useEffect(() => {
+        // Lấy JWT token từ cookie để xác thực socket
+        const getCookie = (name: string) =>
+            document.cookie.match(`(^|;)\\s*${name}=([^;]+)`)?.pop() || '';
+        const token = getCookie('token');
+
         const newSocket = io(API_URL, {
             path: '/socket.io',
+            auth: { token },
             transports: ['websocket', 'polling']
         });
         setSocket(newSocket);
@@ -331,6 +337,11 @@ export default function WatchPage() {
         setCurrentEpisode(episode);
         setShouldAutoPlay(true);
 
+        // Phát sự kiện chuyển tập cho các Guest trong phòng xem chung (chỉ Host mới gửi được lên server)
+        if (socket && roomParam) {
+            socket.emit('wp_change_episode', { roomId: roomParam, serverName, episodeSlug: episode.slug });
+        }
+
         // Reset pre-roll cho mỗi lần đổi tập
         if (!isSameEpisode) {
             setAdDismissed(false);
@@ -443,7 +454,21 @@ export default function WatchPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-2 md:gap-4">
-                        {!roomParam && (
+                        {roomParam ? (
+                            // Đã tạo phòng → hiện nút Share
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(window.location.href);
+                                    toast.success('Đã sao chép link phòng! Gửi cho bạn bè cùng xem 🎉');
+                                }}
+                                className="flex items-center bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/50 text-xs font-bold gap-1 md:gap-2 px-2 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                            >
+                                <Share2 className="w-3 h-3 md:w-4 md:h-4" />
+                                <span className="hidden sm:inline">Chia sẻ phòng</span>
+                                <span className="sm:hidden">Chia sẻ</span>
+                            </button>
+                        ) : (
+                            // Chưa tạo phòng → hiện nút Tạo
                             <button 
                                 onClick={() => {
                                     if (!user) {
@@ -452,6 +477,7 @@ export default function WatchPage() {
                                     }
                                     const roomId = Math.random().toString(36).substring(2, 9);
                                     router.push(`?room=${roomId}`, { scroll: false });
+                                    toast.success('Đã tạo phòng! Chia sẻ link để bạn bè cùng xem 🎉');
                                 }}
                                 className="flex items-center bg-primary/20 text-primary hover:bg-primary/30 border border-primary/50 text-xs font-bold gap-1 md:gap-2 px-2 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors whitespace-nowrap"
                             >

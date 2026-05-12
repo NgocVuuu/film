@@ -35,8 +35,8 @@ export default function WatchPartyChat({ socket, roomId, onClose }: { socket: an
             setMessages(prev => [...prev, msg]);
         });
 
-        // Join the room
-        socket.emit('wp_join_room', { roomId, user: { displayName: user.displayName, avatar: user.avatar } });
+        // Bỏ wp_join_room ở đây vì VideoPlayer đã lo việc join phòng
+        // Chỉ cần lắng nghe event
 
         return () => {
             socket.off('wp_room_update');

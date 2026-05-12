@@ -214,6 +214,26 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('wp_request_sync', ({ roomId }) => {
+        const room = wpRooms[roomId];
+        if (room && room.host) {
+            // Yêu cầu Host gửi trạng thái hiện tại
+            io.to(room.host).emit('wp_request_sync_action', { requesterId: socket.id });
+        }
+    });
+
+    socket.on('wp_sync_state', ({ requesterId, state }) => {
+        // Nhận trạng thái từ Host và gửi cho Guest đang yêu cầu
+        io.to(requesterId).emit('wp_sync_state_action', state);
+    });
+
+    socket.on('wp_change_episode', ({ roomId, serverName, episodeSlug }) => {
+        const room = wpRooms[roomId];
+        if (room && room.host === socket.id) {
+            socket.to(`wp_${roomId}`).emit('wp_change_episode_action', { serverName, episodeSlug });
+        }
+    });
+
     socket.on('wp_chat', ({ roomId, message, sender }) => {
         io.to(`wp_${roomId}`).emit('wp_chat_message', { sender, message, time: new Date() });
     });

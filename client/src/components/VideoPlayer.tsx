@@ -10,6 +10,7 @@ import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useWatchProgress } from '@/hooks/useWatchProgress';
 import WatchPartyChat from './WatchPartyChat';
+import toast from 'react-hot-toast';
 
 interface WebKitVideoElement extends HTMLVideoElement {
     webkitSupportsPresentationMode?: (mode: string) => boolean;
@@ -138,6 +139,8 @@ export default function VideoPlayer({
 
     // Watch Party Chat
     const [showChat, setShowChat] = useState(false);
+    const [roomState, setRoomState] = useState<any>(null);
+    const isHost = !roomId || !roomState || roomState.host === socket?.id;
 
     // Zoom state
     const [isZoomed, setIsZoomed] = useState(false);
@@ -158,12 +161,23 @@ export default function VideoPlayer({
 
     // Socket listeners for Watch Party
     useEffect(() => {
-        if (!socket || !roomId || !videoRef.current) return;
+        if (!socket || !roomId || !user || !videoRef.current) return;
+
+        // Tự động join phòng ngay khi load Player
+        socket.emit('wp_join_room', { roomId, user: { displayName: user.displayName, avatar: user.avatar } });
+        
+        // Vừa join xong thì xin sync từ Host
+        socket.emit('wp_request_sync', { roomId });
+
+        const handleRoomUpdate = (state: any) => setRoomState(state);
+        socket.on('wp_room_update', handleRoomUpdate);
 
         const handlePlay = (data: { time: number }) => {
             if (videoRef.current) {
                 videoRef.current.currentTime = data.time;
-                videoRef.current.play();
+                videoRef.current.play().catch(e => {
+                    if (e.name !== 'AbortError') console.error('Play error:', e);
+                });
                 setIsPlaying(true);
             }
         };
@@ -182,16 +196,59 @@ export default function VideoPlayer({
             }
         };
 
+        // --- LATE JOINER SYNC ---
+        // Server báo có người mới vào xin sync, nếu mình là Host thì gửi trạng thái hiện tại
+        socket.on('wp_request_sync_action', ({ requesterId }: any) => {
+            if (videoRef.current) {
+                socket.emit('wp_sync_state', { 
+                    requesterId, 
+                    state: { 
+                        time: videoRef.current.currentTime, 
+                        isPlaying: !videoRef.current.paused,
+                        serverName,
+                        episodeSlug
+                    } 
+                });
+            }
+        });
+
+        // Nhận trạng thái sync từ Host
+        socket.on('wp_sync_state_action', (state: any) => {
+            if (videoRef.current) {
+                videoRef.current.currentTime = state.time;
+                if (state.isPlaying) {
+                    videoRef.current.play().catch(e => console.error(e));
+                    setIsPlaying(true);
+                } else {
+                    videoRef.current.pause();
+                    setIsPlaying(false);
+                }
+            }
+            // Nếu Host đang xem tập khác, tự chuyển sang tập đó
+            if (onEpisodeSelect && ((state.serverName && state.serverName !== serverName) || (state.episodeSlug && state.episodeSlug !== episodeSlug))) {
+                onEpisodeSelect(state.serverName, state.episodeSlug);
+            }
+        });
+
+        // --- EPISODE SYNC ---
+        socket.on('wp_change_episode_action', ({ serverName: newServer, episodeSlug: newEp }: any) => {
+             if (onEpisodeSelect) onEpisodeSelect(newServer, newEp);
+        });
+
         socket.on('wp_play_action', handlePlay);
         socket.on('wp_pause_action', handlePause);
         socket.on('wp_seek_action', handleSeek);
 
         return () => {
+            socket.off('wp_room_update', handleRoomUpdate);
             socket.off('wp_play_action', handlePlay);
             socket.off('wp_pause_action', handlePause);
             socket.off('wp_seek_action', handleSeek);
+            socket.off('wp_request_sync_action');
+            socket.off('wp_sync_state_action');
+            socket.off('wp_change_episode_action');
         };
-    }, [socket, roomId]);
+    }, [socket, roomId, user, serverName, episodeSlug, onEpisodeSelect]);
 
     // -- Logic --
 
@@ -210,6 +267,10 @@ export default function VideoPlayer({
     const togglePlay = (e?: React.MouseEvent | React.TouchEvent | React.SyntheticEvent) => {
         if (e) {
             e.stopPropagation();
+        }
+        if (!isHost) {
+            toast.error('Chỉ chủ phòng mới có quyền điều khiển video');
+            return;
         }
         if (!videoRef.current) return;
 
@@ -300,6 +361,7 @@ export default function VideoPlayer({
     };
 
     const handleScrubbing = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!isHost) return;
         const time = Number(e.target.value);
         setScrubTime(time);
         if (!isScrubbing) setIsScrubbing(true);
@@ -307,6 +369,7 @@ export default function VideoPlayer({
     };
 
     const handleScrubEnd = () => {
+        if (!isHost) return;
         setIsScrubbing(false);
         if (videoRef.current) {
             videoRef.current.currentTime = scrubTime;
@@ -336,6 +399,10 @@ export default function VideoPlayer({
 
     // Seek forward/backward
     const seekVideo = (seconds: number) => {
+        if (!isHost) {
+            toast.error('Chỉ chủ phòng mới có quyền điều khiển video');
+            return;
+        }
         if (!videoRef.current) return;
         const currentVideoTime = videoRef.current.currentTime;
         const videoDuration = videoRef.current.duration || 0;
