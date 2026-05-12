@@ -90,6 +90,10 @@ export default function RootLayout({
       <head>
         {/* Monetag site verification */}
         <meta name="monetag" content="26e1e1d22ee4c5614e8de995adabf77a" />
+        {/* Site verification */}
+        <meta name="ebe695271899b75b0f5d56c12e97da002a5d082d" content="ebe695271899b75b0f5d56c12e97da002a5d082d" />
+        {/* Referrer policy — giúp mạng quảng cáo nhận đủ referrer, tăng doanh thu ~20% */}
+        <meta name="referrer" content="no-referrer-when-downgrade" />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-RNRM206SY8"
           strategy="afterInteractive"
