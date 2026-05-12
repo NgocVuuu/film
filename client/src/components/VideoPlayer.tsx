@@ -140,6 +140,7 @@ export default function VideoPlayer({
     // Watch Party Chat
     const [showChat, setShowChat] = useState(false);
     const [roomState, setRoomState] = useState<any>(null);
+    const [chatMessages, setChatMessages] = useState<any[]>([]);
     const isHost = !roomId || !roomState || roomState.host === socket?.id;
 
     // Zoom state
@@ -159,15 +160,40 @@ export default function VideoPlayer({
         serverName
     });
 
+    // Sử dụng refs để tránh vòng lặp re-render khi dependencies thay đổi
+    const episodeDataRef = useRef({ serverName, episodeSlug, onEpisodeSelect });
+    useEffect(() => {
+        episodeDataRef.current = { serverName, episodeSlug, onEpisodeSelect };
+    }, [serverName, episodeSlug, onEpisodeSelect]);
+
+    const userRef = useRef(user);
+    useEffect(() => {
+        userRef.current = user;
+    }, [user]);
+
+    // Auto Join & Sync (Chỉ chạy 1 lần khi có socket và roomId)
+    const hasJoinedRef = useRef(false);
+    useEffect(() => {
+        if (!socket || !roomId || !userRef.current || hasJoinedRef.current) return;
+        
+        hasJoinedRef.current = true;
+        const u = userRef.current;
+        
+        // Tự động join phòng
+        socket.emit('wp_join_room', { roomId, user: { displayName: u.displayName, avatar: u.avatar } });
+        
+        // Vừa join xong thì xin sync từ Host (nếu mình là guest)
+        socket.emit('wp_request_sync', { roomId });
+        
+        // Reset state khi unmount hoặc đổi phòng
+        return () => {
+            hasJoinedRef.current = false;
+        };
+    }, [socket, roomId]);
+
     // Socket listeners for Watch Party
     useEffect(() => {
-        if (!socket || !roomId || !user || !videoRef.current) return;
-
-        // Tự động join phòng ngay khi load Player
-        socket.emit('wp_join_room', { roomId, user: { displayName: user.displayName, avatar: user.avatar } });
-        
-        // Vừa join xong thì xin sync từ Host
-        socket.emit('wp_request_sync', { roomId });
+        if (!socket || !roomId) return;
 
         const handleRoomUpdate = (state: any) => setRoomState(state);
         socket.on('wp_room_update', handleRoomUpdate);
@@ -200,13 +226,14 @@ export default function VideoPlayer({
         // Server báo có người mới vào xin sync, nếu mình là Host thì gửi trạng thái hiện tại
         socket.on('wp_request_sync_action', ({ requesterId }: any) => {
             if (videoRef.current) {
+                const { serverName: sName, episodeSlug: eSlug } = episodeDataRef.current;
                 socket.emit('wp_sync_state', { 
                     requesterId, 
                     state: { 
                         time: videoRef.current.currentTime, 
                         isPlaying: !videoRef.current.paused,
-                        serverName,
-                        episodeSlug
+                        serverName: sName,
+                        episodeSlug: eSlug
                     } 
                 });
             }
@@ -215,6 +242,7 @@ export default function VideoPlayer({
         // Nhận trạng thái sync từ Host
         socket.on('wp_sync_state_action', (state: any) => {
             if (videoRef.current) {
+                // Đảm bảo không tự sync với chính mình
                 videoRef.current.currentTime = state.time;
                 if (state.isPlaying) {
                     videoRef.current.play().catch(e => console.error(e));
@@ -225,14 +253,20 @@ export default function VideoPlayer({
                 }
             }
             // Nếu Host đang xem tập khác, tự chuyển sang tập đó
-            if (onEpisodeSelect && ((state.serverName && state.serverName !== serverName) || (state.episodeSlug && state.episodeSlug !== episodeSlug))) {
-                onEpisodeSelect(state.serverName, state.episodeSlug);
+            const { serverName: currentServer, episodeSlug: currentEp, onEpisodeSelect: onSelect } = episodeDataRef.current;
+            if (onSelect && ((state.serverName && state.serverName !== currentServer) || (state.episodeSlug && state.episodeSlug !== currentEp))) {
+                onSelect(state.serverName, state.episodeSlug);
             }
         });
 
         // --- EPISODE SYNC ---
         socket.on('wp_change_episode_action', ({ serverName: newServer, episodeSlug: newEp }: any) => {
-             if (onEpisodeSelect) onEpisodeSelect(newServer, newEp);
+             const { onEpisodeSelect: onSelect } = episodeDataRef.current;
+             if (onSelect) onSelect(newServer, newEp);
+        });
+
+        socket.on('wp_chat_message', (msg: any) => {
+            setChatMessages(prev => [...prev, msg]);
         });
 
         socket.on('wp_play_action', handlePlay);
@@ -247,8 +281,9 @@ export default function VideoPlayer({
             socket.off('wp_request_sync_action');
             socket.off('wp_sync_state_action');
             socket.off('wp_change_episode_action');
+            socket.off('wp_chat_message');
         };
-    }, [socket, roomId, user, serverName, episodeSlug, onEpisodeSelect]);
+    }, [socket, roomId]);
 
     // -- Logic --
 
@@ -1587,14 +1622,15 @@ export default function VideoPlayer({
             </div> {/* End Main Player Area Wrapper */}
 
             {/* Watch Party Chat Area */}
-            {roomId && socket && (
-                <div 
-                    className={`h-full shrink-0 z-50 transition-all duration-300 ease-in-out bg-black/90 backdrop-blur-md border-l border-white/10 overflow-hidden ${showChat ? 'w-80 opacity-100 pointer-events-auto shadow-[-10px_0_30px_rgba(0,0,0,0.5)]' : 'w-0 opacity-0 pointer-events-none'}`}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="w-80 h-full flex flex-col">
-                        <WatchPartyChat socket={socket} roomId={roomId} onClose={() => setShowChat(false)} />
-                    </div>
+            {showChat && roomId && (
+                <div className="absolute top-4 right-4 md:right-16 md:bottom-16 w-72 md:w-80 h-[60%] md:h-[400px] max-h-[80vh] z-50 animate-in slide-in-from-right-4 fade-in duration-200">
+                    <WatchPartyChat 
+                        socket={socket} 
+                        roomId={roomId} 
+                        messages={chatMessages}
+                        roomState={roomState}
+                        onClose={() => setShowChat(false)} 
+                    />
                 </div>
             )}
         </div >
