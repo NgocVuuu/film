@@ -35,6 +35,16 @@ interface TrendingCarouselProps {
 export function TrendingCarousel({ movies, title = "Xếp Hạng Nổi Bật" }: TrendingCarouselProps) {
     if (!movies || movies.length === 0) return null;
 
+    const getQualityLabel = (quality?: string) => {
+        const q = quality?.toLowerCase() || '';
+        if (q.includes('4k') || q.includes('2160')) return '4K';
+        if (q.includes('fhd') || q.includes('1080')) return 'FHD';
+        if (q.includes('hd') || q.includes('720')) return 'HD';
+        if (q.includes('sd') || q.includes('480')) return 'SD';
+        if (q.includes('cam')) return 'CAM';
+        return null;
+    };
+
     const getBadges = (quality?: string, episode?: string, lang?: string) => {
         const q = quality?.toLowerCase() || '';
         const l = lang?.toLowerCase() || '';
@@ -102,6 +112,7 @@ export function TrendingCarousel({ movies, title = "Xếp Hạng Nổi Bật" }:
                 <CarouselContent className="-ml-4">
                     {movies.map((movie, index) => {
                         const movieBadges = getBadges(movie.quality, movie.episode_current, movie.lang);
+                        const qualityLabel = movieBadges.length > 0 ? getQualityLabel(movie.quality) : null;
                         return (
                             <CarouselItem key={movie._id} className="pl-4 basis-[48%] sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
                                 <Link href={`/movie/${movie.slug}`} className="block group transition-all duration-300">
@@ -136,12 +147,21 @@ export function TrendingCarousel({ movies, title = "Xếp Hạng Nổi Bật" }:
                                             </span>
                                         </div>
 
+                                        {/* Quality Badge (Top Left) */}
+                                        {qualityLabel && (
+                                            <div className="absolute top-2 left-2 z-20 skew-x-6 pointer-events-none">
+                                                <div className="md:backdrop-blur-md text-center text-[6.5px] font-bold px-1.5 py-0.5 rounded-[2px] border shadow-sm bg-stone-900/85 text-amber-400 border-stone-600/60 flex justify-center items-center tracking-wide">
+                                                    {qualityLabel}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Unified Badges (Bottom Right) - Inside Poster */}
                                         <div className="absolute bottom-3 right-4 z-20 skew-x-6 pointer-events-none flex flex-col items-end gap-0.5 max-w-[80%]">
                                             {movieBadges.map((b, idx) => (
                                                 <div 
                                                     key={idx} 
-                                                    className={`text-[6.5px] font-bold px-1 py-0.5 rounded-[2px] border shadow-sm transition-colors md:backdrop-blur-md ${b.classes}`}
+                                                    className={`text-center w-[48px] text-[6.5px] font-bold px-1 py-0.5 rounded-[2px] border shadow-sm transition-colors flex justify-center items-center md:backdrop-blur-md ${b.classes}`}
                                                 >
                                                     {b.display}
                                                 </div>

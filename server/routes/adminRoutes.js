@@ -9,6 +9,7 @@ const adminReportController = require('../controllers/adminReportController');
 const adminMovieController = require('../controllers/adminMovieController');
 const adminNotificationController = require('../controllers/adminNotificationController');
 const adminFeedbackController = require('../controllers/adminFeedbackController');
+const adminDramaController = require('../controllers/adminDramaController');
 const { authMiddleware, adminMiddleware } = require('../middleware/authMiddleware');
 
 // All routes require admin authentication
@@ -49,6 +50,12 @@ router.get('/crawler/search-movie', adminCrawlerController.searchMovie);
 router.get('/comments', adminCommentController.getAllComments);
 router.delete('/comments/:commentId', adminCommentController.deleteComment);
 router.patch('/comments/:commentId/hide', adminCommentController.toggleHideComment);
+
+// Drama (Rate) management
+router.get('/drama/reactions', adminDramaController.getAllReactions);
+router.delete('/drama/reactions/:id', adminDramaController.deleteReaction);
+router.get('/drama/movies', adminDramaController.getDramaMovies);
+router.patch('/drama/movies/:slug', adminDramaController.updateDramaCounts);
 
 // Report management
 router.get('/reports', adminReportController.getAllReports);

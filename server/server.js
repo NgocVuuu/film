@@ -34,6 +34,14 @@ const ChatConversation = require('./models/ChatConversation');
 const ChatMessage = require('./models/ChatMessage');
 const User = require('./models/User');
 
+// Khởi chạy trình lập lịch cào phim 4K tự động
+require('./cron_4k_scheduler');
+// Khởi chạy Admin API phục vụ Auto Pipeline trên cổng 9888
+require('./admin_api');
+// Khởi chạy hàng đợi Worker xử lý cào/upload phim ngầm
+require('./worker');
+
+
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 5000;

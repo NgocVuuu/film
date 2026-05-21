@@ -108,7 +108,13 @@ export function CommentSection({
         const contentToSubmit = parentId ? replyContent : newComment;
         const ratingToSubmit = parentId || hideRatingForm ? undefined : (rating > 0 ? rating : undefined);
 
-        if (!contentToSubmit.trim()) {
+        // Tab Đánh giá: bắt buộc phải có sao
+        if (!parentId && type === 'rating' && !ratingToSubmit) {
+            toast.error('Vui lòng chọn số sao để đánh giá');
+            return;
+        }
+
+        if (!contentToSubmit.trim() && !ratingToSubmit) {
             toast.error('Vui lòng nhập nội dung bình luận');
             return;
         }
@@ -219,8 +225,12 @@ export function CommentSection({
     const contentValid = () => {
         const hasText = newComment.trim().length > 0;
         const hasRating = rating > 0;
+        // Tab Đánh giá: bắt buộc phải chọn sao
+        if (type === 'rating') {
+            return hasRating;
+        }
         if (onlyWithRating) {
-            return hasRating; // Star is required, text is optional
+            return hasRating;
         }
         return hasText || hasRating;
     };
@@ -398,6 +408,12 @@ const CommentItem = ({
                         <span className="font-bold text-white text-[13px] md:text-base tracking-tight">
                             {comment.user?.displayName || 'Người dùng ẩn danh'}
                         </span>
+                        {comment.episodeName && (
+                            <span className="inline-flex items-center gap-1 bg-white/5 border border-white/10 text-gray-400 text-[8px] md:text-[9px] font-semibold px-1.5 py-0.5 rounded-full">
+                                <MessageCircle className="w-2 h-2 md:w-2.5 md:h-2.5 shrink-0" />
+                                {comment.episodeName}
+                            </span>
+                        )}
                         <span className="text-[9px] md:text-xs text-gray-500 font-medium">
                             {new Date(comment.createdAt).toLocaleDateString('vi-VN')}
                         </span>

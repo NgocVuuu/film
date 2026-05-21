@@ -389,11 +389,13 @@ export function Navbar() {
                                 )}
                             </div>
                         ) : (
-                            <div className="hidden md:block">
-                                <Button onClick={() => router.push('/login')} variant="outline" className="border-primary/50 text-primary hover:bg-primary hover:text-black transition-colors text-sm">
-                                    Đăng nhập
-                                </Button>
-                            </div>
+                            pathname !== '/login' && (
+                                <div className="hidden md:block">
+                                    <Button onClick={() => router.push('/login')} variant="outline" className="border-primary/50 text-primary hover:bg-primary hover:text-black transition-colors text-sm">
+                                        Đăng nhập
+                                    </Button>
+                                </div>
+                            )
                         )}
                     </div>
                 </div>

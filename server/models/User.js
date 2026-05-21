@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema({
         sparse: true,
         unique: true
     },
+    discordId: {
+        type: String,
+        sparse: true,
+        unique: true
+    },
     displayName: {
         type: String,
         required: true
@@ -71,5 +76,6 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ email: 1 });
 userSchema.index({ phoneNumber: 1 });
 userSchema.index({ googleId: 1 });
+userSchema.index({ discordId: 1 });
 
 module.exports = mongoose.model('User', userSchema);

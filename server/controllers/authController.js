@@ -154,6 +154,142 @@ exports.googleLogin = async (req, res) => {
     }
 };
 
+// ===== DISCORD OAUTH =====
+
+// Bước 1: Redirect user đến trang đăng nhập Discord
+exports.discordLogin = (req, res) => {
+    const params = new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        redirect_uri: process.env.DISCORD_REDIRECT_URI,
+        response_type: 'code',
+        scope: 'identify email guilds.join',
+    });
+    res.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
+};
+
+// Bước 2: Discord redirect về đây với code
+exports.discordCallback = async (req, res) => {
+    try {
+        const { code } = req.query;
+
+        if (!code) {
+            return res.redirect(`${process.env.CLIENT_URL}/login?error=discord_cancelled`);
+        }
+
+        // Đổi code lấy access_token
+        const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                client_id: process.env.DISCORD_CLIENT_ID,
+                client_secret: process.env.DISCORD_CLIENT_SECRET,
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: process.env.DISCORD_REDIRECT_URI,
+            }),
+        });
+
+        const tokenData = await tokenResponse.json();
+
+        if (!tokenData.access_token) {
+            console.error('Discord token error:', tokenData);
+            return res.redirect(`${process.env.CLIENT_URL}/login?error=discord_token_failed`);
+        }
+
+        const { access_token } = tokenData;
+
+        // Lấy thông tin user Discord
+        const userResponse = await fetch('https://discord.com/api/users/@me', {
+            headers: { Authorization: `Bearer ${access_token}` },
+        });
+        const discordUser = await userResponse.json();
+
+        if (!discordUser.id) {
+            return res.redirect(`${process.env.CLIENT_URL}/login?error=discord_user_failed`);
+        }
+
+        const { id: discordId, email, username, global_name, avatar } = discordUser;
+        const displayName = global_name || username;
+        const avatarUrl = avatar
+            ? `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.png`
+            : `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(discordId) % BigInt(5))}.png`;
+
+        // Tìm hoặc tạo user trong DB
+        let user = await User.findOne({ discordId });
+
+        if (!user && email) {
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                // Liên kết Discord vào tài khoản đã có
+                existingUser.discordId = discordId;
+                existingUser.avatar = avatarUrl;
+                existingUser.lastLogin = new Date();
+                await existingUser.save();
+                user = existingUser;
+            }
+        }
+
+        if (!user) {
+            const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
+            user = await User.create({
+                discordId,
+                email: email || undefined,
+                displayName,
+                avatar: avatarUrl,
+                isVerified: true,
+                lastLogin: new Date(),
+                role: email && adminEmails.includes(email) ? 'admin' : 'user',
+            });
+        } else {
+            user.lastLogin = new Date();
+            user.avatar = avatarUrl;
+            await user.save();
+        }
+
+        // Tự động add user vào Discord Server
+        try {
+            const guildRes = await fetch(
+                `https://discord.com/api/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordId}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ access_token }),
+                }
+            );
+            // 201 = vừa được add, 204 = đã là thành viên — đều OK
+            console.log(`Discord guild add status: ${guildRes.status} for user ${discordId}`);
+        } catch (guildErr) {
+            console.warn('Could not add user to Discord guild:', guildErr.message);
+        }
+
+        // Tạo JWT và set cookie
+        const token = generateToken(user._id);
+
+        const origin = req.headers.origin || '';
+        const isProduction = process.env.NODE_ENV === 'production' ||
+            (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) ||
+            (origin && !origin.includes('localhost') && origin.startsWith('http'));
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? 'none' : 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        res.redirect(`${process.env.CLIENT_URL}/?discord_login=success`);
+
+    } catch (error) {
+        console.error('Discord callback error:', error);
+        res.redirect(`${process.env.CLIENT_URL}/login?error=discord_error`);
+    }
+};
+
+
+
 
 
 // Get current user

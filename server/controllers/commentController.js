@@ -13,10 +13,20 @@ const getComments = async (req, res) => {
         const filter = { movieSlug: slug, parentId: null };
         if (type) {
             if (type === 'comment') {
-                // If type is 'comment', show data where type is either 'comment' OR missing
-                filter.$or = [
-                    { type: 'comment' },
-                    { type: { $exists: false } }
+                // Tab bình luận: chỉ lấy type=comment VÀ không có rating
+                filter.$and = [
+                    {
+                        $or: [
+                            { type: 'comment' },
+                            { type: { $exists: false } }
+                        ]
+                    },
+                    {
+                        $or: [
+                            { rating: null },
+                            { rating: { $exists: false } }
+                        ]
+                    }
                 ];
             } else {
                 filter.type = type;
@@ -92,6 +102,8 @@ const addComment = async (req, res) => {
         }
 
         // Create Comment
+        // Nếu có rating → tự động gán type='rating' để hiển thị đúng tab
+        const commentType = rating ? 'rating' : (type || 'comment');
         const newComment = new Comment({
             user: userId,
             movieSlug,
@@ -99,7 +111,7 @@ const addComment = async (req, res) => {
             rating: rating || undefined,
             parentId: parentId || null,
             episodeName: episodeName || null,
-            type: type || 'comment'
+            type: commentType
         });
         await newComment.save();
 

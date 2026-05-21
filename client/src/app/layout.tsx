@@ -10,6 +10,7 @@ import ChatWidget from "@/components/ChatWidget";
 import { AdInterstitial } from "@/components/AdInterstitial";
 import { GlobalPopunder } from "@/components/GlobalPopunder";
 import { QuickViewProvider } from "@/contexts/QuickViewContext";
+import DisableDevTools from "@/components/DisableDevTools";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -113,6 +114,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <QuickViewProvider>
+            <DisableDevTools />
             <MainLayout>
               {children}
             </MainLayout>

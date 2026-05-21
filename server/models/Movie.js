@@ -70,7 +70,7 @@ const movieSchema = new mongoose.Schema({
   isFeatured: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   lastNotifiedEpisode: { type: String }, // Tránh spam thông báo cho cùng một tập
-
+  mkvUrl: { type: String }, // Đường dẫn trực tiếp nguồn cào 4K (mkvdrama)
   updatedAt: { type: Date, default: Date.now },
 });
 

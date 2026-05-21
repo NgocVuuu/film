@@ -117,20 +117,25 @@ export default function WatchPage() {
     useEffect(() => {
         if (!movie || !movie.episodes) return;
 
-        // Filter out NguonC entirely
-        const validEpisodes = movie.episodes.filter(ep => !ep.server_name.startsWith('NC -'));
+        // Filter out NguonC and old PChill Server entirely
+        const validEpisodes = movie.episodes.filter(ep => 
+            !ep.server_name.startsWith('NC -') && 
+            ep.server_name !== 'PChill Server'
+        );
 
         // 1. Identify Sources
         const sources = new Set<string>();
         validEpisodes.forEach((ep: Episode) => {
             const name = ep.server_name;
-            if (name.startsWith('KK -')) sources.add('KKPhim');
-            else if (name.startsWith('OP -')) sources.add('Ophim');
+            if (name.startsWith('KK -')) sources.add('Server 1');
+            else if (name.startsWith('OP -')) sources.add('Server 2');
+            else if (name === 'PChill - Play4Me') sources.add('PChill #1');
+            else if (name === 'PChill - SeekStreaming') sources.add('PChill #2');
             else sources.add('Khác');
         });
 
         // Priority Order
-        const sourceOrder = ['KKPhim', 'Ophim', 'Khác'];
+        const sourceOrder = ['PChill #1', 'PChill #2', 'Server 1', 'Server 2', 'Khác'];
         const sortedSources = Array.from(sources).sort((a, b) => {
             return sourceOrder.indexOf(a) - sourceOrder.indexOf(b);
         });
@@ -145,8 +150,10 @@ export default function WatchPage() {
                 const matchedServer = validEpisodes.find(ep => ep.server_name === serverParam);
                 if (matchedServer) {
                     const name = matchedServer.server_name;
-                    if (name.startsWith('KK -')) activeSource = 'KKPhim';
-                    else if (name.startsWith('OP -')) activeSource = 'Ophim';
+                    if (name.startsWith('KK -')) activeSource = 'Server 1';
+                    else if (name.startsWith('OP -')) activeSource = 'Server 2';
+                    else if (name === 'PChill - Play4Me') activeSource = 'PChill #1';
+                    else if (name === 'PChill - SeekStreaming') activeSource = 'PChill #2';
                     else activeSource = 'Khác';
                 }
             }
@@ -159,16 +166,22 @@ export default function WatchPage() {
         // 3. Filter Servers
         if (activeSource) {
             const prefixMap: Record<string, string> = {
-                'KKPhim': 'KK -',
-                'Ophim': 'OP -',
-                'Khác': ''
+                'Server 1': 'KK -',
+                'Server 2': 'OP -'
             };
             const prefix = prefixMap[activeSource] || '';
 
             const filtered = validEpisodes.filter((ep: Episode) => {
+                if (activeSource === 'PChill #1') {
+                    return ep.server_name === 'PChill - Play4Me';
+                }
+                if (activeSource === 'PChill #2') {
+                    return ep.server_name === 'PChill - SeekStreaming';
+                }
                 if (activeSource === 'Khác') {
                     return !ep.server_name.startsWith('KK -') &&
-                        !ep.server_name.startsWith('OP -');
+                        !ep.server_name.startsWith('OP -') &&
+                        !ep.server_name.startsWith('PChill');
                 }
                 return ep.server_name.startsWith(prefix);
             });
@@ -349,17 +362,24 @@ export default function WatchPage() {
         // Auto-switch to same episode on new source if we have a currentEpisode
         if (movie?.episodes) {
             const prefixMap: Record<string, string> = {
-                'KKPhim': 'KK -',
-                'Ophim': 'OP -',
-                'Khác': ''
+                'Server 1': 'KK -',
+                'Server 2': 'OP -'
             };
             const prefix = prefixMap[newSource] || '';
 
             const targetServers = movie.episodes.filter((ep: Episode) => {
-                if (ep.server_name.startsWith('NC -')) return false; // Ignore NguonC
+                if (ep.server_name.startsWith('NC -') || ep.server_name === 'PChill Server') return false; 
+                
+                if (newSource === 'PChill #1') {
+                    return ep.server_name === 'PChill - Play4Me';
+                }
+                if (newSource === 'PChill #2') {
+                    return ep.server_name === 'PChill - SeekStreaming';
+                }
                 if (newSource === 'Khác') {
                     return !ep.server_name.startsWith('KK -') &&
-                        !ep.server_name.startsWith('OP -');
+                        !ep.server_name.startsWith('OP -') &&
+                        !ep.server_name.startsWith('PChill');
                 }
                 return ep.server_name.startsWith(prefix);
             });
@@ -399,6 +419,9 @@ export default function WatchPage() {
     };
 
     const getCleanServerName = (rawName: string) => {
+        if (rawName === 'PChill - Play4Me') return 'PChill #1';
+        if (rawName === 'PChill - SeekStreaming') return 'PChill #2';
+
         const lowerName = rawName.toLowerCase();
 
         // 1. Detect Type (Priority)
@@ -593,7 +616,7 @@ export default function WatchPage() {
                                             : 'bg-surface-800 text-gray-400 hover:bg-surface-700 hover:text-white border border-white/5'
                                             }`}
                                     >
-                                        Server {index + 1}
+                                        {source}
                                     </button>
                                 ))}
                             </div>
@@ -622,7 +645,7 @@ export default function WatchPage() {
                                                 : 'bg-surface-700 text-gray-400 hover:bg-surface-600 hover:text-white border border-white/5'
                                                 }`}
                                         >
-                                            Server {index + 1}
+                                            {source}
                                         </button>
                                     ))}
                                 </div>

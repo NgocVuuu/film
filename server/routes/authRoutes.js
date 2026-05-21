@@ -7,6 +7,8 @@ const { validateRequest, schemas } = require('../middleware/validationMiddleware
 
 // Public routes
 router.post('/google', authController.googleLogin);
+router.get('/discord', authController.discordLogin);
+router.get('/discord/callback', authController.discordCallback);
 router.post('/register', validateRequest(schemas.register), authController.register);
 router.get('/verify-email', authController.verifyEmail);
 router.post('/resend-verification', authController.resendVerification);

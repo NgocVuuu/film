@@ -48,6 +48,16 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
         }
     };
 
+    const getQualityLabel = (quality?: string) => {
+        const q = quality?.toLowerCase() || '';
+        if (q.includes('4k') || q.includes('2160')) return '4K';
+        if (q.includes('fhd') || q.includes('1080')) return 'FHD';
+        if (q.includes('hd') || q.includes('720')) return 'HD';
+        if (q.includes('sd') || q.includes('480')) return 'SD';
+        if (q.includes('cam')) return 'CAM';
+        return null;
+    };
+
     const getBadges = (quality?: string, episode?: string, lang?: string) => {
         const q = quality?.toLowerCase() || '';
         const l = lang?.toLowerCase() || '';
@@ -128,6 +138,7 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
                             showQuickView(movie as any);
                         }, { shouldPreventDefault: false });
                         const movieBadges = getBadges(movie.quality, movie.episode_current, movie.lang);
+                        const qualityLabel = movieBadges.length > 0 ? getQualityLabel(movie.quality) : null;
 
                         return (
                             <Link
@@ -153,12 +164,21 @@ export function MovieCarousel({ title, movies, icon, viewAllLink }: MovieCarouse
                                     />
                                     <div className="absolute inset-0 bg-linear-to-t from-black via-transparent to-transparent opacity-60 transition-opacity group-hover:opacity-40" />
 
+                                    {/* Quality Badge (Top Left) */}
+                                    {qualityLabel && (
+                                        <div className="absolute top-1 left-1 z-20 pointer-events-none">
+                                            <div className="md:backdrop-blur-md text-center text-[6.5px] font-bold px-1.5 py-0.5 rounded-[2px] border shadow-sm bg-stone-900/85 text-amber-400 border-stone-600/60 flex justify-center items-center tracking-wide">
+                                                {qualityLabel}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Unified Badges (Bottom Right) */}
                                     <div className="absolute bottom-1 right-1 z-20 pointer-events-none flex flex-col items-end gap-0.5 max-w-[90%]">
                                         {movieBadges.map((b, idx) => (
                                             <div 
                                                 key={idx} 
-                                                className={`text-[6.5px] font-bold px-1 py-0.5 rounded-[2px] border shadow-sm transition-colors md:backdrop-blur-md ${b.classes}`}
+                                                className={`text-center w-[48px] text-[6.5px] font-bold px-1 py-0.5 rounded-[2px] border shadow-sm transition-colors flex justify-center items-center md:backdrop-blur-md ${b.classes}`}
                                             >
                                                 {b.display}
                                             </div>

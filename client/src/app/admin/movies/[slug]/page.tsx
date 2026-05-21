@@ -62,6 +62,7 @@ interface Movie {
     episodes: ServerData[];
     isFeatured: boolean;
     isActive: boolean;
+    mkvUrl?: string;
 }
 
 interface EditMoviePageProps {
@@ -91,7 +92,8 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
         episode_total: '',
         quality: '',
         lang: '',
-        year: 2024
+        year: 2024,
+        mkvUrl: ''
     });
 
     const [actors, setActors] = useState<string[]>([]);
@@ -124,7 +126,8 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                     episode_total: movieData.episode_total || '',
                     quality: movieData.quality || '',
                     lang: movieData.lang || '',
-                    year: movieData.year || 2024
+                    year: movieData.year || 2024,
+                    mkvUrl: movieData.mkvUrl || ''
                 });
                 setActors(movieData.actor || []);
                 setDirectors(movieData.director || []);
@@ -306,6 +309,17 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                             onChange={(e) => handleInputChange('trailer_url', e.target.value)}
                             className="bg-surface-800 border-white/10 text-white"
                         />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-2">Link cào 4K trực tiếp (mkvdrama.net / mkvdrama.org)</label>
+                        <Input
+                            value={formData.mkvUrl}
+                            onChange={(e) => handleInputChange('mkvUrl', e.target.value)}
+                            placeholder="Ví dụ: https://mkvdrama.net/760409-pursuit-of-jade"
+                            className="bg-surface-800 border-white/10 text-white"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Nhập liên kết này để robot cào thẳng các tập 4K hằng ngày từ link này mà không cần dò tìm tên.</p>
                     </div>
                 </div>
 

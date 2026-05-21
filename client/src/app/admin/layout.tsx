@@ -16,7 +16,8 @@ import {
     Flag,
     Video,
     Bell,
-    MessageCircle
+    MessageCircle,
+    Flame
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
@@ -26,6 +27,7 @@ const navigation = [
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Movies', href: '/admin/movies', icon: Video },
     { name: 'Comments', href: '/admin/comments', icon: MessageSquare },
+    { name: 'Drama Manager', href: '/admin/drama', icon: Flame },
     { name: 'Reports', href: '/admin/reports', icon: Flag },
     { name: 'Subscriptions', href: '/admin/subscriptions', icon: CreditCard },
     { name: 'Movie Requests', href: '/admin/requests', icon: Film },
@@ -33,6 +35,7 @@ const navigation = [
     { name: 'Chat', href: '/admin/chat', icon: MessageCircle },
     { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
     { name: 'Crawler', href: '/admin/crawler', icon: RefreshCw },
+    { name: 'Auto Pipeline', href: '/admin/pipeline', icon: Film },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
