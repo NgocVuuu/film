@@ -14,6 +14,7 @@ interface MovieRequest {
     movieName: string;
     movieSlug?: string;
     status: string;
+    type?: string;
     priority: number;
     requestCount: number;
     createdAt: string;
@@ -169,6 +170,7 @@ export default function AdminRequestsPage() {
                                 <tr>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Movie</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Requested By</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Type</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Priority</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Status</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Date</th>
@@ -193,6 +195,13 @@ export default function AdminRequestsPage() {
                                             <div className="text-sm text-gray-400">
                                                 {request.userId?.displayName || 'Unknown'}
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {request.type === '4k_upgrade' ? (
+                                                <span className="px-2 py-1 text-[10px] font-bold rounded bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 uppercase">4K Upgrade</span>
+                                            ) : (
+                                                <span className="px-2 py-1 text-[10px] font-bold rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">New Movie</span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-1">

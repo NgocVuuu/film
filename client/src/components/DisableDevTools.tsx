@@ -6,7 +6,11 @@ import disableDevtool from 'disable-devtool';
 export default function DisableDevTools() {
   useEffect(() => {
     // Kích hoạt thư viện disable-devtool
-    // Thư viện này hỗ trợ chặn rất mạnh: F12, chuột phải, debugger, inspect, thay đổi kích thước window (khi mở devtools doc), v.v.
+    // Chỉ chặn trên môi trường Production. Trong lúc code (npm run dev), tính năng này sẽ bị tắt để dễ debug.
+    if (process.env.NODE_ENV === 'development') {
+        return;
+    }
+
     disableDevtool({
       md5: '', // tuỳ chọn md5 để bypass
       url: '', // url redirect nếu phát hiện mở devtools (để trống là ko redirect)

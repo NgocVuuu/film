@@ -10,6 +10,11 @@ const movieRequestSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    type: {
+        type: String,
+        enum: ['new_movie', '4k_upgrade'],
+        default: 'new_movie'
+    },
     movieSlug: String,
     ophimUrl: String,
     status: {

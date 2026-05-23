@@ -139,7 +139,8 @@ exports.googleLogin = async (req, res) => {
                     avatar: user.avatar,
                     role: user.role,
                     subscription: user.subscription,
-                    isPremium: user.role === 'admin' || (user.subscription?.tier === 'premium' && user.subscription?.status === 'active')
+                    isPremium: user.role === 'admin' || ((user.subscription?.tier === 'premium' || user.subscription?.tier === 'vip') && user.subscription?.status === 'active'),
+                    isVip: user.role === 'admin' || (user.subscription?.tier === 'vip' && user.subscription?.status === 'active')
                 },
                 token
             },
@@ -300,10 +301,15 @@ exports.getCurrentUser = async (req, res) => {
         const userFull = await User.findById(user._id).select('password');
         const hasPassword = !!(userFull && userFull.password);
 
-        // Calculate isPremium from subscription (or if admin)
+        // Calculate isPremium and isVip from subscription (or if admin)
         const isPremium = user.role === 'admin' || (
             user.subscription &&
-            user.subscription.tier === 'premium' &&
+            (user.subscription.tier === 'premium' || user.subscription.tier === 'vip') &&
+            user.subscription.status === 'active'
+        );
+        const isVip = user.role === 'admin' || (
+            user.subscription &&
+            user.subscription.tier === 'vip' &&
             user.subscription.status === 'active'
         );
 
@@ -318,6 +324,7 @@ exports.getCurrentUser = async (req, res) => {
                 role: user.role,
                 subscription: user.subscription,
                 isPremium,
+                isVip,
                 hasPassword
             }
         });
@@ -626,7 +633,8 @@ exports.login = async (req, res) => {
                     avatar: user.avatar,
                     role: user.role,
                     subscription: user.subscription,
-                    isPremium: user.role === 'admin' || (user.subscription?.tier === 'premium' && user.subscription?.status === 'active')
+                    isPremium: user.role === 'admin' || ((user.subscription?.tier === 'premium' || user.subscription?.tier === 'vip') && user.subscription?.status === 'active'),
+                    isVip: user.role === 'admin' || (user.subscription?.tier === 'vip' && user.subscription?.status === 'active')
                 },
                 token
             },

@@ -14,6 +14,7 @@ interface User {
     role: string;
     hasPassword?: boolean;
     isPremium?: boolean; // Computed from subscription
+    isVip?: boolean;     // True only for VIP tier or Admin
     subscription: {
         tier: string;
         status: string;

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { encodeServerForUrl } from '@/lib/serverUrl';
 
 interface ContinueWatchingCardProps {
     movie: {
@@ -30,8 +31,8 @@ export function ContinueWatchingCard({ movie, onRemove }: ContinueWatchingCardPr
         return null;
     }
 
-    // Build watch URL with episode and timestamp
-    const serverQuery = movie.progress.serverName ? `&server=${encodeURIComponent(movie.progress.serverName)}` : '';
+    // Build watch URL with episode and timestamp - encode server to hide internal names
+    const serverQuery = movie.progress.serverName ? `&server=${encodeServerForUrl(movie.progress.serverName)}` : '';
     const watchUrl = `/movie/${movie.slug}/watch?episode=${movie.progress.episodeSlug}&t=${Math.floor(movie.progress.currentTime)}${serverQuery}`;
 
     return (

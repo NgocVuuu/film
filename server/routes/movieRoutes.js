@@ -42,6 +42,9 @@ router.get('/movies/updated-today', cacheMiddleware(300), movieController.getUpd
 router.post('/movies/:slug/react', authMiddleware, movieController.reactToMovie);
 router.get('/movies/:slug/reaction', authMiddleware, movieController.getUserReaction);
 
+// Request 4K Version
+router.post('/movies/:slug/request-4k', authMiddleware, movieController.request4k);
+
 // Drama Ranking
 router.get('/movies/drama-ranking', cacheMiddleware(300), movieController.getDramaRanking);
 

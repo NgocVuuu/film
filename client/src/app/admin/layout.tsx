@@ -17,7 +17,8 @@ import {
     Video,
     Bell,
     MessageCircle,
-    Flame
+    Flame,
+    Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
@@ -30,6 +31,7 @@ const navigation = [
     { name: 'Drama Manager', href: '/admin/drama', icon: Flame },
     { name: 'Reports', href: '/admin/reports', icon: Flag },
     { name: 'Subscriptions', href: '/admin/subscriptions', icon: CreditCard },
+    { name: 'Upgrade Requests', href: '/admin/upgrades', icon: Crown },
     { name: 'Movie Requests', href: '/admin/requests', icon: Film },
     { name: 'Notifications', href: '/admin/notifications', icon: Bell },
     { name: 'Chat', href: '/admin/chat', icon: MessageCircle },

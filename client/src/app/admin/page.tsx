@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Users, CreditCard, Film, TrendingUp, Loader2, Eye, UserPlus, Activity, RefreshCw } from 'lucide-react';
+import { Users, CreditCard, Film, TrendingUp, Loader2, Eye, UserPlus, Activity, RefreshCw, AlertTriangle, MonitorPlay, Zap, HardDrive } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
 
@@ -30,6 +30,19 @@ interface DashboardStats {
     topMovies: Movie[];
     viewTrends: TrendData[];
     userTrends: TrendData[];
+    tracking?: {
+        pendingReports: number;
+        pending4kRequests: number;
+        pendingMovieRequests: number;
+        pendingUpgradeRequests: number;
+        systemTracking: {
+            uptime: number;
+            memory: {
+                heapUsed: number;
+                rss: number;
+            };
+        };
+    };
 }
 
 import {
@@ -49,10 +62,26 @@ import {
 export default function AdminDashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [hostRevenue, setHostRevenue] = useState<{ play4me?: any, seekStreaming?: any } | null>(null);
 
     useEffect(() => {
         fetchStats();
+        fetchHostRevenue();
     }, []);
+
+    const fetchHostRevenue = async () => {
+        try {
+            const response = await customFetch(`/api/admin/host-revenue`, {
+                credentials: 'include'
+            });
+            const data = await response.json();
+            if (data.success) {
+                setHostRevenue(data.data);
+            }
+        } catch (error) {
+            console.error('Fetch host revenue error:', error);
+        }
+    };
 
     const fetchStats = async () => {
         try {
@@ -221,6 +250,112 @@ export default function AdminDashboardPage() {
                     <p className="text-gray-400 text-sm">Total Watch Progress</p>
                 </div>
             </div>
+
+            {/* Host Revenue */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-surface-900 border border-white/10 rounded-xl p-6 relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-4 relative z-10">
+                        <div className="p-3 bg-indigo-500/10 rounded-lg">
+                            <CreditCard className="w-6 h-6 text-indigo-500" />
+                        </div>
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-1 relative z-10">
+                        {hostRevenue?.play4me?.balance ? `$${hostRevenue.play4me.balance}` : 'N/A'}
+                    </h3>
+                    <p className="text-indigo-400 text-sm relative z-10 font-medium">Số dư Play4Me</p>
+                    <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                        <CreditCard className="w-24 h-24 text-indigo-500 translate-x-4 translate-y-4" />
+                    </div>
+                </div>
+                <div className="bg-surface-900 border border-white/10 rounded-xl p-6 relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-4 relative z-10">
+                        <div className="p-3 bg-cyan-500/10 rounded-lg">
+                            <CreditCard className="w-6 h-6 text-cyan-500" />
+                        </div>
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-1 relative z-10">
+                        {hostRevenue?.seekStreaming?.balance ? `$${hostRevenue.seekStreaming.balance}` : 'N/A'}
+                    </h3>
+                    <p className="text-cyan-400 text-sm relative z-10 font-medium">Số dư SeekStreaming</p>
+                    <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                        <CreditCard className="w-24 h-24 text-cyan-500 translate-x-4 translate-y-4" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Tracking & System Status Section */}
+            {stats?.tracking && (
+                <div className="mb-8">
+                    <h2 className="text-xl font-bold text-white mb-6">Trạng thái hệ thống & Cần xử lý</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        
+                        {/* Pending Reports */}
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 relative overflow-hidden group">
+                            <div className="flex items-center justify-between mb-4 relative z-10">
+                                <div className="p-3 bg-red-500/20 rounded-lg">
+                                    <AlertTriangle className="w-6 h-6 text-red-500" />
+                                </div>
+                            </div>
+                            <h3 className="text-2xl font-bold text-white mb-1 relative z-10">
+                                {formatNumber(stats.tracking.pendingReports || 0)}
+                            </h3>
+                            <p className="text-red-400 text-sm relative z-10 font-medium">Báo lỗi chờ xử lý</p>
+                            <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                                <AlertTriangle className="w-24 h-24 text-red-500 translate-x-4 translate-y-4" />
+                            </div>
+                        </div>
+
+                        {/* 4K Requests */}
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-6 relative overflow-hidden group">
+                            <div className="flex items-center justify-between mb-4 relative z-10">
+                                <div className="p-3 bg-yellow-500/20 rounded-lg">
+                                    <MonitorPlay className="w-6 h-6 text-yellow-500" />
+                                </div>
+                            </div>
+                            <h3 className="text-2xl font-bold text-white mb-1 relative z-10">
+                                {formatNumber(stats.tracking.pending4kRequests || 0)}
+                            </h3>
+                            <p className="text-yellow-400 text-sm relative z-10 font-medium">Yêu cầu 4K (VIP)</p>
+                            <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                                <MonitorPlay className="w-24 h-24 text-yellow-500 translate-x-4 translate-y-4" />
+                            </div>
+                        </div>
+
+                        {/* System Uptime */}
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6 relative overflow-hidden group">
+                            <div className="flex items-center justify-between mb-4 relative z-10">
+                                <div className="p-3 bg-blue-500/20 rounded-lg">
+                                    <Zap className="w-6 h-6 text-blue-500" />
+                                </div>
+                            </div>
+                            <h3 className="text-2xl font-bold text-white mb-1 relative z-10">
+                                {Math.floor(stats.tracking.systemTracking.uptime / 3600)}h {Math.floor((stats.tracking.systemTracking.uptime % 3600) / 60)}m
+                            </h3>
+                            <p className="text-blue-400 text-sm relative z-10 font-medium">Server Uptime</p>
+                            <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                                <Zap className="w-24 h-24 text-blue-500 translate-x-4 translate-y-4" />
+                            </div>
+                        </div>
+
+                        {/* Memory Usage */}
+                        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 relative overflow-hidden group">
+                            <div className="flex items-center justify-between mb-4 relative z-10">
+                                <div className="p-3 bg-green-500/20 rounded-lg">
+                                    <HardDrive className="w-6 h-6 text-green-500" />
+                                </div>
+                            </div>
+                            <h3 className="text-2xl font-bold text-white mb-1 relative z-10">
+                                {Math.round(stats.tracking.systemTracking.memory.heapUsed / 1024 / 1024)} MB
+                            </h3>
+                            <p className="text-green-400 text-sm relative z-10 font-medium">RAM Usage (Heap)</p>
+                            <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                                <HardDrive className="w-24 h-24 text-green-500 translate-x-4 translate-y-4" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            )}
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

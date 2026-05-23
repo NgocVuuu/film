@@ -93,6 +93,7 @@ async function runAutoUploadPipeline(jobData) {
     let movieUrl = typeof jobData === 'string' ? jobData : jobData.sourceUrl;
     let localMovieId = typeof jobData === 'object' ? jobData.movieId : null;
     const forceUpload = typeof jobData === 'object' ? !!jobData.forceUpload : false;
+    const targetEpisode = typeof jobData === 'object' ? jobData.targetEpisode : null;
     let targetMovie = null;
 
     const sanitizeName = (v = '') => String(v)
@@ -153,11 +154,19 @@ async function runAutoUploadPipeline(jobData) {
 
     let browser;
     let server;
+    let extractedLinks = [];
+    let viewcrateUrl = null;
 
     try {
-        server = app.listen(9666, () => {
-            console.log("\n✅ [1] Server Fake JDownloader đang chờ ở cổng 9666...\n");
-        });
+        const isDirectLinkMatch = movieUrl.match(/https?:\/\/(?:www\.)?(?:gofile\.io\/d\/[A-Za-z0-9]+|pixeldrain\.com\/u\/[A-Za-z0-9]+|send\.now\/[A-Za-z0-9]+|send\.cm\/[A-Za-z0-9]+)/i);
+
+        if (isDirectLinkMatch) {
+            console.log(`✅ Phát hiện link trực tiếp (Direct Link): ${movieUrl}. Bỏ qua bước cào Mkvdrama/Viewcrate.`);
+            extractedLinks = [movieUrl];
+        } else {
+            server = app.listen(9666, () => {
+                console.log("\n✅ [1] Server Fake JDownloader đang chờ ở cổng 9666...\n");
+            });
 
         console.log("✅ [2] Mở trình duyệt ẩn danh Puppeteer...");
         browser = await puppeteer.launch({ 
@@ -174,46 +183,75 @@ async function runAutoUploadPipeline(jobData) {
 
         const page = await browser.newPage();
         
-        // ---- BƯỚC 1: LẤY LINK OUO 2160P ----
-        console.log(`👉 Đi tới trang phim Mkvdrama: ${movieUrl}`);
-        await page.goto(movieUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        
-        console.log(`🔄 Khắc phục lỗi 404/Block: Đợi 4s rồi Reload lại trang...`);
-        await new Promise(r => setTimeout(r, 4000));
-        await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
-
-        console.log(`⏳ Đang tìm link... Do web thiết lập độ trễ nên sẽ chờ 15s...`);
-
-        // Đợi 15s cho web đếm ngược (nếu có)
-        await new Promise(r => setTimeout(r, 15000));
-        
-        // Cuộn xuống để kích hoạt lazyload nếu web yêu cầu
-        await page.evaluate(() => window.scrollBy(0, window.innerHeight));
-        await new Promise(r => setTimeout(r, 2000));
-
-        const ouoLink = await page.evaluate(() => {
-            const allLinks = Array.from(document.querySelectorAll('a'));
-            const link1s = allLinks.filter(a => a.innerText.toLowerCase().includes('link 1') || a.innerText.toLowerCase().includes('ouo'));
-            
-            // Ưu tiên 2160p / 4k
-            for (let a of link1s) {
-                const rowText = a.closest('tr')?.innerText.toLowerCase() || (a.parentElement && a.parentElement.innerText.toLowerCase()) || '';
-                if (rowText.includes('2160') || rowText.includes('4k')) return a.href;
+        // Khóa luồng điều hướng toàn cục để chống quảng cáo tự redirect trang chính
+        await page.setRequestInterception(true);
+        page.on('request', req => {
+            if (req.isNavigationRequest() && req.frame() === page.mainFrame()) {
+                const u = req.url();
+                if (u !== 'about:blank' && !u.includes('viewcrate') && !u.includes('filecrypt') && !u.includes('ouo') && !u.includes('mkvdrama') && !u.includes('google') && !u.includes('recaptcha') && !u.includes('turnstile')) {
+                    console.log(`🚫 Đã chặn trang chính tự chuyển hướng sang quảng cáo: ${u}`);
+                    req.abort('aborted');
+                    return;
+                }
             }
-            // Ưu tiên 1080p
-            for (let a of link1s) {
-                const rowText = a.closest('tr')?.innerText.toLowerCase() || (a.parentElement && a.parentElement.innerText.toLowerCase()) || '';
-                if (rowText.includes('1080')) return a.href;
-            }
-            
-            if(link1s.length > 0) return link1s[0].href;
-            return null;
+            req.continue();
         });
 
-        if (!ouoLink) {
-            throw new Error("❌ Không tìm thấy link nào nhãn Link 1 trên trang!");
+        // ---- BƯỚC 1: LẤY LINK OUO 2160P ----
+        let viewcratePage = null;
+
+        if (movieUrl.includes('viewcrate')) {
+            console.log(`✅ Phát hiện link đích là Viewcrate, bỏ qua bước vượt Ouo...`);
+            await page.goto(movieUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            viewcratePage = page;
+        } else {
+            // ---- BƯỚC 1: LẤY LINK OUO 2160P ----
+            console.log(`👉 Đi tới trang phim Mkvdrama: ${movieUrl}`);
+            await page.goto(movieUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            
+            console.log(`🔄 Khắc phục lỗi 404/Block: Đợi 4s rồi Reload lại trang...`);
+            await new Promise(r => setTimeout(r, 4000));
+            await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
+
+            console.log(`⏳ Đang tìm link... Do web thiết lập độ trễ nên sẽ chờ 15s...`);
+
+            // Đợi 15s cho web đếm ngược (nếu có)
+            await new Promise(r => setTimeout(r, 15000));
+            
+            // Cuộn xuống để kích hoạt lazyload nếu web yêu cầu
+            await page.evaluate(() => window.scrollBy(0, window.innerHeight));
+            await new Promise(r => setTimeout(r, 2000));
+
+            const ouoLink = await page.evaluate(() => {
+                const allLinks = Array.from(document.querySelectorAll('a'));
+                const link1s = allLinks.filter(a => a.innerText.toLowerCase().includes('link 1') || a.innerText.toLowerCase().includes('ouo'));
+                
+                // Ưu tiên 2160p / 4k
+                for (let a of link1s) {
+                    const rowText = a.closest('tr')?.innerText.toLowerCase() || (a.parentElement && a.parentElement.innerText.toLowerCase()) || '';
+                    if (rowText.includes('2160') || rowText.includes('4k')) return a.href;
+                }
+                // Ưu tiên 1080p
+                for (let a of link1s) {
+                    const rowText = a.closest('tr')?.innerText.toLowerCase() || (a.parentElement && a.parentElement.innerText.toLowerCase()) || '';
+                    if (rowText.includes('1080')) return a.href;
+                }
+                
+                if(link1s.length > 0) return link1s[0].href;
+                return null;
+            });
+
+            if (!ouoLink) {
+                throw new Error("❌ Không tìm thấy link nào nhãn Link 1 trên trang!");
+            }
+            console.log(`✅ [3] Đã phát hiện Link tải: ${ouoLink}`);
+
+            // ---- BƯỚC 2: VƯỢT OUO ĐỂ TỚI VIEWCRATE ----
+            console.log(`👉 Truy cập Ouo vòng 1...`);
+            await page.goto(ouoLink, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            
+            console.log(`⏳ Đang chạy Auto-Skip quảng cáo Ouo.io...`);
         }
-        console.log(`✅ [3] Đã phát hiện Link tải: ${ouoLink}`);
 
         resetCnlPromise();
 
@@ -223,6 +261,22 @@ async function runAutoUploadPipeline(jobData) {
                 try {
                     const newPage = await target.page();
                     if (!newPage) return;
+                    
+                    // Khóa điều hướng nội bộ để chống ad redirect
+                    try {
+                        await newPage.setRequestInterception(true);
+                        newPage.on('request', req => {
+                            if (req.isNavigationRequest() && req.frame() === newPage.mainFrame()) {
+                                const u = req.url();
+                                if (!u.includes('viewcrate') && !u.includes('filecrypt') && !u.includes('ouo') && !u.includes('mkvdrama') && u !== 'about:blank') {
+                                    console.log(`🚫 Đã chặn popup tự chuyển hướng sang quảng cáo: ${u}`);
+                                    req.abort('aborted');
+                                    return;
+                                }
+                            }
+                            req.continue();
+                        });
+                    } catch(e) {}
                     newPage.on('framenavigated', async (frame) => {
                         if (frame === newPage.mainFrame()) {
                             const u = newPage.url();
@@ -243,33 +297,38 @@ async function runAutoUploadPipeline(jobData) {
                                 return;
                             }
 
-                            if (u && u !== 'about:blank' && !u.includes('ouo.io') && !u.includes('ouo.press') && !u.includes('viewcrate') && !u.includes('mkvdrama')) {
+                            if (u && u !== 'about:blank' && !u.includes('ouo.io') && !u.includes('ouo.press') && !u.includes('viewcrate') && !u.includes('filecrypt') && !u.includes('mkvdrama')) {
                                 console.log(`🗑 Chặn từ trứng nước popup rác: ${u.substring(0, 40)}...`);
                                 await newPage.close().catch(()=>{});
                             }
                         }
                     });
+
+                    // Chờ 2.5s, nếu tab vẫn mở mà không phải web đích thì đóng (chống popup about:blank hoặc ad ngầm)
+                    setTimeout(async () => {
+                        try {
+                            if (!newPage.isClosed()) {
+                                const u = newPage.url();
+                                if (!u.includes('viewcrate') && !u.includes('filecrypt') && !u.includes('mkvdrama') && !u.includes('ouo')) {
+                                    console.log(`🗑 Dọn dẹp tab rác (ad popup): ${u}`);
+                                    await newPage.close().catch(()=>{});
+                                }
+                            }
+                        } catch(e){}
+                    }, 2500);
                 } catch(e) {}
             }
         };
         browser.on('targetcreated', targetCreatedHandler);
 
-        // ---- BƯỚC 2: VƯỢT OUO ĐỂ TỚI VIEWCRATE ----
-        console.log(`👉 Truy cập Ouo vòng 1...`);
-        await page.goto(ouoLink, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        
-        console.log(`⏳ Đang chạy Auto-Skip quảng cáo Ouo.io...`);
-        
-
-
-        // Vòng lặp tìm và bấm nút liên tục
-        let viewcratePage = null;
-        for (let i = 0; i < 30; i++) {
+        // Vòng lặp tìm và bấm nút liên tục (chỉ chạy nếu chưa tới viewcrate)
+        if (!viewcratePage) {
+            for (let i = 0; i < 30; i++) {
             // Kiểm tra xem đã tới đích ViewCrate chưa
             const currentPages = await browser.pages();
-            viewcratePage = currentPages.find(p => p.url().includes('viewcrate'));
+            viewcratePage = currentPages.find(p => p.url().includes('viewcrate') || p.url().includes('filecrypt'));
             if (viewcratePage) {
-                console.log("✅ Đã xuyên thủng Ouo tới Viewcrate!");
+                console.log("✅ Đã xuyên thủng Ouo tới trang đích (Viewcrate/Filecrypt)!");
                 await viewcratePage.bringToFront();
                 break;
             }
@@ -319,6 +378,7 @@ async function runAutoUploadPipeline(jobData) {
             }
             await new Promise(r => setTimeout(r, 2000));
         }
+        } // End of if (!viewcratePage)
 
         if (!viewcratePage) {
             console.log("⚠️ CẢNH BÁO: Thuật toán Bypass chưa thể xuyên thủng do IP bị dính Captcha hình ảnh. Bạn vui lòng thao tác nốt bằng tay trên tab Chromium nhé, server vẫn đang chờ!");
@@ -326,12 +386,31 @@ async function runAutoUploadPipeline(jobData) {
             viewcratePage = targetPages[targetPages.length - 1]; // Fallback lấy tab cuối
         }
 
-        const viewcrateUrl = viewcratePage.url();
+        viewcrateUrl = viewcratePage.url();
         console.log(`✅ [4] Trang đích vòng Bypass: ${viewcrateUrl}`);
 
         // ---- BƯỚC 3: CLICK N LOAD VIEWCRATE ----
-        console.log(`⏳ Chờ 8 giây cho ViewCrate load xong toàn bộ giao diện và Iframe...`);
+        console.log(`⏳ Chờ 8 giây cho ViewCrate/Filecrypt load xong toàn bộ giao diện và Iframe...`);
         await new Promise(r => setTimeout(r, 8000));
+        
+        // Càn quét và tiêu diệt các lớp Overlay quảng cáo vô hình (đặc sản của Filecrypt)
+        try {
+            await viewcratePage.evaluate(() => {
+                const overlays = Array.from(document.querySelectorAll('div, span, a, iframe'));
+                for (const el of overlays) {
+                    const style = window.getComputedStyle(el);
+                    if (style.position === 'absolute' || style.position === 'fixed') {
+                        if (parseInt(style.zIndex, 10) > 900 || style.opacity === '0' || style.width === '100%') {
+                            if (!el.className.includes('recaptcha') && !el.className.includes('turnstile')) {
+                                el.remove();
+                            }
+                        }
+                    }
+                }
+            });
+            console.log("🧹 Đã dọn dẹp các lớp quảng cáo tàng hình!");
+        } catch(e) {}
+
         await viewcratePage.evaluate(() => window.scrollBy(0, 300)); // Cuộn xuống xíu cho chắc
         await new Promise(r => setTimeout(r, 2000));
 
@@ -340,14 +419,23 @@ async function runAutoUploadPipeline(jobData) {
         for (const frame of viewcratePage.frames()) {
             try {
                 const foundAndClicked = await frame.evaluate(() => {
-                    const elements = Array.from(document.querySelectorAll('button, a, div, span'));
+                    const elements = Array.from(document.querySelectorAll('*'));
                     for (let el of elements) {
-                        const text = (el.innerText || '').toLowerCase();
-                        // Chấp nhận nhiều biến thể chữ của Click N Load
-                        if (text.includes("click'n'load") || text.includes("click 'n' load") || text.includes("dlbutton") || el.className.includes('cnl')) {
-                            el.scrollIntoView({ behavior: 'center' });
-                            el.click();
-                            return true;
+                        const text = (el.innerText || el.value || el.alt || '').toLowerCase();
+                        const cls = (typeof el.className === 'string' ? el.className.toLowerCase() : '');
+                        const id = (el.id || '').toLowerCase();
+                        const src = (el.src || '').toLowerCase();
+                        const onclick = (el.getAttribute('onclick') || '').toLowerCase();
+                        
+                        if (text.includes("click'n'load") || text.includes("click 'n' load") || text.includes("click'n load") || 
+                            text.includes("dlbutton") || cls.includes('cnl') || cls.includes('dlbutton') || 
+                            id.includes('cnl') || onclick.includes('crypted') || 
+                            (el.tagName === 'IMG' && src.includes('cnl')) || (el.tagName === 'BUTTON' && text.includes('load'))) {
+                            if (el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE') {
+                                el.scrollIntoView({ behavior: 'center' });
+                                el.click();
+                                return true;
+                            }
                         }
                     }
                     return false;
@@ -369,12 +457,22 @@ async function runAutoUploadPipeline(jobData) {
                 for (const frame of viewcratePage.frames()) {
                     try {
                         await frame.evaluate(() => {
-                            const elements = Array.from(document.querySelectorAll('button, a, div, span'));
+                            const elements = Array.from(document.querySelectorAll('*'));
                             for (let el of elements) {
-                                const text = (el.innerText || '').toLowerCase();
-                                if (text.includes("click'n'load") || text.includes("click 'n' load") || text.includes("dlbutton") || el.className.includes('cnl')) {
-                                    el.scrollIntoView({ behavior: 'center' });
-                                    el.click();
+                                const text = (el.innerText || el.value || el.alt || '').toLowerCase();
+                                const cls = (typeof el.className === 'string' ? el.className.toLowerCase() : '');
+                                const id = (el.id || '').toLowerCase();
+                                const src = (el.src || '').toLowerCase();
+                                const onclick = (el.getAttribute('onclick') || '').toLowerCase();
+                                
+                                if (text.includes("click'n'load") || text.includes("click 'n' load") || text.includes("click'n load") || 
+                                    text.includes("dlbutton") || cls.includes('cnl') || cls.includes('dlbutton') || 
+                                    id.includes('cnl') || onclick.includes('crypted') || 
+                                    (el.tagName === 'IMG' && src.includes('cnl')) || (el.tagName === 'BUTTON' && text.includes('load'))) {
+                                    if (el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE') {
+                                        el.scrollIntoView({ behavior: 'center' });
+                                        el.click();
+                                    }
                                 }
                             }
                         }).catch(()=>{});
@@ -410,7 +508,8 @@ async function runAutoUploadPipeline(jobData) {
         }
 
         // Chờ Data từ Web (tăng timeout lên 180s vì đôi khi ViewCrate trả chậm)
-        let extractedLinks = await Promise.race([
+        // Chờ Data từ Web (tăng timeout lên 180s vì đôi khi ViewCrate trả chậm)
+        extractedLinks = await Promise.race([
             cnlLinksPromise,
             new Promise(r => setTimeout(() => r("TIMEOUT"), 180000))
         ]);
@@ -432,12 +531,21 @@ async function runAutoUploadPipeline(jobData) {
                 console.log('⚠️ Fallback DOM extraction thất bại:', e.message);
             }
         }
+        
+        } // End of else (!isDirectLinkMatch)
 
         if (!Array.isArray(extractedLinks) || extractedLinks.length === 0) {
             throw new Error("❌ Đã quá hạn hoặc không lấy được link Click'n'Load. Hủy bỏ quy trình!");
         }
 
         console.log(`✅ [5] CÁC LINK GỐC ĐÃ EXTRACT:`, extractedLinks);
+
+        if (jobData && jobData.extractOnly) {
+            console.log("✅ [Extract Only Mode] Trả về danh sách link và kết thúc.");
+            if (browser) await browser.close();
+            if (server) server.close();
+            return extractedLinks;
+        }
 
         // Helper: try parse series/season/episode from filename
         function parseSeriesSeasonEpisode(name) {
@@ -486,12 +594,15 @@ async function runAutoUploadPipeline(jobData) {
                     if (idMatch) {
                         const id = idMatch[1];
                         try {
+                            await new Promise(r => setTimeout(r, 1500)); // Delay để tránh Rate Limit của Pixeldrain
                             const res = await axios.get(`https://pixeldrain.com/api/file/${id}/info`);
                             if (res.data && res.data.name) {
                                 finalFilename = res.data.name;
                                 directLinkToUpload = `https://pixeldrain.com/api/file/${id}`;
                             }
-                        } catch(e) {}
+                        } catch(e) {
+                            console.log(`⚠️ Lỗi lấy thông tin file Pixeldrain ${id}:`, e.message);
+                        }
                     }
                 }
             } catch (e) {}
@@ -501,6 +612,11 @@ async function runAutoUploadPipeline(jobData) {
             const parsed = parseSeriesSeasonEpisode(finalFilename);
             if (!parsed.episode) continue;
             
+            // Lọc đúng tập cần upload nếu có truyền targetEpisode (cho tính năng Retry)
+            if (targetEpisode && parsed.episode !== targetEpisode) {
+                continue;
+            }
+
             if (processedEpisodes.has(parsed.episode)) {
                 continue;
             }
@@ -578,7 +694,9 @@ async function runAutoUploadPipeline(jobData) {
     } finally {
         if(browser) await browser.close();
         if(server) server.close();
-        process.exit(0);
+        if (require.main === module) {
+            process.exit(0);
+        }
     }
 }
 

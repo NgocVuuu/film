@@ -47,6 +47,7 @@ const movieSchema = new mongoose.Schema({
   episodes: [
     {
       server_name: String,
+      isHidden: { type: Boolean, default: false },
       server_data: [
         {
           name: String,

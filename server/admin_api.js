@@ -7,11 +7,9 @@ const { runAutoUploadPipeline } = require('./auto_pipeline');
 const captchaQueue = require('./utils/captchaQueue');
 const path = require('path');
 
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
+const router = express.Router();
 
-app.get('/admin/uploads', async (req, res) => {
+router.get('/uploads', async (req, res) => {
   const q = {};
   if (req.query.host) q.host = req.query.host;
   if (req.query.status) q.status = req.query.status;
@@ -19,27 +17,224 @@ app.get('/admin/uploads', async (req, res) => {
   res.json(rows);
 });
 
-app.post('/admin/uploads/:id/retry', async (req, res) => {
+router.post('/uploads/:id/status-check', async (req, res) => {
   try {
     const id = req.params.id;
     const doc = await hostUpload.findById(id).lean();
     if (!doc) return res.status(404).send('Not found');
-    // re-run pipeline for the source page (best-effort)
-    if (!doc.sourcePage) return res.status(400).send('No sourcePage to retry');
-    // run in background
-    runAutoUploadPipeline(doc.sourcePage).catch(()=>{});
-    res.json({ ok: true, message: 'Retry started' });
+
+    const hostApis = require('./utils/videoHostProviders');
+    const apiToPoll = hostApis[doc.host];
+    if (apiToPoll && doc.taskId) {
+        const status = await apiToPoll.checkStatus(doc.taskId);
+        return res.json({ ok: true, status });
+    }
+    return res.status(400).send('No status provider or taskId');
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-app.get('/admin/host-folders', async (req, res) => {
+router.post('/uploads/:id/cancel', async (req, res) => {
+  try {
+    const id = req.params.id;
+    await hostUpload.findByIdAndUpdate(id, { 
+        status: 'failed', 
+        notes: 'Đã hủy thủ công để thoát kẹt' 
+    });
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete('/uploads/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    await hostUpload.findByIdAndDelete(id);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/uploads/:id/retry', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { customLink } = req.body;
+    const doc = await hostUpload.findById(id).lean();
+    if (!doc) return res.status(404).send('Not found');
+
+    if (customLink) {
+        await hostUpload.findByIdAndUpdate(id, { status: 'processing', notes: `Đang lấy video từ link tuỳ chỉnh...`, taskId: null });
+        
+        (async () => {
+            try {
+                let directLinkToUpload = customLink;
+                let finalFilename = doc.filename || "PhimMoi.mp4";
+                
+                if (customLink.includes('gofile.io')) {
+                    const gofileService = require('./utils/gofileService');
+                    const gofileIdMatch = customLink.match(/gofile\.io\/d\/([a-zA-Z0-9]+)/);
+                    if (gofileIdMatch) {
+                        const files = await gofileService.getMkvFilesFromFolder(gofileIdMatch[1]);
+                        if (files && files.length > 0) {
+                            let matchedFile = files[0];
+                            for (const f of files) {
+                                const epMatch = f.name.match(/s?\d{1,2}e(\d{2})/i) || f.name.match(new RegExp(`e0?${(doc.episode||'').replace('E', '')}`, 'i'));
+                                if (epMatch || f.name.toLowerCase().includes((doc.episode||'').toLowerCase())) {
+                                    matchedFile = f;
+                                    break;
+                                }
+                            }
+                            if (matchedFile && matchedFile.link && !matchedFile.link.startsWith('javascript')) {
+                                directLinkToUpload = matchedFile.link;
+                                finalFilename = matchedFile.name;
+                            } else {
+                                throw new Error("Không thể trích xuất link tải trực tiếp từ thư mục Gofile");
+                            }
+                        } else {
+                            throw new Error("Thư mục Gofile trống hoặc không truy cập được");
+                        }
+                    }
+                } else if (customLink.includes('pixeldrain.com')) {
+                    const idMatch = customLink.match(/pixeldrain\.com\/u\/([a-zA-Z0-9]+)/);
+                    if (idMatch) {
+                        const axios = require('axios');
+                        const pdId = idMatch[1];
+                        const pdRes = await axios.get(`https://pixeldrain.com/api/file/${pdId}/info`).catch(()=>null);
+                        if (pdRes && pdRes.data && pdRes.data.name) {
+                            finalFilename = pdRes.data.name;
+                            directLinkToUpload = `https://pixeldrain.com/api/file/${pdId}`;
+                        } else {
+                            throw new Error("Không lấy được thông tin file Pixeldrain");
+                        }
+                    }
+                }
+
+                const folderName = doc.series ? `${doc.series} - ${doc.season || ''}`.trim() : 'PhimMoi';
+                const folderId = await hostManager.createOrGetFolder(doc.series, doc.season, doc.host, folderName);
+                
+                const uploadRes = await hostManager.remoteUploadWithRetry(doc.host, directLinkToUpload, finalFilename, folderId);
+                if (!uploadRes.ok) throw new Error(uploadRes.error || 'upload failed');
+
+                await hostUpload.findByIdAndUpdate(id, { 
+                    taskId: uploadRes.taskId, 
+                    status: 'pending', 
+                    notes: '',
+                    retries: (doc.retries || 0) + uploadRes.attempts 
+                });
+
+                const hostApis = require('./utils/videoHostProviders');
+                const apiToPoll = hostApis[doc.host];
+                if (apiToPoll) {
+                    hostManager.pollAndSyncStatus(apiToPoll, uploadRes.taskId, id).catch(()=>{});
+                }
+            } catch(e) {
+                await hostUpload.findByIdAndUpdate(id, { status: 'failed', notes: `Lỗi Custom Link: ${e.message}` });
+            }
+        })();
+
+        return res.json({ ok: true, message: 'Processing custom link' });
+    } else if (doc.sourcePage) {
+      // Bỏ Smart Retry, luôn cào lại từ đầu bằng Puppeteer vì link tĩnh (Gofile/Pixeldrain) chết quá nhanh
+      await hostUpload.findByIdAndUpdate(id, { status: 'processing', notes: 'Đang cào lại từ đầu bằng Puppeteer...', taskId: null });
+      runAutoUploadPipeline({ sourceUrl: doc.sourcePage, targetEpisode: doc.episode }).catch(()=>{});
+      return res.json({ ok: true, message: 'Recrawl started using Puppeteer' });
+    } else {
+      return res.status(400).send('No sourcePage to retry');
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/extract-links', async (req, res) => {
+  try {
+    const { id, movieUrl } = req.body;
+    let targetUrl = movieUrl;
+    
+    if (id) {
+        const doc = await hostUpload.findById(id).lean();
+        if (!doc || !doc.sourcePage) return res.status(404).send('Not found or no sourcePage');
+        targetUrl = doc.sourcePage;
+    }
+
+    if (!targetUrl) return res.status(400).send('movieUrl or id is required');
+
+    const { runAutoUploadPipeline } = require('./auto_pipeline');
+    const gofileService = require('./utils/gofileService');
+    
+    // Chạy Puppeteer ở chế độ extractOnly
+    const links = await runAutoUploadPipeline({ sourceUrl: targetUrl, extractOnly: true });
+    
+    if (!links || !Array.isArray(links)) {
+        return res.status(400).json({ error: 'Không tìm thấy link nào.' });
+    }
+
+    // Tự động phân tích và chia link từng tập
+    const detailedLinks = [];
+    const fetchPixeldrainName = async (id) => {
+        try {
+            const res = await require('axios').get(`https://pixeldrain.com/api/file/${id}/info`, { timeout: 3000 });
+            return res.data.name || '';
+        } catch(e) { return ''; }
+    };
+
+    let currentEpisodeLabel = 'Tập ?';
+    
+    // Mkvdrama thường trả link theo cụm (Gofile, Pixeldrain, Send) cho từng tập. 
+    // Ta sẽ lấy tên tập từ Pixeldrain API (rất nhanh) và gán cho các link lân cận.
+    for (const src of links) {
+        try {
+            let ep = currentEpisodeLabel;
+            let name = 'Link bóc tách';
+            
+            if (src.includes('pixeldrain.com/u/')) {
+                const pdMatch = src.match(/pixeldrain\.com\/u\/([a-zA-Z0-9]+)/);
+                if (pdMatch) {
+                    const pdName = await fetchPixeldrainName(pdMatch[1]);
+                    if (pdName) {
+                        name = pdName;
+                        const epMatch = pdName.match(/s?\d{1,2}e(\d{2})/i) || pdName.match(/e(\d{2,3})/i);
+                        if (epMatch) {
+                            ep = `Tập ${epMatch[1]}`;
+                            currentEpisodeLabel = ep; // Cập nhật cho các link tiếp theo (như send.cm)
+                        }
+                    } else {
+                        name = 'Pixeldrain Link';
+                    }
+                }
+            } else if (src.includes('gofile.io')) {
+                name = 'Gofile Folder';
+            } else if (src.includes('send.cm') || src.includes('send.now')) {
+                name = 'Send.cm Link';
+            }
+
+            detailedLinks.push({
+                episode: ep,
+                name: name,
+                link: src,
+                folderLink: src
+            });
+        } catch(e) {
+            detailedLinks.push({ episode: 'Error', name: e.message, link: src, folderLink: src });
+        }
+    }
+
+    detailedLinks.sort((a, b) => a.name.localeCompare(b.name));
+    return res.json({ ok: true, detailedLinks, rawLinks: links });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/host-folders', async (req, res) => {
   const rows = await require('./utils/hostManager').findUploads({}, { limit: 10 }).catch(()=>[]);
   res.json({ ok: true, info: 'Use hostManager API for folder listing' });
 });
 
-app.post('/admin/create-folder', async (req, res) => {
+router.post('/create-folder', async (req, res) => {
   try {
     const { series, season, host, displayName } = req.body;
     if (!host) return res.status(400).send('host required');
@@ -50,7 +245,7 @@ app.post('/admin/create-folder', async (req, res) => {
   }
 });
 
-app.post('/admin/uploads/:id/assign-folder', async (req, res) => {
+router.post('/uploads/:id/assign-folder', async (req, res) => {
   try {
     const id = req.params.id;
     const { host, series, season, folderName } = req.body;
@@ -64,7 +259,7 @@ app.post('/admin/uploads/:id/assign-folder', async (req, res) => {
 });
 
 // Manual crawl trigger for direct url
-app.post('/admin/crawl-url', async (req, res) => {
+router.post('/crawl-url', async (req, res) => {
   let browser;
   try {
     const { movieId, url } = req.body;
@@ -149,7 +344,7 @@ app.post('/admin/crawl-url', async (req, res) => {
 });
 
 // Webhook from Host API replacing poll where applicable
-app.post('/webhook/host-callback', async (req, res) => {
+router.post('/webhook/host-callback', async (req, res) => {
   try {
     const { taskId, host, status, error, videoId } = req.body;
     if (!taskId || !host) return res.status(400).send('taskId and host required');
@@ -174,19 +369,19 @@ app.post('/webhook/host-callback', async (req, res) => {
 });
 
 // Captcha human-in-loop endpoints
-app.get('/admin/captcha', async (req, res) => {
+router.get('/captcha', async (req, res) => {
   const rows = captchaQueue.listJobs();
   res.json(rows);
 });
 
-app.get('/admin/captcha/:id', async (req, res) => {
+router.get('/captcha/:id', async (req, res) => {
   const id = req.params.id;
   const job = captchaQueue.getJob(id);
   if (!job) return res.status(404).send('not found');
   res.json({ id: job.id, pageUrl: job.pageUrl, reason: job.reason, status: job.status, screenshotPath: job.screenshotPath });
 });
 
-app.get('/admin/captcha/:id/screenshot', async (req, res) => {
+router.get('/captcha/:id/screenshot', async (req, res) => {
   const id = req.params.id;
   const job = captchaQueue.getJob(id);
   if (!job) return res.status(404).send('not found');
@@ -194,14 +389,12 @@ app.get('/admin/captcha/:id/screenshot', async (req, res) => {
   res.sendFile(path.resolve(job.screenshotPath));
 });
 
-app.post('/admin/captcha/:id/resolve', async (req, res) => {
+router.post('/captcha/:id/resolve', async (req, res) => {
   const id = req.params.id;
   const ok = captchaQueue.resolveJob(id, req.body || {});
   if (!ok) return res.status(404).send('not found');
   res.json({ ok: true });
 });
 
-const port = process.env.ADMIN_PORT || 9888;
-app.listen(port, () => console.log(`Admin API listening on ${port}`));
-
-module.exports = app;
+module.exports = router;
+// Trigger nodemon restart

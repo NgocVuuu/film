@@ -9,7 +9,7 @@ import { customFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Save, ArrowLeft, Plus, X } from 'lucide-react';
+import { Loader2, Save, ArrowLeft, Plus, X, ChevronDown, ChevronRight, Link, Trash2, ArrowUpDown, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Category {
@@ -34,6 +34,7 @@ interface Episode {
 
 interface ServerData {
     server_name: string;
+    isHidden?: boolean;
     server_data: Episode[];
 }
 
@@ -100,6 +101,8 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
     const [directors, setDirectors] = useState<string[]>([]);
     const [newActor, setNewActor] = useState('');
     const [newDirector, setNewDirector] = useState('');
+    const [episodes, setEpisodes] = useState<ServerData[]>([]);
+    const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
 
     const fetchMovieDetail = useCallback(async () => {
         try {
@@ -131,6 +134,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                 });
                 setActors(movieData.actor || []);
                 setDirectors(movieData.director || []);
+                setEpisodes(movieData.episodes || []);
             } else {
                 toast.error(data.message);
             }
@@ -172,19 +176,120 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
         setDirectors(directors.filter(d => d !== director));
     };
 
+    const handleEpisodeFieldChange = (serverIdx: number, epIdx: number, field: 'name' | 'link_m3u8' | 'link_embed', value: string) => {
+        setEpisodes(prev => {
+            const next = prev.map((s, si) => {
+                if (si !== serverIdx) return s;
+                return {
+                    ...s,
+                    server_data: s.server_data.map((ep, ei) => {
+                        if (ei !== epIdx) return ep;
+                        return { ...ep, [field]: value };
+                    })
+                };
+            });
+            return next;
+        });
+    };
+
+    const removeEpisode = (serverIdx: number, epIdx: number) => {
+        if (confirm('Bạn có chắc chắn muốn xóa tập phim này?')) {
+            setEpisodes(prev => {
+                const next = [...prev];
+                next[serverIdx] = {
+                    ...next[serverIdx],
+                    server_data: next[serverIdx].server_data.filter((_, i) => i !== epIdx)
+                };
+                return next;
+            });
+        }
+    };
+
+    const toggleServer = (name: string) => {
+        setExpandedServers(prev => {
+            const next = new Set(prev);
+            if (next.has(name)) next.delete(name);
+            else next.add(name);
+            return next;
+        });
+    };
+
+    const removeServer = (serverName: string) => {
+        if (confirm(`Bạn có chắc chắn muốn xóa toàn bộ tập phim của server "${serverName}" không?`)) {
+            setEpisodes(prev => prev.filter(s => s.server_name !== serverName));
+            setExpandedServers(prev => {
+                const next = new Set(prev);
+                next.delete(serverName);
+                return next;
+            });
+        }
+    };
+
+    const toggleHideServer = (serverIdx: number) => {
+        setEpisodes(prev => {
+            const next = [...prev];
+            next[serverIdx] = {
+                ...next[serverIdx],
+                isHidden: !next[serverIdx].isHidden
+            };
+            return next;
+        });
+    };
+
+    const addEpisode = (serverIdx: number) => {
+        setEpisodes(prev => {
+            const next = [...prev];
+            next[serverIdx] = {
+                ...next[serverIdx],
+                server_data: [
+                    ...next[serverIdx].server_data,
+                    { name: '', slug: '', filename: '', link_embed: '', link_m3u8: '' }
+                ]
+            };
+            return next;
+        });
+    };
+
+    const sortEpisodes = (serverIdx: number) => {
+        setEpisodes(prev => {
+            const next = [...prev];
+            const sortedData = [...next[serverIdx].server_data].sort((a, b) => {
+                const extractNum = (str: string) => {
+                    if (!str) return 0;
+                    const m = str.match(/(\d+)/);
+                    return m ? parseInt(m[1]) : 0;
+                };
+                return extractNum(a.name) - extractNum(b.name);
+            });
+            next[serverIdx] = {
+                ...next[serverIdx],
+                server_data: sortedData
+            };
+            return next;
+        });
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
+
+            // Auto sort episodes before saving
+            const sortedEpisodes = episodes.map(s => {
+                const sortedData = [...s.server_data].sort((a, b) => {
+                    return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+                });
+                return { ...s, server_data: sortedData };
+            });
 
             const updateData = {
                 ...formData,
                 actor: actors,
                 director: directors,
-                // Keep existing category, country, episodes
+                // Keep existing category, country, use edited episodes
                 ...(movie && {
                     category: movie.category,
                     country: movie.country,
-                    episodes: movie.episodes
+                    episodes: sortedEpisodes
                 })
             };
 
@@ -520,18 +625,125 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                     </div>
                 </div>
 
-                {/* Episodes Info */}
+                {/* Episodes - Full editable */}
                 <div className="bg-surface-900 rounded-lg p-6">
-                    <h2 className="text-xl font-semibold text-white mb-4">Tập phim</h2>
+                    <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                        <Link className="w-5 h-5 text-primary" />
+                        Tập phim
+                        <span className="text-sm text-gray-500 font-normal ml-2">({episodes.reduce((acc, s) => acc + s.server_data.length, 0)} tập)</span>
+                    </h2>
                     <div className="space-y-3">
-                        {movie.episodes?.map((server, idx) => (
-                            <div key={idx} className="bg-surface-800 p-4 rounded-lg">
-                                <h3 className="text-white font-semibold mb-2">{server.server_name}</h3>
-                                <p className="text-gray-400 text-sm">{server.server_data?.length || 0} tập</p>
+                        {episodes.map((server, si) => (
+                            <div key={si} className="border border-white/10 rounded-lg overflow-hidden">
+                                <div className="w-full flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/8 transition-colors">
+                                    <button
+                                        onClick={() => toggleServer(server.server_name)}
+                                        className="flex items-center gap-2 flex-1 text-left"
+                                    >
+                                        {expandedServers.has(server.server_name)
+                                            ? <ChevronDown className="w-4 h-4 text-gray-400" />
+                                            : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                                        <span className="font-bold text-white text-sm">{server.server_name}</span>
+                                        <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">{server.server_data.length} tập</span>
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); toggleHideServer(si); }}
+                                        className={`p-1.5 rounded-md transition-colors ml-4 shrink-0 ${server.isHidden ? 'text-gray-500 bg-gray-500/10 hover:bg-gray-500/20' : 'text-green-500 bg-green-500/10 hover:bg-green-500/20'}`}
+                                        title={server.isHidden ? "Đang ẩn - Nhấn để hiện" : "Đang hiện - Nhấn để ẩn"}
+                                    >
+                                        {server.isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); removeServer(server.server_name); }}
+                                        className="text-red-500 hover:text-red-400 p-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors ml-2 shrink-0"
+                                        title="Xóa server này"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                {expandedServers.has(server.server_name) && (
+                                    <div className="overflow-x-auto border-t border-white/5">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="bg-black/20 text-gray-500 text-xs uppercase">
+                                                    <th className="px-4 py-2 text-left w-24">Tên tập</th>
+                                                    <th className="px-4 py-2 text-left">Link M3U8</th>
+                                                    <th className="px-4 py-2 text-left">Link Embed / iFrame</th>
+                                                    <th className="px-4 py-2 text-center w-10"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5">
+                                                {server.server_data.map((ep, ei) => (
+                                                    <tr key={ep.slug || ei} className="hover:bg-white/[0.02]">
+                                                        <td className="px-4 py-2">
+                                                            <input
+                                                                type="text"
+                                                                value={ep.name || ''}
+                                                                onChange={e => handleEpisodeFieldChange(si, ei, 'name', e.target.value)}
+                                                                className="w-full bg-black/30 border border-white/10 text-white font-bold text-xs rounded px-2 py-1.5 focus:outline-none focus:border-primary"
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-2">
+                                                            <input
+                                                                type="text"
+                                                                value={ep.link_m3u8 || ''}
+                                                                onChange={e => handleEpisodeFieldChange(si, ei, 'link_m3u8', e.target.value)}
+                                                                placeholder="https://... .m3u8"
+                                                                className="w-full bg-black/30 border border-white/10 text-white text-xs rounded px-2 py-1.5 focus:outline-none focus:border-primary font-mono"
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-2">
+                                                            <input
+                                                                type="text"
+                                                                value={ep.link_embed || ''}
+                                                                onChange={e => handleEpisodeFieldChange(si, ei, 'link_embed', e.target.value)}
+                                                                placeholder="https://... embed URL"
+                                                                className="w-full bg-black/30 border border-white/10 text-white text-xs rounded px-2 py-1.5 focus:outline-none focus:border-primary font-mono"
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-2 text-center">
+                                                            <button
+                                                                onClick={() => removeEpisode(si, ei)}
+                                                                className="text-gray-500 hover:text-red-500 transition-colors p-1"
+                                                                title="Xóa tập"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <div className="px-4 mt-3 mb-2 flex gap-2">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                onClick={() => addEpisode(si)}
+                                                className="flex-1 border-white/10 hover:bg-white/5 text-gray-300"
+                                            >
+                                                <Plus className="w-4 h-4 mr-2" />
+                                                Thêm tập mới
+                                            </Button>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                onClick={() => sortEpisodes(si)}
+                                                className="flex-1 border-white/10 hover:bg-white/5 text-blue-400 border-blue-400/20 bg-blue-400/5 hover:bg-blue-400/10"
+                                                title="Sắp xếp danh sách tập theo thứ tự tên"
+                                            >
+                                                <ArrowUpDown className="w-4 h-4 mr-2" />
+                                                Sắp xếp tự động
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
+                        {episodes.length === 0 && (
+                            <p className="text-gray-500 text-sm">Chưa có tập nào</p>
+                        )}
                     </div>
-                    <p className="text-gray-500 text-sm mt-3">Cập nhật tập phim từ crawler</p>
+                    <p className="text-gray-500 text-xs mt-3">Nhấn vào tên server để mở rộng và sửa link. Bấm “Lưu thay đổi” để lưu toàn bộ.</p>
                 </div>
             </div>
         </div>

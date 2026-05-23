@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
-import { Play, ArrowLeft } from 'lucide-react';
+import { Play, ArrowLeft, Crown, Lock } from 'lucide-react';
 import { ReportModal } from '@/components/ReportModal';
 import { CommentSection } from '@/components/CommentSection';
 import { DonateButton } from '@/components/DonateButton';
@@ -13,12 +13,14 @@ import { useAuth } from '@/contexts/auth-context';
 import { PWAAds } from '@/components/PWAAds';
 import { Users } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { encodeServerForUrl, decodeServerFromUrl } from '@/lib/serverUrl';
 
 
 
 // Types (Reuse same types)
 interface Episode {
     server_name: string;
+    isHidden?: boolean;
     server_data: {
         name: string;
         slug: string;
@@ -69,6 +71,9 @@ export default function WatchPage() {
     const [startTime, setStartTime] = useState<number>(0);
     const [playerTime, setPlayerTime] = useState<number>(0);
 
+    // Track if we've already done initial URL-based server selection
+    const hasInitialized = useRef(false);
+
     // Source State
     const [availableSources, setAvailableSources] = useState<string[]>([]);
     const [currentSource, setCurrentSource] = useState<string>('');
@@ -82,8 +87,11 @@ export default function WatchPage() {
     // Get query params
     const episodeParam = searchParams.get('episode');
     const timestampParam = searchParams.get('t');
-    const serverParam = searchParams.get('server');
+    const serverParamRaw = searchParams.get('server');
     const roomParam = searchParams.get('room');
+
+    // Decode server param from URL (may be short ID or legacy raw name)
+    const serverParam = serverParamRaw ? decodeServerFromUrl(serverParamRaw) : null;
 
     useEffect(() => {
         const newSocket = io(API_URL, {
@@ -96,6 +104,48 @@ export default function WatchPage() {
             newSocket.disconnect();
         };
     }, []);
+
+    // Realtime Sync: Listen for new episodes uploaded by the pipeline
+    useEffect(() => {
+        if (!socket || !slug) return;
+        
+        const handleEpisodeAdded = (data: any) => {
+            if (data.movieSlug === slug) {
+                setMovie((prevMovie: any) => {
+                    if (!prevMovie) return prevMovie;
+                    const nextMovie = JSON.parse(JSON.stringify(prevMovie));
+                    let serverObj = nextMovie.episodes.find((e: any) => e.server_name === data.serverName);
+                    if (!serverObj) {
+                        serverObj = { server_name: data.serverName, server_data: [] };
+                        nextMovie.episodes.push(serverObj);
+                    }
+                    const exists = serverObj.server_data.find((ep: any) => ep.slug === data.episode.slug);
+                    if (!exists) {
+                        serverObj.server_data.push(data.episode);
+                    } else {
+                        Object.assign(exists, data.episode);
+                    }
+                    // Sort episodes numerically (1, 2, ..., 10, 11)
+                    serverObj.server_data.sort((a: any, b: any) => {
+                        const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
+                        const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+                        return numA - numB;
+                    });
+                    return nextMovie;
+                });
+                toast.success(`Tập "${data.episode.name}" vừa có thêm server mới, hãy tải lại trang nếu bạn đang gặp lỗi!`, {
+                    duration: 5000,
+                    icon: '🚀'
+                });
+            }
+        };
+
+        socket.on('episode_added', handleEpisodeAdded);
+        
+        return () => {
+            socket.off('episode_added', handleEpisodeAdded);
+        };
+    }, [socket, slug]);
 
     useEffect(() => {
         if (!slug) return;
@@ -117,8 +167,9 @@ export default function WatchPage() {
     useEffect(() => {
         if (!movie || !movie.episodes) return;
 
-        // Filter out NguonC and old PChill Server entirely
+        // Filter out NguonC, old PChill Server, and hidden servers entirely
         const validEpisodes = movie.episodes.filter(ep => 
+            !ep.isHidden &&
             !ep.server_name.startsWith('NC -') && 
             ep.server_name !== 'PChill Server'
         );
@@ -129,31 +180,31 @@ export default function WatchPage() {
             const name = ep.server_name;
             if (name.startsWith('KK -')) sources.add('Server 1');
             else if (name.startsWith('OP -')) sources.add('Server 2');
-            else if (name === 'PChill - Play4Me') sources.add('PChill #1');
-            else if (name === 'PChill - SeekStreaming') sources.add('PChill #2');
+            else if (name.includes('PChill - Play4Me')) sources.add('PChill VIP 1');
+            else if (name.includes('PChill - SeekStreaming')) sources.add('PChill VIP 2');
             else sources.add('Khác');
         });
 
-        // Priority Order
-        const sourceOrder = ['PChill #1', 'PChill #2', 'Server 1', 'Server 2', 'Khác'];
+        // Priority Order: Free first (default for non-VIP), then VIP
+        const sourceOrder = ['Server 1', 'Server 2', 'PChill VIP 1', 'PChill VIP 2', 'Khác'];
         const sortedSources = Array.from(sources).sort((a, b) => {
             return sourceOrder.indexOf(a) - sourceOrder.indexOf(b);
         });
 
         setAvailableSources(sortedSources);
 
-        // 2. Set Default Source
+        // 2. Set Default Source (only use serverParam on first load)
         let activeSource = currentSource;
         if ((!activeSource || !sources.has(activeSource)) && sortedSources.length > 0) {
-            if (serverParam && validEpisodes.length > 0) {
-                // Find which prefix this exact serverParam belongs to
+            if (!hasInitialized.current && serverParam && validEpisodes.length > 0) {
+                // Find which prefix this exact serverParam belongs to (first load only)
                 const matchedServer = validEpisodes.find(ep => ep.server_name === serverParam);
                 if (matchedServer) {
                     const name = matchedServer.server_name;
                     if (name.startsWith('KK -')) activeSource = 'Server 1';
                     else if (name.startsWith('OP -')) activeSource = 'Server 2';
-                    else if (name === 'PChill - Play4Me') activeSource = 'PChill #1';
-                    else if (name === 'PChill - SeekStreaming') activeSource = 'PChill #2';
+                    else if (name.includes('PChill - Play4Me')) activeSource = 'PChill VIP 1';
+                    else if (name.includes('PChill - SeekStreaming')) activeSource = 'PChill VIP 2';
                     else activeSource = 'Khác';
                 }
             }
@@ -172,11 +223,11 @@ export default function WatchPage() {
             const prefix = prefixMap[activeSource] || '';
 
             const filtered = validEpisodes.filter((ep: Episode) => {
-                if (activeSource === 'PChill #1') {
-                    return ep.server_name === 'PChill - Play4Me';
+                if (activeSource === 'PChill VIP 1') {
+                    return ep.server_name.includes('PChill - Play4Me');
                 }
-                if (activeSource === 'PChill #2') {
-                    return ep.server_name === 'PChill - SeekStreaming';
+                if (activeSource === 'PChill VIP 2') {
+                    return ep.server_name.includes('PChill - SeekStreaming');
                 }
                 if (activeSource === 'Khác') {
                     return !ep.server_name.startsWith('KK -') &&
@@ -259,6 +310,9 @@ export default function WatchPage() {
                             setStartTime(time);
                         }
                     }
+
+                    // Mark initialization done - serverParam won't affect future source changes
+                    hasInitialized.current = true;
                 }
             }
         }
@@ -347,8 +401,9 @@ export default function WatchPage() {
             setStartTime(0);
         }
 
-        // Update URL
-        const newUrl = `/movie/${slug}/watch?episode=${episode.slug}&server=${encodeURIComponent(serverName)}`;
+        // Update URL - encode server name to hide internal names
+        const encodedServer = encodeServerForUrl(serverName);
+        const newUrl = `/movie/${slug}/watch?episode=${episode.slug}&server=${encodedServer}`;
         window.history.replaceState({}, '', newUrl);
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -368,13 +423,14 @@ export default function WatchPage() {
             const prefix = prefixMap[newSource] || '';
 
             const targetServers = movie.episodes.filter((ep: Episode) => {
+                if (ep.isHidden) return false;
                 if (ep.server_name.startsWith('NC -') || ep.server_name === 'PChill Server') return false; 
                 
-                if (newSource === 'PChill #1') {
-                    return ep.server_name === 'PChill - Play4Me';
+                if (newSource === 'PChill VIP 1') {
+                    return ep.server_name.includes('PChill - Play4Me');
                 }
-                if (newSource === 'PChill #2') {
-                    return ep.server_name === 'PChill - SeekStreaming';
+                if (newSource === 'PChill VIP 2') {
+                    return ep.server_name.includes('PChill - SeekStreaming');
                 }
                 if (newSource === 'Khác') {
                     return !ep.server_name.startsWith('KK -') &&
@@ -419,8 +475,8 @@ export default function WatchPage() {
     };
 
     const getCleanServerName = (rawName: string) => {
-        if (rawName === 'PChill - Play4Me') return 'PChill #1';
-        if (rawName === 'PChill - SeekStreaming') return 'PChill #2';
+        if (rawName.includes('PChill - Play4Me')) return 'PChill VIP 1';
+        if (rawName.includes('PChill - SeekStreaming')) return 'PChill VIP 2';
 
         const lowerName = rawName.toLowerCase();
 
@@ -492,7 +548,7 @@ export default function WatchPage() {
                 </div>
             </div>
 
-            <div className="container mx-auto px-0 md:px-4 py-4 md:py-6 flex flex-col lg:flex-row gap-6">
+            <div className="container mx-auto px-0 md:px-4 py-4 md:py-6 max-lg:landscape:py-2 flex flex-col max-lg:landscape:flex-row lg:flex-row gap-4 max-lg:landscape:gap-2 lg:gap-6">
 
                 {/* 1. MAIN PLAYER (Left/Top) */}
                 <div className="flex-1 w-full min-w-0">
@@ -502,8 +558,34 @@ export default function WatchPage() {
                         <PWAAds variant="watch" />
                     </div>
 
-                    <div className="aspect-video bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
-                        {currentEpisode ? (
+                    <div className="aspect-video w-full bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
+                        {/* VIP Lock Overlay */}
+                        {currentSource.startsWith('PChill VIP') && !user?.isVip ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-black/95 rounded-xl gap-4 text-center p-6">
+                                <div className="w-20 h-20 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
+                                    <Crown className="w-10 h-10 text-yellow-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white mb-2">Nội dung dành riêng cho VIP</h3>
+                                    <p className="text-gray-400 text-sm max-w-sm">
+                                        Máy chủ <span className="text-yellow-400 font-bold">{currentSource}</span> chỉ dành cho thành viên <span className="text-yellow-400 font-bold">PChill VIP</span>. Nâng cấp để xem tốc độ cao, không giới hạn.
+                                    </p>
+                                </div>
+                                <a
+                                    href="/pricing"
+                                    className="px-6 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-yellow-500/20"
+                                >
+                                    <Crown className="w-4 h-4" />
+                                    Nâng cấp VIP ngay
+                                </a>
+                                <button
+                                    onClick={() => handleSourceChange('Server 1')}
+                                    className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                                >
+                                    Tiếp tục xem bằng Server miễn phí →
+                                </button>
+                            </div>
+                        ) : currentEpisode ? (
                             <VideoPlayer
                                 socket={socket}
                                 roomId={roomParam}
@@ -565,11 +647,11 @@ export default function WatchPage() {
                     </div>
 
                     {/* Source Selector & Meta below player */}
-                    <div className="mt-4 px-4 md:px-0 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-900/50 p-4 rounded-xl border border-white/5">
-                            <div>
-                                <h1 className="text-xl font-bold text-primary mb-1">{movie.name}</h1>
-                                <p className="text-sm text-gray-400">
+                    <div className="mt-4 max-lg:landscape:mt-2 px-4 md:px-0 space-y-4 max-lg:landscape:space-y-2">
+                        <div className="flex flex-col sm:flex-row max-lg:landscape:flex-col sm:items-center max-lg:landscape:items-start justify-between gap-4 max-lg:landscape:gap-2 bg-surface-900/50 p-4 max-lg:landscape:p-2 rounded-xl border border-white/5">
+                            <div className="min-w-0">
+                                <h1 className="text-xl max-lg:landscape:text-base font-bold text-primary mb-1 max-lg:landscape:mb-0 truncate">{movie.name}</h1>
+                                <p className="text-sm max-lg:landscape:text-xs text-gray-400 truncate">
                                     {movie.origin_name} • {movie.year}
                                     {currentEpisode && (
                                         <>
@@ -589,7 +671,7 @@ export default function WatchPage() {
                             </div>
 
                             {/* Report & Donate Buttons - Mobile and Tablet */}
-                            <div className="flex md:hidden items-center gap-2 shrink-0 mt-3 sm:mt-0">
+                            <div className="flex md:hidden max-lg:landscape:flex items-center gap-2 shrink-0 mt-3 sm:mt-0 max-lg:landscape:mt-2">
                                 <DonateButton />
                                 {movie && (
                                     <ReportModal
@@ -603,56 +685,106 @@ export default function WatchPage() {
                             </div>
                         </div>
 
-                        {/* Source Tabs - Hidden on desktop (moved to sidebar) */}
-                        {availableSources.length > 1 && (
-                            <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto">
-                                <span className="text-xs font-bold text-gray-500 uppercase shrink-0">Nguồn:</span>
-                                {availableSources.map((source, index) => (
+                        {/* Source Tabs - Hidden on desktop (moved to sidebar) - 2 ROW LAYOUT */}
+                        {availableSources.length > 0 && (() => {
+                            const freeSources = availableSources.filter(s => !s.startsWith('PChill VIP'));
+                            const vipSources = availableSources.filter(s => s.startsWith('PChill VIP'));
+                            const renderBtn = (source: string) => {
+                                const isVipSource = source.startsWith('PChill VIP');
+                                const canAccess = !isVipSource || user?.isVip;
+                                return (
                                     <button
                                         key={source}
-                                        onClick={() => handleSourceChange(source)}
-                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${currentSource === source
-                                            ? 'bg-primary text-black shadow-md shadow-primary/20'
-                                            : 'bg-surface-800 text-gray-400 hover:bg-surface-700 hover:text-white border border-white/5'
+                                        onClick={() => canAccess ? handleSourceChange(source) : null}
+                                        title={!canAccess ? 'Chỉ dành cho thành viên PChill VIP' : ''}
+                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 ${
+                                            currentSource === source
+                                                ? isVipSource ? 'bg-yellow-500 text-black shadow-md' : 'bg-primary text-black shadow-md shadow-primary/20'
+                                                : isVipSource
+                                                    ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20'
+                                                    : 'bg-surface-800 text-gray-400 hover:bg-surface-700 hover:text-white border border-white/5'
                                             }`}
                                     >
+                                        {isVipSource && <Crown className="w-3 h-3" />}
+                                        {!canAccess && <Lock className="w-3 h-3" />}
                                         {source}
                                     </button>
-                                ))}
-                            </div>
-                        )}
+                                );
+                            };
+                            return (
+                                <div className="lg:hidden max-lg:landscape:hidden flex flex-col gap-1.5">
+                                    {freeSources.length > 0 && (
+                                        <div className="flex items-center gap-1.5 overflow-x-auto">
+                                            <span className="text-[10px] font-bold text-gray-600 uppercase shrink-0 w-10">Free</span>
+                                            {freeSources.map(renderBtn)}
+                                        </div>
+                                    )}
+                                    {vipSources.length > 0 && (
+                                        <div className="flex items-center gap-1.5 overflow-x-auto">
+                                            <span className="text-[10px] font-bold text-yellow-700 uppercase shrink-0 w-10">VIP</span>
+                                            {vipSources.map(renderBtn)}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
                 {/* 2. EPISODE SIDEBAR (Right/Bottom) */}
-                <div className="w-full lg:w-96 px-4 md:px-0 space-y-4 shrink-0">
+                <div className="w-full max-lg:landscape:w-64 lg:w-96 px-4 md:px-0 space-y-4 max-lg:landscape:space-y-2 shrink-0">
                     <div className="bg-surface-900/30 rounded-xl border border-white/5 overflow-hidden flex flex-col h-full lg:sticky lg:top-24">
-                        <div className="p-4 border-b border-white/5 bg-surface-900/80 backdrop-blur-sm space-y-3">
-                            <h3 className="font-bold text-white flex items-center gap-2">
-                                <Play className="w-4 h-4 text-primary fill-current" />
+                        <div className="p-4 max-lg:landscape:p-2 border-b border-white/5 bg-surface-900/80 backdrop-blur-sm space-y-3 max-lg:landscape:space-y-1.5">
+                            <h3 className="font-bold text-white flex items-center gap-2 max-lg:landscape:text-sm">
+                                <Play className="w-4 h-4 max-lg:landscape:w-3 max-lg:landscape:h-3 text-primary fill-current" />
                                 Danh Sách Tập
                             </h3>
-                            {/* Source Tabs - Desktop only (inside sidebar) */}
-                            {availableSources.length > 1 && (
-                                <div className="hidden lg:flex items-center gap-2 flex-wrap">
-                                    <span className="text-xs font-bold text-gray-500 uppercase shrink-0">Nguồn:</span>
-                                    {availableSources.map((source, index) => (
+                            {/* Source Tabs - Desktop only (inside sidebar) - 2 ROW LAYOUT */}
+                            {availableSources.length > 0 && (() => {
+                                const freeSources = availableSources.filter(s => !s.startsWith('PChill VIP'));
+                                const vipSources = availableSources.filter(s => s.startsWith('PChill VIP'));
+                                const renderBtn = (source: string) => {
+                                    const isVipSource = source.startsWith('PChill VIP');
+                                    const canAccess = !isVipSource || user?.isVip;
+                                    return (
                                         <button
                                             key={source}
-                                            onClick={() => handleSourceChange(source)}
-                                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${currentSource === source
-                                                ? 'bg-primary text-black shadow-md shadow-primary/20'
-                                                : 'bg-surface-700 text-gray-400 hover:bg-surface-600 hover:text-white border border-white/5'
+                                            onClick={() => canAccess ? handleSourceChange(source) : null}
+                                            title={!canAccess ? 'Chỉ dành cho thành viên PChill VIP' : ''}
+                                            className={`px-3 py-1 max-lg:landscape:px-2 max-lg:landscape:py-0.5 rounded-md text-xs max-lg:landscape:text-[10px] font-bold transition-all whitespace-nowrap flex items-center gap-1.5 max-lg:landscape:gap-1 ${
+                                                currentSource === source
+                                                    ? isVipSource ? 'bg-yellow-500 text-black shadow-md' : 'bg-primary text-black shadow-md shadow-primary/20'
+                                                    : isVipSource
+                                                        ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20'
+                                                        : 'bg-surface-700 text-gray-400 hover:bg-surface-600 hover:text-white border border-white/5'
                                                 }`}
                                         >
+                                            {isVipSource && <Crown className="w-3 h-3 max-lg:landscape:w-2.5 max-lg:landscape:h-2.5" />}
+                                            {!canAccess && <Lock className="w-3 h-3 max-lg:landscape:w-2.5 max-lg:landscape:h-2.5" />}
                                             {source}
                                         </button>
-                                    ))}
-                                </div>
-                            )}
+                                    );
+                                };
+                                return (
+                                    <div className="hidden lg:flex max-lg:landscape:flex flex-col gap-1.5">
+                                        {freeSources.length > 0 && (
+                                            <div className="flex items-center gap-1.5 flex-wrap max-lg:landscape:flex-nowrap max-lg:landscape:overflow-x-auto max-lg:landscape:[&::-webkit-scrollbar]:hidden max-lg:landscape:[-ms-overflow-style:none] max-lg:landscape:[scrollbar-width:none]">
+                                                <span className="text-[10px] font-bold text-gray-600 uppercase w-10 shrink-0">Free</span>
+                                                {freeSources.map(renderBtn)}
+                                            </div>
+                                        )}
+                                        {vipSources.length > 0 && (
+                                            <div className="flex items-center gap-1.5 flex-wrap max-lg:landscape:flex-nowrap max-lg:landscape:overflow-x-auto max-lg:landscape:[&::-webkit-scrollbar]:hidden max-lg:landscape:[-ms-overflow-style:none] max-lg:landscape:[scrollbar-width:none]">
+                                                <span className="text-[10px] font-bold text-yellow-700 uppercase w-10 shrink-0">VIP</span>
+                                                {vipSources.map(renderBtn)}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
 
-                        <div className="p-4 flex-1 space-y-4 flex flex-col">
+                        <div className="p-4 max-lg:landscape:p-2 flex-1 space-y-4 max-lg:landscape:space-y-2 flex flex-col">
                             {/* Server/Category Horizontal Tabs */}
                             {filteredServers.length > 0 && (
                                 <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar border-b border-white/10 shrink-0">
@@ -663,7 +795,7 @@ export default function WatchPage() {
                                             <button
                                                 key={`tab-${server.server_name}`}
                                                 onClick={() => setViewingServerName(server.server_name)}
-                                                className={`px-4 py-2 text-sm font-bold whitespace-nowrap rounded-t-lg transition-all border-b-2 ${isActiveTab
+                                                className={`px-4 py-2 max-lg:landscape:px-2 max-lg:landscape:py-1 text-sm max-lg:landscape:text-xs font-bold whitespace-nowrap rounded-t-lg transition-all border-b-2 ${isActiveTab
                                                     ? 'text-primary border-primary bg-primary/10'
                                                     : 'text-gray-400 hover:text-white border-transparent hover:bg-white/5'
                                                     }`}
@@ -675,19 +807,27 @@ export default function WatchPage() {
                                 </div>
                             )}
 
-                            {/* Episodes Grid for the active tab */}
+                            {/* Episodes Grid for the active tab - sorted numerically */}
                             {filteredServers.map((server) => {
                                 if (server.server_name !== viewingServerName) return null;
+                                // Sort episodes: extract leading number from name for correct 1,2,3...10,11 order
+                                const extractEpNum = (name: string) => {
+                                    const m = name.match(/(\d+)/);
+                                    return m ? parseInt(m[1]) : 0;
+                                };
+                                const sortedData = [...server.server_data].sort((a, b) =>
+                                    extractEpNum(a.name) - extractEpNum(b.name)
+                                );
                                 return (
                                     <div key={server.server_name} className="flex-1">
-                                        <div className="grid grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                                            {server.server_data.map((ep: { slug: string; name: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] }) => {
+                                        <div className="grid grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2 max-lg:landscape:gap-1">
+                                            {sortedData.map((ep: { slug: string; name: string; link_m3u8: string; link_embed: string; time_intro?: number[]; time_outro?: number[] }) => {
                                                 const isPlaying = currentEpisode?.slug === ep.slug && currentServerName === server.server_name;
                                                 return (
                                                     <button
                                                         key={ep.slug}
                                                         onClick={() => handleEpisodeClick(server.server_name, ep)}
-                                                        className={`px-2 py-3 text-xs font-medium rounded-lg transition-all border relative flex items-center justify-center ${isPlaying
+                                                        className={`px-2 py-3 max-lg:landscape:py-1.5 text-xs max-lg:landscape:text-[10px] font-medium rounded-lg transition-all border relative flex items-center justify-center ${isPlaying
                                                             ? 'bg-primary text-black border-primary font-bold shadow-md'
                                                             : 'bg-surface-800 text-gray-300 border-transparent hover:bg-surface-700 hover:text-white hover:border-white/10'
                                                             }`}
@@ -711,8 +851,8 @@ export default function WatchPage() {
 
             {/* Comments Section */}
             {movie && (
-                <div className="max-w-7xl mx-auto w-full px-1 md:px-6 pb-12">
-                    <div className="mt-8 bg-white/[0.02] rounded-3xl border border-white/5 overflow-hidden">
+                <div className="max-w-7xl mx-auto w-full px-1 md:px-6 pb-12 max-lg:landscape:px-4 max-lg:landscape:pb-24">
+                    <div className="mt-8 max-lg:landscape:mt-12 bg-white/[0.02] rounded-3xl border border-white/5 overflow-hidden">
                         <div className="flex flex-col md:flex-row md:items-center justify-between bg-surface-900/80 p-1 md:p-1.5 border-b border-white/5 gap-2 md:gap-0">
                             <div className="px-3 md:px-6 py-1.5 md:py-2">
                                 <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">

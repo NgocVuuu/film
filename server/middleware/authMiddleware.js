@@ -94,9 +94,9 @@ const premiumMiddleware = async (req, res, next) => {
         return next();
     }
 
-    // Check if user has active premium subscription
+    // Check if user has active premium subscription (premium OR vip both qualify for premium features)
     const isPremium = req.user.subscription &&
-        req.user.subscription.tier === 'premium' &&
+        (req.user.subscription.tier === 'premium' || req.user.subscription.tier === 'vip') &&
         req.user.subscription.status === 'active';
 
     // Check if subscription has not expired (if endDate exists)
@@ -119,11 +119,45 @@ const premiumMiddleware = async (req, res, next) => {
     next();
 };
 
+// Middleware to check if user has VIP subscription (or is admin)
+const vipMiddleware = async (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({
+            success: false,
+            message: 'Vui lòng đăng nhập để tiếp tục'
+        });
+    }
+
+    // Allow admins
+    if (req.user.role === 'admin') {
+        return next();
+    }
+
+    // Check if user has active VIP subscription
+    const isVip = req.user.subscription &&
+        req.user.subscription.tier === 'vip' &&
+        req.user.subscription.status === 'active';
+
+    const isNotExpired = !req.user.subscription?.endDate ||
+        new Date(req.user.subscription.endDate) > new Date();
+
+    if (!isVip || !isNotExpired) {
+        return res.status(403).json({
+            success: false,
+            message: 'Tính năng này chỉ dành cho thành viên PChill VIP',
+            requiresVip: true
+        });
+    }
+
+    next();
+};
+
 module.exports = {
     authMiddleware,
     adminMiddleware,
     optionalAuthMiddleware,
     premiumMiddleware,
+    vipMiddleware,
     protect: authMiddleware, // Alias
     admin: adminMiddleware   // Alias
 };

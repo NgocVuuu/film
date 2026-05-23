@@ -1,4 +1,5 @@
 const Payment = require('../models/Payment');
+const UpgradeRequest = require('../models/UpgradeRequest');
 const User = require('../models/User');
 const moment = require('moment');
 
@@ -6,59 +7,101 @@ const moment = require('moment');
 exports.getPlans = async (req, res) => {
     try {
         const plans = [
+            // ===== PREMIUM PLANS (No Ads) =====
             {
                 id: 'premium-1m',
-                name: 'Premium - 1 Tháng',
+                name: 'Premium 1 Tháng',
                 tier: 'premium',
                 duration: 1,
-                price: 19000,
+                price: 25000,
                 features: [
                     'Xem phim không quảng cáo',
                     'Lưu tiến độ xem không giới hạn',
-                    'Chất lượng HD/FullHD',
                     'Hỗ trợ ưu tiên'
                 ]
             },
             {
                 id: 'premium-3m',
-                name: 'Premium - 3 Tháng',
+                name: 'Premium 3 Tháng',
                 tier: 'premium',
                 duration: 3,
-                price: 39000,
-                originalPrice: 57000,
+                price: 65000,
+                originalPrice: 75000,
                 features: [
                     'Tất cả tính năng Premium',
-                    'Tiết kiệm 31% so với gói tháng',
-                    'Cộng dồn thời gian premium'
+                    'Tiết kiệm 13% so với gói tháng',
+                    'Cộng dồn thời gian'
                 ]
             },
             {
                 id: 'premium-6m',
-                name: 'Premium - 6 Tháng',
+                name: 'Premium 6 Tháng',
                 tier: 'premium',
                 duration: 6,
-                price: 69000,
-                originalPrice: 114000,
+                price: 120000,
+                originalPrice: 150000,
                 badge: 'Phổ biến',
                 features: [
                     'Tất cả tính năng Premium',
-                    'Tiết kiệm 39% so với gói tháng',
-                    'Cộng dồn thời gian premium'
+                    'Tiết kiệm 20% so với gói tháng',
+                    'Cộng dồn thời gian'
                 ]
             },
             {
                 id: 'premium-12m',
-                name: 'Premium - 1 Năm',
+                name: 'Premium 1 Năm',
                 tier: 'premium',
                 duration: 12,
-                price: 129000,
-                originalPrice: 228000,
-                badge: 'Tốt nhất',
+                price: 220000,
+                originalPrice: 300000,
                 features: [
                     'Tất cả tính năng Premium',
-                    'Tiết kiệm 43% so với gói tháng',
-                    'Cộng dồn thời gian premium',
+                    'Tiết kiệm 27% so với gói tháng',
+                    'Cộng dồn thời gian',
                     'Ưu đãi dành cho fan cứng'
+                ]
+            },
+            // ===== VIP PLANS (No Ads + VIP Servers) =====
+            {
+                id: 'vip-1m',
+                name: 'PChill VIP - 1 Tháng',
+                tier: 'vip',
+                duration: 1,
+                price: 49000,
+                features: [
+                    'Tất cả tính năng Premium',
+                    '💎 Truy cập máy chủ VIP tốc độ cao',
+                    '💎 PChill VIP 1 & PChill VIP 2',
+                    'Chất lượng cao nhất'
+                ]
+            },
+            {
+                id: 'vip-3m',
+                name: 'PChill VIP - 3 Tháng',
+                tier: 'vip',
+                duration: 3,
+                price: 129000,
+                originalPrice: 147000,
+                badge: '💎 Phổ biến VIP',
+                features: [
+                    'Tất cả tính năng VIP',
+                    'Tiết kiệm 12% so với gói tháng',
+                    'Cộng dồn thời gian VIP'
+                ]
+            },
+            {
+                id: 'vip-12m',
+                name: 'PChill VIP - 1 Năm',
+                tier: 'vip',
+                duration: 12,
+                price: 449000,
+                originalPrice: 588000,
+                badge: '💎 Tốt nhất',
+                features: [
+                    'Tất cả tính năng VIP',
+                    'Tiết kiệm 24% so với gói tháng',
+                    'Ưu tiên hỗ trợ 24/7',
+                    'Sớm tiếp cận tính năng mới'
                 ]
             }
         ];
@@ -89,12 +132,15 @@ exports.createPayment = async (req, res) => {
             });
         }
 
+        // Determine tier from planId
+        const subscriptionTier = planId && planId.startsWith('vip') ? 'vip' : 'premium';
+
         // Create pending payment record
         const payment = await Payment.create({
             userId,
             amount,
             provider: 'sepay', // Changed from vnpay
-            subscriptionTier: 'premium',
+            subscriptionTier,
             subscriptionDuration: duration,
             status: 'pending',
             metadata: { planId }
@@ -330,6 +376,83 @@ exports.getPaymentHistory = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Lỗi khi lấy lịch sử thanh toán'
+        });
+    }
+};
+
+// Tạo phiếu nâng cấp thủ công (Admin duyệt tay qua WeScan / BuyMeACoffee)
+exports.createManualUpgrade = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { planId, planName, duration, amount } = req.body;
+
+        if (!planId || !duration || !amount || !planName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Thiếu thông tin gói cước'
+            });
+        }
+
+        // Determine tier from planId
+        const tier = planId.startsWith('vip') ? 'vip' : 'premium';
+
+        // Generate unique VIP-XXXXXX code
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const generateCode = () => {
+            let code = 'VIP-';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        };
+
+        let paymentCode = generateCode();
+        let isExist = await UpgradeRequest.findOne({ paymentCode, status: 'pending' });
+        while (isExist) {
+            paymentCode = generateCode();
+            isExist = await UpgradeRequest.findOne({ paymentCode, status: 'pending' });
+        }
+
+        // Create upgrade request record
+        const request = await UpgradeRequest.create({
+            userId,
+            planId,
+            planName,
+            tier,
+            durationMonths: duration,
+            amount,
+            paymentCode,
+            status: 'pending'
+        });
+
+        // Bank config
+        const bankCode = process.env.BANK_CODE || 'MB';
+        const accNum = process.env.BANK_ACC_NUM || '0000000000';
+        const accName = process.env.BANK_ACC_NAME || 'ADMIN PCHILL';
+
+        // VietQR dynamic QR
+        const qrUrl = `https://img.vietqr.io/image/${bankCode}-${accNum}-compact2.jpg?amount=${amount}&addInfo=${paymentCode}&accountName=${encodeURIComponent(accName)}`;
+
+        res.json({
+            success: true,
+            data: {
+                requestId: request._id,
+                qrUrl,
+                content: paymentCode,
+                amount,
+                bankInfo: {
+                    bankCode,
+                    accountNumber: accNum,
+                    accountName: accName
+                }
+            },
+            message: 'Đã tạo phiếu đăng ký. Đang chờ admin duyệt (5-30 phút).'
+        });
+    } catch (error) {
+        console.error('Create manual upgrade error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi khởi tạo giao dịch'
         });
     }
 };

@@ -138,11 +138,20 @@ exports.toggleBanUser = async (req, res) => {
     }
 };
 
-// Manual upgrade user to premium
+// Manual upgrade user to premium or VIP (with cumulative months)
 exports.manualUpgradePremium = async (req, res) => {
     try {
         const userId = req.params.userId;
-        const { durationDays = 30 } = req.body;
+        const { months = 1, tier = 'premium' } = req.body;
+
+        if (!['premium', 'vip'].includes(tier)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Tier không hợp lệ. Chỉ chấp nhận: premium, vip'
+            });
+        }
+
+        const monthsInt = Math.max(1, parseInt(months) || 1);
 
         const user = await User.findById(userId);
         if (!user) {
@@ -152,12 +161,18 @@ exports.manualUpgradePremium = async (req, res) => {
             });
         }
 
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setDate(endDate.getDate() + durationDays);
+        // Cumulative stacking: if user has active subscription, extend from endDate
+        const now = new Date();
+        const existingEndDate = user.subscription?.endDate ? new Date(user.subscription.endDate) : null;
+        const baseDate = (existingEndDate && existingEndDate > now) ? existingEndDate : now;
+
+        const endDate = new Date(baseDate);
+        endDate.setMonth(endDate.getMonth() + monthsInt);
+
+        const startDate = user.subscription?.startDate || now;
 
         user.subscription = {
-            tier: 'premium',
+            tier,
             status: 'active',
             startDate,
             endDate,
@@ -166,25 +181,25 @@ exports.manualUpgradePremium = async (req, res) => {
 
         await user.save();
 
-        // Create notification for user
+        const tierLabel = tier === 'vip' ? '💎 PChill VIP' : '🏅 Premium';
         const { sendNotification } = require('../utils/notificationService');
         await sendNotification(user._id, {
-            title: '🏅 Nâng cấp Premium',
-            content: `Chúc mừng! Tài khoản của bạn đã được nâng cấp lên Premium (${durationDays} ngày) bởi Admin.`,
+            title: `Nâng cấp ${tierLabel}`,
+            content: `Chúc mừng! Tài khoản của bạn đã được nâng cấp lên ${tierLabel} (+${monthsInt} tháng) bởi Admin. Hạn dùng đến: ${endDate.toLocaleDateString('vi-VN')}.`,
             type: 'system',
             link: '/profile'
         });
 
         res.json({
             success: true,
-            message: `Đã nâng cấp Premium cho ${user.displayName} đến ngày ${endDate.toLocaleDateString('vi-VN')}`,
+            message: `Đã nâng cấp ${tierLabel} cho ${user.displayName} (+${monthsInt} tháng), hạn đến: ${endDate.toLocaleDateString('vi-VN')}`,
             data: user
         });
     } catch (error) {
         console.error('Manual upgrade premium error:', error);
         res.status(500).json({
             success: false,
-            message: 'Lỗi khi nâng cấp Premium'
+            message: 'Lỗi khi nâng cấp'
         });
     }
 };
@@ -229,6 +244,9 @@ exports.deleteUser = async (req, res) => {
 exports.getDashboardStats = async (req, res) => {
     try {
         const Movie = require('../models/Movie');
+        const Report = require('../models/Report');
+        const MovieRequest = require('../models/MovieRequest');
+        const UpgradeRequest = require('../models/UpgradeRequest');
 
         // Total users
         const totalUsers = await User.countDocuments();
@@ -322,6 +340,16 @@ exports.getDashboardStats = async (req, res) => {
             }
         ]);
 
+        // Tracking & Action Required Data
+        const pendingReports = await Report.countDocuments({ status: 'pending' });
+        const pending4kRequests = await MovieRequest.countDocuments({ status: 'pending', type: '4k_upgrade' });
+        const pendingMovieRequests = await MovieRequest.countDocuments({ status: 'pending', type: 'new_movie' });
+        const pendingUpgradeRequests = await UpgradeRequest.countDocuments({ status: 'pending' });
+        const systemTracking = {
+            uptime: process.uptime(),
+            memory: process.memoryUsage()
+        };
+
         res.json({
             success: true,
             data: {
@@ -341,7 +369,14 @@ exports.getDashboardStats = async (req, res) => {
                 userTrends: userTrends.map(item => ({
                     date: item._id,
                     users: item.count
-                }))
+                })),
+                tracking: {
+                    pendingReports,
+                    pending4kRequests,
+                    pendingMovieRequests,
+                    pendingUpgradeRequests,
+                    systemTracking
+                }
             }
         });
     } catch (error) {
@@ -379,4 +414,32 @@ exports.startCrawler = async (req, res) => {
 exports.stopCrawler = (req, res) => {
     const result = crawler.stopCrawl();
     res.json(result);
+};
+
+// VIP Host Revenue
+const { play4meAPI, seekStreamingAPI } = require('../utils/videoHostProviders');
+
+exports.getHostRevenue = async (req, res) => {
+    try {
+        let play4meBalance = null;
+        if (play4meAPI) {
+            play4meBalance = await play4meAPI.getBalance();
+        }
+
+        let seekStreamingBalance = null;
+        if (seekStreamingAPI) {
+            seekStreamingBalance = await seekStreamingAPI.getBalance();
+        }
+
+        res.json({
+            success: true,
+            data: {
+                play4me: play4meBalance,
+                seekStreaming: seekStreamingBalance
+            }
+        });
+    } catch (error) {
+        console.error('Get host revenue error:', error);
+        res.status(500).json({ success: false, message: 'Lỗi khi lấy doanh thu host VIP' });
+    }
 };

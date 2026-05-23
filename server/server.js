@@ -21,6 +21,8 @@ const progressRoutes = require('./routes/progressRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const adminUpgradeRoutes = require('./routes/adminUpgradeRoutes');
+const { authMiddleware, adminMiddleware } = require('./middleware/authMiddleware');
 const movieRoutes = require('./routes/movieRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
@@ -36,10 +38,8 @@ const User = require('./models/User');
 
 // Khởi chạy trình lập lịch cào phim 4K tự động
 require('./cron_4k_scheduler');
-// Khởi chạy Admin API phục vụ Auto Pipeline trên cổng 9888
-require('./admin_api');
 // Khởi chạy hàng đợi Worker xử lý cào/upload phim ngầm
-require('./worker');
+// Worker no longer needed, using in-memory queue
 
 
 const app = express();
@@ -64,6 +64,7 @@ const io = new SocketIO(httpServer, {
         credentials: true
     }
 });
+global.io = io; // Expose globally for background workers like hostManager
 
 // Attach io to app so controllers can access it
 app.set('io', io);
@@ -383,6 +384,11 @@ mongoose.connect(MONGO_URI, {
     .then(() => {
         console.log('Đã kết nối MongoDB');
         setupCrawler();
+        
+        // Bắt đầu Status Poller kiểm tra Abysss/Gofile processing
+        const { startStatusPoller } = require('./utils/statusPoller');
+        startStatusPoller();
+        
         // syncMovies(); // Uncomment to run immediately
     })
     .catch(err => console.error('Lỗi kết nối MongoDB:', err));
@@ -401,6 +407,9 @@ app.use('/api/subscriptions', subscriptionRoutes);
 
 // Admin Routes
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/upgrades', adminUpgradeRoutes);
+const pipelineRoutes = require('./admin_api');
+app.use('/api/admin/pipeline', authMiddleware, adminMiddleware, pipelineRoutes);
 
 // Health Check
 app.get('/', (req, res) => {

@@ -1383,6 +1383,56 @@ const getUserReaction = async (req, res) => {
     }
 };
 
+const request4k = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const userPlan = req.user.subscription?.tier || 'free';
+        
+        // Ensure user is VIP (or admin)
+        if (userRole !== 'admin' && userPlan !== 'vip') {
+            return res.status(403).json({ success: false, message: 'Chỉ tài khoản VIP mới được yêu cầu bản 4K' });
+        }
+
+        const movie = await Movie.findOne({ slug });
+        if (!movie) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
+        }
+
+        const MovieRequest = require('../models/MovieRequest');
+        
+        // Check if user already requested
+        const existingReq = await MovieRequest.findOne({ movieSlug: slug, type: '4k_upgrade' });
+        
+        if (existingReq) {
+            if (existingReq.userId.toString() === userId) {
+                return res.status(400).json({ success: false, message: 'Bạn đã yêu cầu bản 4K cho phim này rồi' });
+            }
+            // Increment request count
+            existingReq.requestCount += 1;
+            await existingReq.save();
+            return res.json({ success: true, message: 'Đã ghi nhận yêu cầu 4K của bạn' });
+        }
+
+        // Create new request
+        const newReq = new MovieRequest({
+            userId,
+            movieName: movie.name,
+            movieSlug: slug,
+            type: '4k_upgrade',
+            status: 'pending'
+        });
+
+        await newReq.save();
+
+        res.json({ success: true, message: 'Gửi yêu cầu 4K thành công' });
+    } catch (error) {
+        console.error('Error requesting 4k:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
 const getDramaRanking = async (req, res) => {
     try {
         const type = req.query.type === 'fire' ? 'fire' : 'trash';
@@ -1419,5 +1469,6 @@ module.exports = {
     getUpdatedTodayMovies,
     reactToMovie,
     getUserReaction,
+    request4k,
     getDramaRanking,
 };

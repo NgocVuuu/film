@@ -180,6 +180,34 @@ class PremiumHostService {
             return false;
         }
     }
+    /**
+     * Delete video by videoId
+     * @param {string} videoId
+     */
+    async deleteVideo(videoId) {
+        try {
+            if (!videoId) return false;
+            const resp = await this.client.delete(`/api/v1/video/manage/${videoId}`);
+            return resp.status === 204 || resp.status === 200;
+        } catch (e) {
+            console.error(`[${this.hostName}] deleteVideo error:`, e.response?.data || e.message);
+            return false;
+        }
+    }
+
+    /**
+     * Get billing balance
+     * @returns {Object|null} balance info
+     */
+    async getBalance() {
+        try {
+            const resp = await this.client.get('/api/v1/billing/balance');
+            return resp.data?.data || resp.data || null;
+        } catch (e) {
+            console.error(`[${this.hostName}] getBalance error:`, e.response?.data || e.message);
+            return null;
+        }
+    }
 }
 
 // Cấu hình linh hoạt từ biến môi trường

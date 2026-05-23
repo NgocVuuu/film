@@ -86,6 +86,22 @@ async function syncMovieEpisode(doc, videoId) {
 
     await movie.save();
     console.log(`\n✅ [SYNC] Đã cập nhật tập "${doc.episode}" vào hệ thống PChill Server cho phim ${movie.name}!`);
+
+    // Emit Realtime Event cho các máy khách đang xem phim này
+    if (global.io) {
+      global.io.emit('episode_added', {
+        movieSlug: movie.slug,
+        serverName: serverName,
+        episode: {
+          name: doc.episode,
+          slug: doc.episode.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+          filename: doc.filename,
+          link_embed: embedUrl,
+          link_m3u8: '' // M3u8 chưa có từ host, cập nhật sau nếu cần
+        }
+      });
+    }
+
   } catch (e) {
     console.error('[SYNC ERROR] Cập nhật tập phim lỗi:', e.message);
   }
@@ -147,6 +163,9 @@ async function pollAndSyncStatus(hostService, taskId, docId) {
     }
   } catch (e) {
     console.error('[POLL ERROR] Status poll/sync failed:', e.message);
+    if (e.response && e.response.status === 404) {
+      updateUpload(docId, { status: 'failed', notes: 'Upload task not found on host (404)' }).catch(()=>{});
+    }
   }
 }
 

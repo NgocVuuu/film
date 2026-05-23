@@ -1,49 +1,41 @@
-const { Queue } = require('bullmq');
+const { runAutoUploadPipeline } = require('../auto_pipeline');
 
-const connection = {
-    host: process.env.REDIS_HOST || '127.0.0.1',
-    port: process.env.REDIS_PORT || 6379,
-    // password: process.env.REDIS_PASSWORD || '',
-};
+const memoryQueue = [];
+let isProcessing = false;
 
-// Queue name
-const UPLOAD_QUEUE_NAME = 'UploadQueue';
-
-const uploadQueue = new Queue(UPLOAD_QUEUE_NAME, {
-    connection,
-    defaultJobOptions: {
-        attempts: 3, // automatically retry failing jobs
-        backoff: {
-            type: 'exponential',
-            delay: 1000 * 60, // 1 minute between retries
-        },
-        removeOnComplete: true, // remove successful jobs from queue
-        removeOnFail: false,   // keep failed jobs for manual review/retry
+async function processQueue() {
+    if (isProcessing || memoryQueue.length === 0) return;
+    isProcessing = true;
+    
+    while (memoryQueue.length > 0) {
+        const jobData = memoryQueue.shift();
+        console.log(`\n[Memory-Queue] Bắt đầu xử lý Job: ${jobData.sourceUrl}`);
+        try {
+            await runAutoUploadPipeline(jobData);
+            console.log(`[Memory-Queue] Hoàn thành Job: ${jobData.sourceUrl}`);
+        } catch (error) {
+            console.error(`[Memory-Queue] Job thất bại:`, error.message);
+        }
     }
-});
-
-// Prevent unhandled Redis connection crashes and throttle terminal spam when Redis is down
-let lastLoggedRedisError = 0;
-uploadQueue.on('error', (err) => {
-    const now = Date.now();
-    if (now - lastLoggedRedisError > 30000) {
-        console.warn(`[REDIS-QUEUE-ERROR] Redis server is offline (connect ECONNREFUSED 127.0.0.1:6379). Auto-reconnecting in background...`);
-        lastLoggedRedisError = now;
-    }
-});
+    
+    isProcessing = false;
+}
 
 /**
  * Add a new url to be processed by the auto_pipeline
  */
 async function addUploadJob(jobData) {
-    // jobData typically looks like:
-    // { showName, seasonNumber, episodeNumber, sourceUrl, targetHost, ... }
-    return await uploadQueue.add('processUrl', jobData);
+    memoryQueue.push(jobData);
+    console.log(`[Memory-Queue] Đã thêm Job vào hàng đợi. Đang chờ xử lý... (Vị trí: ${memoryQueue.length})`);
+    
+    // Khởi chạy ngầm xử lý queue mà không block thread
+    processQueue().catch(e => console.error('[Memory-Queue] Lỗi tiến trình Queue:', e));
+    
+    return { id: Date.now() + Math.random().toString() };
 }
 
 module.exports = {
-    connection,
-    UPLOAD_QUEUE_NAME,
-    uploadQueue,
-    addUploadJob
+    addUploadJob,
+    getQueueLength: () => memoryQueue.length,
+    UPLOAD_QUEUE_NAME: 'UploadQueue_Memory'
 };

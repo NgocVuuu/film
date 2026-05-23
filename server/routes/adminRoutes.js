@@ -18,6 +18,7 @@ router.use(adminMiddleware);
 
 // Dashboard stats
 router.get('/stats', adminController.getDashboardStats);
+router.get('/host-revenue', adminController.getHostRevenue);
 
 // User management
 router.get('/users', adminController.getAllUsers);

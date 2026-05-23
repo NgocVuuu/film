@@ -11,10 +11,11 @@ import { useAuth } from '@/contexts/auth-context';
 import { usePWA } from '@/hooks/usePWA';
 import { API_URL } from '@/lib/config';
 import { PWAAds } from '@/components/PWAAds';
-import { getAuthToken } from '@/lib/api';
+import { getAuthToken, customFetch } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { MovieCard } from '@/components/MovieCard';
 import { cn } from '@/lib/utils';
+import { encodeServerForUrl } from '@/lib/serverUrl';
 
 // ── Download Section Component ─────────────────────────────────────────────────
 type DLFile = { filename?: string; size?: string; host: string; url: string };
@@ -388,7 +389,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     const handleWatchNow = () => {
         if (movie) {
             if (movie.progress && movie.progress.episodeSlug) {
-                const serverQuery = movie.progress.serverName ? `&server=${encodeURIComponent(movie.progress.serverName)}` : '';
+                const serverQuery = movie.progress.serverName ? `&server=${encodeServerForUrl(movie.progress.serverName)}` : '';
                 router.push(`/movie/${movie.slug}/watch?episode=${movie.progress.episodeSlug}${serverQuery}`);
             } else {
                 router.push(`/movie/${movie.slug}/watch`);
@@ -481,6 +482,30 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
             }
         } catch (e) {
             toast.error('Lỗi khi vote phim');
+        }
+    };
+
+    const handleRequest4k = async () => {
+        if (!user) {
+            toast.error('Vui lòng đăng nhập để sử dụng tính năng này');
+            return;
+        }
+        if (user.role !== 'admin' && user.subscription?.tier !== 'vip') {
+            toast.error('Chỉ tài khoản VIP mới được yêu cầu bản 4K');
+            return;
+        }
+        try {
+            const res = await customFetch(`/api/movies/${movie?.slug}/request-4k`, {
+                method: 'POST'
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success(data.message || 'Gửi yêu cầu 4K thành công!');
+            } else {
+                toast.error(data.message || 'Lỗi khi gửi yêu cầu');
+            }
+        } catch (e) {
+            toast.error('Lỗi kết nối server');
         }
     };
 
@@ -619,6 +644,17 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                 <Share2 className="w-5 h-5 text-gray-400" />
                             </div>
                             <span className="text-[9px] font-medium text-gray-500 uppercase">CHIA SẺ</span>
+                        </button>
+                        
+                        <button 
+                            onClick={handleRequest4k}
+                            className="flex flex-col items-center gap-1.5 group"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-surface-800 flex items-center justify-center group-active:scale-95 transition-all relative overflow-hidden border border-yellow-500/20">
+                                <div className="absolute inset-0 bg-gold-gradient opacity-10"></div>
+                                <span className="text-[14px] font-black text-yellow-500 z-10">4K</span>
+                            </div>
+                            <span className="text-[9px] font-medium text-yellow-500/80 uppercase">Bản 4K</span>
                         </button>
                     </div>
 
@@ -859,6 +895,18 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                             <Share2 className="mr-2 w-4 h-4 md:w-5 md:h-5 shrink-0" />
                                             Chia Sẻ
                                         </Button>
+
+                                        {/* Yêu cầu 4K */}
+                                        <Button
+                                            variant="outline"
+                                            onClick={handleRequest4k}
+                                            className="h-11 md:h-13 px-5 border border-yellow-500/30 hover:border-yellow-500/60 bg-yellow-500/5 hover:bg-yellow-500/10 text-yellow-500 text-sm md:text-base font-bold rounded-xl backdrop-blur-sm transition-all duration-200 hover:scale-[1.03] active:scale-95 group relative overflow-hidden"
+                                            title="Yêu cầu bản 4K (Chỉ dành cho VIP)"
+                                        >
+                                            <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                                            <span className="mr-2 font-black text-lg leading-none shrink-0">4K</span>
+                                            Yêu cầu 4K
+                                        </Button>
                                     </div>
 
                                     {/* Reactions / Drama block */}
@@ -1038,7 +1086,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                         </div>
                                         <div className="flex justify-between border-b border-white/10 pb-1.5">
                                             <dt className="text-gray-400">Số tập</dt>
-                                            <dd className="text-white">{movie.episodes?.[0]?.server_data?.length || '?'}</dd>
+                                            <dd className="text-white">{movie.episodes?.find(e => !e.isHidden && !e.server_name.startsWith('NC -'))?.server_data?.length || '?'}</dd>
                                         </div>
                                         <div className="flex justify-between border-b border-white/10 pb-1.5">
                                             <dt className="text-gray-400">Thời lượng</dt>

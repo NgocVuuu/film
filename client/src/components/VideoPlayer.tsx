@@ -116,7 +116,10 @@ export default function VideoPlayer({
     const [showControls, setShowControls] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(false);
-    const [useEmbed] = useState(false);
+    
+    // Iframe Embed Player state
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const isEmbedPlayer = !!embedUrl && (!src || src === embedUrl || serverName?.includes('Play4Me') || serverName?.includes('SeekStreaming'));
     const [hoverTime, setHoverTime] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<number>(0);
     const [isScrubbing, setIsScrubbing] = useState(false);
@@ -192,6 +195,62 @@ export default function VideoPlayer({
             socket.off('wp_seek_action', handleSeek);
         };
     }, [socket, roomId]);
+
+    // Iframe message listener for VIP Host
+    useEffect(() => {
+        if (!isEmbedPlayer || !iframeRef.current) return;
+
+        const handleMessage = (e: MessageEvent) => {
+            try {
+                const playerOrigin = new URL(iframeRef.current!.src).origin;
+                if (e.origin !== playerOrigin) return;
+
+                if (e.data.playerStatus === 'Ready') {
+                    // Restore progress
+                    if (initialProgress && initialProgress > 10) {
+                        iframeRef.current?.contentWindow?.postMessage({ command: 'seek', value: initialProgress }, playerOrigin);
+                    }
+                }
+
+                if (e.data.currentTime !== undefined) {
+                    const time = e.data.currentTime;
+                    setCurrentTime(time);
+                    if (onTimeUpdate) onTimeUpdate(time);
+                    if (movieSlug && episodeSlug) debouncedSave(time, duration || e.data.duration || 0);
+
+                    // Auto Next Episode check
+                    const dur = e.data.duration || duration || 0;
+                    if (onEnded && nextEpisodeInfo && !cancelledAutoPlay && dur > 0 && dur - time <= 10 && dur - time > 0) {
+                        if (!showNextEpisode) {
+                            setShowNextEpisode(true);
+                            setCountdown(Math.ceil(dur - time));
+                        }
+                    }
+                }
+
+                if (e.data.duration !== undefined) {
+                    setDuration(e.data.duration);
+                }
+            } catch (err) {}
+        };
+
+        window.addEventListener('message', handleMessage);
+
+        // Poll for time
+        const interval = setInterval(() => {
+            try {
+                if (iframeRef.current && iframeRef.current.src) {
+                    const playerOrigin = new URL(iframeRef.current.src).origin;
+                    iframeRef.current.contentWindow?.postMessage({ command: 'getTime' }, playerOrigin);
+                }
+            } catch (err) {}
+        }, 1000);
+
+        return () => {
+            window.removeEventListener('message', handleMessage);
+            clearInterval(interval);
+        };
+    }, [isEmbedPlayer, initialProgress, onTimeUpdate, movieSlug, episodeSlug, duration, onEnded, nextEpisodeInfo, cancelledAutoPlay, showNextEpisode]);
 
     // -- Logic --
 
@@ -1080,13 +1139,24 @@ export default function VideoPlayer({
         >
             {/* Main Player Area Wrapper */}
             <div className="relative flex-1 h-full min-w-0">
-            <video
-                ref={videoRef}
-                poster={poster}
-                className={`w-full h-full ${isZoomed ? 'object-cover' : 'object-contain'} rounded-lg`}
-                playsInline
-                autoPlay={autoPlay}
-            />
+            {isEmbedPlayer ? (
+                <iframe
+                    id="playerIframeId"
+                    ref={iframeRef}
+                    src={embedUrl}
+                    className="w-full h-full border-none rounded-lg"
+                    allowFullScreen
+                    allow="autoplay; fullscreen"
+                />
+            ) : (
+                <video
+                    ref={videoRef}
+                    poster={poster}
+                    className={`w-full h-full ${isZoomed ? 'object-cover' : 'object-contain'} rounded-lg`}
+                    playsInline
+                    autoPlay={autoPlay}
+                />
+            )}
 
             {/* Error Overlay */}
             {error && (
@@ -1096,6 +1166,8 @@ export default function VideoPlayer({
                     <Button onClick={() => window.location.reload()} variant="outline" className="mt-2 text-white border-white/20 hover:bg-white/10">Tải lại trang</Button>
                 </div>
             )}
+
+
 
             {/* Gesture Feedback Overlay */}
             {gestureFeedback && (
@@ -1267,6 +1339,7 @@ export default function VideoPlayer({
             }
 
             {/* Controls Overlay */}
+            {!isEmbedPlayer && (
             <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end px-2 py-2 sm:px-3 sm:py-3 md:p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
 
                 {/* Progress Bar */}
@@ -1501,6 +1574,53 @@ export default function VideoPlayer({
                     </div>
                 </div>
             </div>
+            )}
+
+            {/* Overlaid UI for Embed Player (Chat & Episode List) */}
+            {isEmbedPlayer && (
+                <div className="absolute top-4 right-4 z-[60] flex flex-col gap-2 pointer-events-auto">
+                    {/* Watch Party Chat Button */}
+                    {roomId && socket && (
+                        <div className="hidden sm:block bg-black/50 backdrop-blur-md rounded-lg">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowChat(v => !v);
+                                    setShowEpisodePanel(false);
+                                }}
+                                className={`text-white hover:text-primary hover:bg-transparent ${showChat ? 'text-primary' : ''}`}
+                                title="Lịch sử Chat"
+                            >
+                                <MessageSquare className="w-5 h-5" />
+                            </Button>
+                        </div>
+                    )}
+                    
+                    {/* Episode List Button */}
+                    {episodeServers && episodeServers.length > 0 && (
+                        <div className="hidden landscape:block md:block bg-black/50 backdrop-blur-md rounded-lg">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!panelServerName && episodeServers.length > 0) {
+                                        setPanelServerName(episodeServers[0].server_name);
+                                    }
+                                    setShowEpisodePanel(v => !v);
+                                    setShowChat(false);
+                                }}
+                                className={`text-white hover:text-primary hover:bg-transparent ${showEpisodePanel ? 'text-primary' : ''}`}
+                                title="Danh sách tập"
+                            >
+                                <ListVideo className="w-5 h-5" />
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Click outside to close chat interceptor */}
             {roomId && socket && showChat && (
