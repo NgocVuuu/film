@@ -194,7 +194,7 @@ function ProfileContent() {
                                 <p className="text-gray-500 text-xs leading-relaxed font-vietnamese">
                                     {user.isPremium
                                         ? 'Cảm ơn bạn đã "nuôi" ad! Nhờ bạn mà server vẫn chạy phà phà, cùng tận hưởng đặc quyền thôi nào! ✨🙏'
-                                        : 'Donate bất kỳ để được ẩn quảng cáo trong 1 tháng. Cảm ơn bạn đã ủng hộ Pchill!'}
+                                        : '💝 Donate bất kỳ số tiền nào để được ẩn quảng cáo trong 1 tháng, nội dung là email Pchill của bạn. Cảm ơn bạn đã ủng hộ Pchill!'}
                                 </p>
                             </div>
                             {/* Hidden: Nâng cấp / Gia hạn button */}
@@ -317,7 +317,7 @@ function ProfileContent() {
                                         <p className="text-xs text-gray-500 leading-normal font-vietnamese">
                                             {user.isPremium
                                                 ? 'Cảm ơn bạn đã "nuôi" ad! Nhờ bạn mà server vẫn chạy phà phà, cùng tận hưởng đặc quyền thôi nào! ✨🙏'
-                                                : '💝 Donate bất kỳ số tiền nào để được ẩn quảng cáo trong 1 tháng. Cảm ơn bạn đã ủng hộ Pchill!'}
+                                                : '💝 Donate bất kỳ số tiền nào để được ẩn quảng cáo trong 1 tháng, nội dung là email Pchill của bạn. Cảm ơn bạn đã ủng hộ Pchill!'}
                                         </p>
                                     </div>
                                 </div>

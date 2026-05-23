@@ -17,32 +17,22 @@ interface RoomState {
     users: { id: string, displayName: string, avatar?: string }[];
 }
 
-export default function WatchPartyChat({ socket, roomId, onClose }: { socket: any, roomId: string, onClose?: () => void }) {
+export default function WatchPartyChat({ 
+    socket, 
+    roomId, 
+    messages, 
+    roomState, 
+    onClose 
+}: { 
+    socket: any, 
+    roomId: string, 
+    messages: Message[], 
+    roomState: RoomState | null,
+    onClose?: () => void 
+}) {
     const { user } = useAuth();
-    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
-    const [roomState, setRoomState] = useState<RoomState | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!socket || !user) return;
-
-        socket.on('wp_room_update', (state: RoomState) => {
-            setRoomState(state);
-        });
-
-        socket.on('wp_chat_message', (msg: Message) => {
-            setMessages(prev => [...prev, msg]);
-        });
-
-        // Join the room
-        socket.emit('wp_join_room', { roomId, user: { displayName: user.displayName, avatar: user.avatar } });
-
-        return () => {
-            socket.off('wp_room_update');
-            socket.off('wp_chat_message');
-        };
-    }, [socket, roomId, user]);
 
     useEffect(() => {
         if (messagesEndRef.current) {

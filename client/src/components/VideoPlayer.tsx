@@ -10,6 +10,7 @@ import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useWatchProgress } from '@/hooks/useWatchProgress';
 import WatchPartyChat from './WatchPartyChat';
+import toast from 'react-hot-toast';
 
 interface WebKitVideoElement extends HTMLVideoElement {
     webkitSupportsPresentationMode?: (mode: string) => boolean;
@@ -141,6 +142,9 @@ export default function VideoPlayer({
 
     // Watch Party Chat
     const [showChat, setShowChat] = useState(false);
+    const [roomState, setRoomState] = useState<any>(null);
+    const [chatMessages, setChatMessages] = useState<any[]>([]);
+    const isHost = !roomId || !roomState || roomState.host === socket?.id;
 
     // Zoom state
     const [isZoomed, setIsZoomed] = useState(false);
@@ -159,14 +163,50 @@ export default function VideoPlayer({
         serverName
     });
 
+    // Sử dụng refs để tránh vòng lặp re-render khi dependencies thay đổi
+    const episodeDataRef = useRef({ serverName, episodeSlug, onEpisodeSelect });
+    useEffect(() => {
+        episodeDataRef.current = { serverName, episodeSlug, onEpisodeSelect };
+    }, [serverName, episodeSlug, onEpisodeSelect]);
+
+    const userRef = useRef(user);
+    useEffect(() => {
+        userRef.current = user;
+    }, [user]);
+
+    // Auto Join & Sync (Chỉ chạy 1 lần khi có socket, roomId và user đã tải xong)
+    const hasJoinedRef = useRef(false);
+    const pendingSyncRef = useRef<{time: number, isPlaying: boolean} | null>(null);
+    useEffect(() => {
+        if (!socket || !roomId || !user || hasJoinedRef.current) return;
+        
+        hasJoinedRef.current = true;
+        
+        // Tự động join phòng
+        socket.emit('wp_join_room', { roomId, user: { displayName: user.displayName, avatar: user.avatar } });
+        
+        // Vừa join xong thì xin sync từ Host (nếu mình là guest)
+        socket.emit('wp_request_sync', { roomId });
+        
+        // Reset state khi unmount hoặc đổi phòng
+        return () => {
+            hasJoinedRef.current = false;
+        };
+    }, [socket, roomId, user]);
+
     // Socket listeners for Watch Party
     useEffect(() => {
-        if (!socket || !roomId || !videoRef.current) return;
+        if (!socket || !roomId) return;
+
+        const handleRoomUpdate = (state: any) => setRoomState(state);
+        socket.on('wp_room_update', handleRoomUpdate);
 
         const handlePlay = (data: { time: number }) => {
             if (videoRef.current) {
                 videoRef.current.currentTime = data.time;
-                videoRef.current.play();
+                videoRef.current.play().catch(e => {
+                    if (e.name !== 'AbortError') console.error('Play error:', e);
+                });
                 setIsPlaying(true);
             }
         };
@@ -185,14 +225,70 @@ export default function VideoPlayer({
             }
         };
 
+        // --- LATE JOINER SYNC ---
+        // Server báo có người mới vào xin sync, nếu mình là Host thì gửi trạng thái hiện tại
+        socket.on('wp_request_sync_action', ({ requesterId }: any) => {
+            if (videoRef.current) {
+                const { serverName: sName, episodeSlug: eSlug } = episodeDataRef.current;
+                socket.emit('wp_sync_state', { 
+                    requesterId, 
+                    state: { 
+                        time: videoRef.current.currentTime, 
+                        isPlaying: !videoRef.current.paused,
+                        serverName: sName,
+                        episodeSlug: eSlug
+                    } 
+                });
+            }
+        });
+
+        // Nhận trạng thái sync từ Host
+        socket.on('wp_sync_state_action', (state: any) => {
+            if (videoRef.current) {
+                if (videoRef.current.readyState >= 1) { // HAVE_METADATA
+                    videoRef.current.currentTime = state.time;
+                    if (state.isPlaying) {
+                        videoRef.current.play().catch(e => console.error(e));
+                        setIsPlaying(true);
+                    } else {
+                        videoRef.current.pause();
+                        setIsPlaying(false);
+                    }
+                } else {
+                    // Video chưa load xong, lưu vào pending để set sau khi loadedmetadata
+                    pendingSyncRef.current = { time: state.time, isPlaying: state.isPlaying };
+                }
+            }
+            // Nếu Host đang xem tập khác, tự chuyển sang tập đó
+            const { serverName: currentServer, episodeSlug: currentEp, onEpisodeSelect: onSelect } = episodeDataRef.current;
+            if (onSelect && ((state.serverName && state.serverName !== currentServer) || (state.episodeSlug && state.episodeSlug !== currentEp))) {
+                onSelect(state.serverName, state.episodeSlug);
+            }
+        });
+
+        // --- EPISODE SYNC ---
+        socket.on('wp_change_episode_action', ({ serverName: newServer, episodeSlug: newEp }: any) => {
+             const { onEpisodeSelect: onSelect } = episodeDataRef.current;
+             if (onSelect) onSelect(newServer, newEp);
+        });
+
+        socket.on('wp_chat_message', (msg: any) => {
+            setChatMessages(prev => [...prev, msg]);
+        });
+
         socket.on('wp_play_action', handlePlay);
         socket.on('wp_pause_action', handlePause);
         socket.on('wp_seek_action', handleSeek);
 
         return () => {
+            socket.off('wp_room_update', handleRoomUpdate);
             socket.off('wp_play_action', handlePlay);
             socket.off('wp_pause_action', handlePause);
             socket.off('wp_seek_action', handleSeek);
+            socket.off('wp_request_sync_action');
+            socket.off('wp_sync_state_action');
+            socket.off('wp_change_episode_action');
+            socket.off('wp_chat_message');
         };
     }, [socket, roomId]);
 
@@ -269,6 +365,10 @@ export default function VideoPlayer({
     const togglePlay = (e?: React.MouseEvent | React.TouchEvent | React.SyntheticEvent) => {
         if (e) {
             e.stopPropagation();
+        }
+        if (!isHost) {
+            toast.error('Chỉ chủ phòng mới có quyền điều khiển video');
+            return;
         }
         if (!videoRef.current) return;
 
@@ -359,6 +459,7 @@ export default function VideoPlayer({
     };
 
     const handleScrubbing = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!isHost) return;
         const time = Number(e.target.value);
         setScrubTime(time);
         if (!isScrubbing) setIsScrubbing(true);
@@ -366,6 +467,7 @@ export default function VideoPlayer({
     };
 
     const handleScrubEnd = () => {
+        if (!isHost) return;
         setIsScrubbing(false);
         if (videoRef.current) {
             videoRef.current.currentTime = scrubTime;
@@ -395,6 +497,10 @@ export default function VideoPlayer({
 
     // Seek forward/backward
     const seekVideo = (seconds: number) => {
+        if (!isHost) {
+            toast.error('Chỉ chủ phòng mới có quyền điều khiển video');
+            return;
+        }
         if (!videoRef.current) return;
         const currentVideoTime = videoRef.current.currentTime;
         const videoDuration = videoRef.current.duration || 0;
@@ -752,10 +858,10 @@ export default function VideoPlayer({
     useEffect(() => {
         const video = videoRef.current;
         const isSameEpisode = prevEpisodeRef.current?.movie === movieSlug && prevEpisodeRef.current?.episode === episodeSlug;
-        if (video && initialProgress !== null && initialProgress > 10 && video.currentTime < 5 && !isSameEpisode) {
+        if (!roomId && video && initialProgress !== null && initialProgress > 10 && video.currentTime < 5 && !isSameEpisode) {
             video.currentTime = initialProgress;
         }
-    }, [initialProgress, movieSlug, episodeSlug]);
+    }, [initialProgress, movieSlug, episodeSlug, roomId]);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -808,7 +914,17 @@ export default function VideoPlayer({
             // 2. startTime from URL param
             // 3. saved progress (initialProgress)
 
-            if (isSameEpisode && savedTimeRef.current > 0) {
+            if (pendingSyncRef.current) {
+                // Ưu tiên sync từ phòng Watch Party nếu vừa join
+                video.currentTime = pendingSyncRef.current.time;
+                if (pendingSyncRef.current.isPlaying) {
+                    video.play().catch(e => {
+                        if (e.name !== 'AbortError') console.error('Play error after sync:', e);
+                    });
+                    setIsPlaying(true);
+                }
+                pendingSyncRef.current = null;
+            } else if (isSameEpisode && savedTimeRef.current > 0) {
                 // Restore time when switching source (Vietsub <-> Thuyết minh)
                 video.currentTime = savedTimeRef.current;
             } else {
@@ -816,7 +932,8 @@ export default function VideoPlayer({
                 savedTimeRef.current = 0; // Reset saved time for safety
                 if (startTime > 0) {
                     video.currentTime = startTime;
-                } else if (initialProgress !== null && initialProgress > 10) {
+                } else if (!roomId && initialProgress !== null && initialProgress > 10) {
+                    // Cập nhật tiến độ lưu cá nhân (bỏ qua nếu đang Watch Party)
                     video.currentTime = initialProgress;
                 } else {
                     // Force reset to 0 in case the `<video>` element retained its currentTime
@@ -1640,14 +1757,19 @@ export default function VideoPlayer({
             </div> {/* End Main Player Area Wrapper */}
 
             {/* Watch Party Chat Area */}
-            {roomId && socket && (
+            {showChat && roomId && (
                 <div 
-                    className={`h-full shrink-0 z-50 transition-all duration-300 ease-in-out bg-black/90 backdrop-blur-md border-l border-white/10 overflow-hidden ${showChat ? 'w-80 opacity-100 pointer-events-auto shadow-[-10px_0_30px_rgba(0,0,0,0.5)]' : 'w-0 opacity-0 pointer-events-none'}`}
+                    className="absolute top-4 right-4 md:right-16 md:bottom-16 w-72 md:w-80 h-[60%] md:h-[400px] max-h-[80vh] z-[70] animate-in slide-in-from-right-4 fade-in duration-200"
                     onClick={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                 >
-                    <div className="w-80 h-full flex flex-col">
-                        <WatchPartyChat socket={socket} roomId={roomId} onClose={() => setShowChat(false)} />
-                    </div>
+                    <WatchPartyChat 
+                        socket={socket} 
+                        roomId={roomId} 
+                        messages={chatMessages}
+                        roomState={roomState}
+                        onClose={() => setShowChat(false)} 
+                    />
                 </div>
             )}
         </div >

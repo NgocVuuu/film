@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
-import { Play, ArrowLeft, Crown, Lock } from 'lucide-react';
+import { Play, ArrowLeft, Crown, Lock, Share2 } from 'lucide-react';
 import { ReportModal } from '@/components/ReportModal';
 import { CommentSection } from '@/components/CommentSection';
 import { DonateButton } from '@/components/DonateButton';
@@ -11,6 +11,7 @@ import { API_URL } from '@/lib/config';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '@/contexts/auth-context';
 import { PWAAds } from '@/components/PWAAds';
+import { PreRollAd } from '@/components/PreRollAd';
 import { Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { encodeServerForUrl, decodeServerFromUrl } from '@/lib/serverUrl';
@@ -74,6 +75,9 @@ export default function WatchPage() {
     // Track if we've already done initial URL-based server selection
     const hasInitialized = useRef(false);
 
+    // Pre-roll ad: true = ad dismissed, player shown; false = ad showing
+    const [adDismissed, setAdDismissed] = useState(false);
+
     // Source State
     const [availableSources, setAvailableSources] = useState<string[]>([]);
     const [currentSource, setCurrentSource] = useState<string>('');
@@ -94,8 +98,14 @@ export default function WatchPage() {
     const serverParam = serverParamRaw ? decodeServerFromUrl(serverParamRaw) : null;
 
     useEffect(() => {
+        // Lấy JWT token từ cookie để xác thực socket
+        const getCookie = (name: string) =>
+            document.cookie.match(`(^|;)\\s*${name}=([^;]+)`)?.pop() || '';
+        const token = getCookie('token');
+
         const newSocket = io(API_URL, {
             path: '/socket.io',
+            auth: { token },
             transports: ['websocket', 'polling']
         });
         setSocket(newSocket);
@@ -394,6 +404,16 @@ export default function WatchPage() {
         setCurrentEpisode(episode);
         setShouldAutoPlay(true);
 
+        // Phát sự kiện chuyển tập cho các Guest trong phòng xem chung (chỉ Host mới gửi được lên server)
+        if (socket && roomParam) {
+            socket.emit('wp_change_episode', { roomId: roomParam, serverName, episodeSlug: episode.slug });
+        }
+
+        // Reset pre-roll cho mỗi lần đổi tập
+        if (!isSameEpisode) {
+            setAdDismissed(false);
+        }
+
         // Restore time if switching versions of the same episode
         if (isSameEpisode) {
             setStartTime(playerTime);
@@ -513,7 +533,21 @@ export default function WatchPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-2 md:gap-4">
-                        {!roomParam && (
+                        {roomParam ? (
+                            // Đã tạo phòng → hiện nút Share
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(window.location.href);
+                                    toast.success('Đã sao chép link phòng! Gửi cho bạn bè cùng xem 🎉');
+                                }}
+                                className="flex items-center bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/50 text-xs font-bold gap-1 md:gap-2 px-2 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                            >
+                                <Share2 className="w-3 h-3 md:w-4 md:h-4" />
+                                <span className="hidden sm:inline">Chia sẻ phòng</span>
+                                <span className="sm:hidden">Chia sẻ</span>
+                            </button>
+                        ) : (
+                            // Chưa tạo phòng → hiện nút Tạo
                             <button 
                                 onClick={() => {
                                     if (!user) {
@@ -522,6 +556,7 @@ export default function WatchPage() {
                                     }
                                     const roomId = Math.random().toString(36).substring(2, 9);
                                     router.push(`?room=${roomId}`, { scroll: false });
+                                    toast.success('Đã tạo phòng! Chia sẻ link để bạn bè cùng xem 🎉');
                                 }}
                                 className="flex items-center bg-primary/20 text-primary hover:bg-primary/30 border border-primary/50 text-xs font-bold gap-1 md:gap-2 px-2 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors whitespace-nowrap"
                             >
@@ -559,9 +594,18 @@ export default function WatchPage() {
                     </div>
 
                     <div className="aspect-video w-full bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
+                        {/* Pre-roll ad overlay — auto-hidden for premium users */}
+                        {currentEpisode && !adDismissed && (
+                            <PreRollAd
+                                key={currentEpisode.slug}
+                                onDismiss={() => setAdDismissed(true)}
+                                poster={movie.poster_url}
+                            />
+                        )}
+
                         {/* VIP Lock Overlay */}
                         {currentSource.startsWith('PChill VIP') && !user?.isVip ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-black/95 rounded-xl gap-4 text-center p-6">
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-black/95 rounded-xl gap-4 text-center p-6 z-50 absolute top-0 left-0">
                                 <div className="w-20 h-20 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
                                     <Crown className="w-10 h-10 text-yellow-400" />
                                 </div>
@@ -580,7 +624,7 @@ export default function WatchPage() {
                                 </a>
                                 <button
                                     onClick={() => handleSourceChange('Server 1')}
-                                    className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                                    className="text-sm text-gray-500 hover:text-gray-300 transition-colors z-[60] relative"
                                 >
                                     Tiếp tục xem bằng Server miễn phí →
                                 </button>
@@ -592,7 +636,7 @@ export default function WatchPage() {
                                 src={currentEpisode.link_m3u8}
                                 poster={movie.poster_url}
                                 embedUrl={currentEpisode.link_embed}
-                                autoPlay={shouldAutoPlay}
+                                autoPlay={shouldAutoPlay && adDismissed}
                                 movieSlug={movie.slug}
                                 movieName={movie.name}
                                 movieThumb={movie.thumb_url}
