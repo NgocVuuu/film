@@ -441,10 +441,10 @@ app.use('/api/search', searchRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 
 // Admin Routes
-app.use('/api/admin', adminRoutes);
-app.use('/api/admin/upgrades', adminUpgradeRoutes);
 const pipelineRoutes = require('./admin_api');
 app.use('/api/admin/pipeline', authMiddleware, adminMiddleware, pipelineRoutes);
+app.use('/api/admin/upgrades', adminUpgradeRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health Check
 app.get('/', (req, res) => {
