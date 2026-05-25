@@ -167,73 +167,84 @@ export default function AdminRequestsPage() {
             ) : (
                 <div className="bg-surface-900 border border-white/10 rounded-xl overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full min-w-[1100px]">
                             <thead className="bg-white/5 border-b border-white/10">
                                 <tr>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Movie</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Requested By</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Type</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Priority</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Status</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Date</th>
-                                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-300">Actions</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 whitespace-nowrap w-1/4">Movie</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 whitespace-nowrap">Requested By</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 whitespace-nowrap text-center">Type</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 whitespace-nowrap w-48">Priority</th>
+                                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300 whitespace-nowrap">Status</th>
+                                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-300 whitespace-nowrap">Date</th>
+                                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-300 whitespace-nowrap">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {requests.map((request) => (
-                                    <tr key={request._id} className="hover:bg-white/5">
-                                        <td className="px-6 py-4">
+                                    <tr key={request._id} className="hover:bg-white/5 transition-colors">
+                                        <td className="px-6 py-4 min-w-[250px]">
                                             <div className="flex items-center gap-3">
-                                                <Film className="w-5 h-5 text-primary shrink-0" />
-                                                <div>
-                                                    <div className="font-medium text-white">{request.movieName}</div>
+                                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                                    <Film className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="font-bold text-white text-sm line-clamp-2 leading-snug">{request.movieName}</div>
                                                     {request.movieSlug && (
-                                                        <div className="text-xs text-gray-500">{request.movieSlug}</div>
+                                                        <div className="text-[11px] text-gray-500 font-mono mt-0.5 truncate">{request.movieSlug}</div>
                                                     )}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-400">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-medium text-gray-300">
                                                 {request.userId?.displayName || 'Unknown'}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 text-center whitespace-nowrap">
                                             {request.type === '4k_upgrade' ? (
-                                                <span className="px-2 py-1 text-[10px] font-bold rounded bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 uppercase">4K Upgrade</span>
+                                                <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-black rounded-md bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 uppercase tracking-wider">
+                                                    4K Upgrade
+                                                </span>
                                             ) : (
-                                                <span className="px-2 py-1 text-[10px] font-bold rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">New Movie</span>
+                                                <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-black rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wider">
+                                                    New Movie
+                                                </span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-1">
-                                                <TrendingUp className="w-4 h-4 text-primary" />
-                                                <span className="text-sm font-medium text-white">
-                                                    {request.priority}
-                                                </span>
-                                                <div className="flex flex-col ml-1">
-                                                    <span className="text-xs text-yellow-500 font-bold">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 shrink-0">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-sm font-black text-white">{request.priority}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-xs text-yellow-500 font-black tracking-tight">
                                                         VIP: {request.vipCount || 0}
                                                     </span>
-                                                    <span className="text-[10px] text-gray-400 font-medium">
+                                                    <span className="text-[10px] text-gray-400 font-bold">
                                                         Premium: {request.premiumCount || 0}
                                                     </span>
-                                                    <span className="text-[10px] text-gray-500">
+                                                    <span className="text-[10px] text-gray-500 font-medium">
                                                         Tổng: {request.requestCount}
                                                     </span>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(request.status)}`}>
+                                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                                            <span className={`inline-flex px-2.5 py-1 text-[11px] font-bold rounded-md uppercase tracking-wider ${getStatusBadge(request.status)}`}>
                                                 {request.status}
                                             </span>
                                             {request.errorMessage && (
-                                                <div className="text-xs text-red-400 mt-1">{request.errorMessage}</div>
+                                                <div className="text-[10px] text-red-400 mt-1.5 max-w-[150px] truncate mx-auto" title={request.errorMessage}>
+                                                    {request.errorMessage}
+                                                </div>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-400">
-                                            {new Date(request.createdAt).toLocaleDateString('vi-VN')}
+                                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                                            <div className="text-[13px] text-gray-400 font-medium">
+                                                {new Date(request.createdAt).toLocaleDateString('vi-VN')}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
