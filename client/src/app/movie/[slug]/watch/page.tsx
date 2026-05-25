@@ -491,9 +491,6 @@ export default function WatchPage() {
 
         // Auto failover strategy
         let fallbackSource: string | null = null;
-        
-        // Convert Set to Array to check available sources
-        const availableSources = Array.from(sources);
 
         if (currentSource === 'PChill VIP 1') {
             fallbackSource = availableSources.includes('PChill VIP 2') ? 'PChill VIP 2' : (availableSources.includes('Server 1') ? 'Server 1' : null);
