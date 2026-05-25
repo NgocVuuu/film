@@ -158,12 +158,16 @@ export default function AdminMoviesPage() {
 
     return (
         <div className="p-4 md:p-6">
-            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between mb-8 gap-6">
-                <h1 className="text-2xl font-bold text-white shrink-0">Quản lý Phim</h1>
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-6">
+                <div className="flex flex-col gap-1 shrink-0">
+                    <h1 className="text-2xl font-bold text-white">Quản lý Phim</h1>
+                    <p className="text-sm text-gray-400">Quản lý kho phim, nổi bật, ẩn/hiện và quét TMDB.</p>
+                </div>
 
-                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full xl:w-auto">
-                    <div className="flex items-center gap-2 bg-surface-800 p-2 rounded-xl border border-white/10 relative group/select">
-                        <span className="text-[10px] text-gray-500 px-2 uppercase font-black tracking-widest hidden sm:inline">Trạng thái</span>
+                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto flex-1 lg:justify-end">
+                    {/* Status Filter */}
+                    <div className="flex items-center bg-surface-800 p-1.5 rounded-xl border border-white/10 shrink-0">
+                        <span className="text-[10px] text-gray-500 px-3 uppercase font-black tracking-widest hidden sm:inline">Trạng thái</span>
                         <div className="relative">
                             <select
                                 value={isActiveFilter}
@@ -171,40 +175,40 @@ export default function AdminMoviesPage() {
                                     setIsActiveFilter(e.target.value);
                                     setPage(1);
                                 }}
-                                className="bg-surface-900 border border-white/5 text-white h-9 pl-3 pr-8 rounded-lg text-xs focus:outline-none focus:border-primary transition-colors appearance-none cursor-pointer hover:bg-surface-700 min-w-[120px]"
+                                className="bg-surface-900 border border-white/5 text-white h-10 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:border-primary transition-colors appearance-none cursor-pointer hover:bg-surface-700 min-w-[130px]"
                             >
                                 <option value="true" className="bg-surface-900 py-2">Đang hiện</option>
                                 <option value="false" className="bg-surface-900 py-2 text-red-400 font-bold">Đã xóa/ẩn</option>
                                 <option value="all" className="bg-surface-900 py-2">Tất cả</option>
                             </select>
-                            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                             </div>
                         </div>
                     </div>
 
                     {/* Scraper Range */}
-                    <div className="flex flex-wrap items-center gap-2 bg-surface-800 p-2 rounded-xl border border-white/10 flex-1 md:flex-initial">
-                        <span className="text-[10px] text-gray-500 px-2 uppercase font-black tracking-widest hidden sm:inline">Quét nhanh</span>
-                        <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                    <div className="flex items-center bg-surface-800 p-1.5 rounded-xl border border-white/10 shrink-0">
+                        <span className="text-[10px] text-gray-500 px-3 uppercase font-black tracking-widest hidden md:inline">Quét TMDB</span>
+                        <div className="flex items-center gap-1.5">
                             <Input
                                 type="number"
                                 placeholder="Từ"
-                                className="bg-surface-900 border-white/5 text-white w-14 h-9 text-xs"
+                                className="bg-surface-900 border-white/5 text-white w-16 h-10 text-sm text-center px-1"
                                 id="fromPage"
                             />
-                            <span className="text-gray-500">-</span>
+                            <span className="text-gray-600 font-bold">-</span>
                             <Input
                                 type="number"
                                 placeholder="Đến"
-                                className="bg-surface-900 border-white/5 text-white w-14 h-9 text-xs"
+                                className="bg-surface-900 border-white/5 text-white w-16 h-10 text-sm text-center px-1"
                                 id="toPage"
                             />
                         </div>
                         <Button
                             size="sm"
                             variant="secondary"
-                            className="bg-primary/20 text-primary hover:bg-primary/30 border-none h-9 px-4"
+                            className="bg-primary/20 text-primary hover:bg-primary/30 border-none h-10 px-4 ml-2"
                             onClick={async () => {
                                 const from = (document.getElementById('fromPage') as HTMLInputElement).value;
                                 const to = (document.getElementById('toPage') as HTMLInputElement).value;
@@ -228,15 +232,16 @@ export default function AdminMoviesPage() {
                         </Button>
                     </div>
 
-                    <div className="flex gap-2 flex-1 md:flex-initial">
+                    {/* Search */}
+                    <div className="flex gap-2 w-full sm:w-auto shrink-0 flex-1 sm:flex-none">
                         <Input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                            placeholder="Tìm kiếm phim..."
-                            className="bg-surface-800 border-white/10 text-white flex-1 md:w-64 h-11 md:h-10"
+                            placeholder="Tìm phim..."
+                            className="bg-surface-800 border-white/10 text-white w-full sm:w-64 h-10"
                         />
-                        <Button onClick={handleSearch} className="h-11 md:h-10 px-6">Tìm</Button>
+                        <Button onClick={handleSearch} className="h-10 px-6 shrink-0">Tìm</Button>
                     </div>
                 </div>
             </div>
