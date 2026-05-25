@@ -618,7 +618,7 @@ export default function AdminPipelinePage() {
                                 return (
                                     <div className="space-y-6">
                                         <h3 className="text-md font-bold text-green-400">Kết quả ({extractedLinks.length} files):</h3>
-                                        {Object.entries(groupedByHost).map(([host, links]) => (
+                                        {Object.entries(groupedByHost).map(([host, links]: [string, any]) => (
                                             <div key={host} className="bg-black/20 border border-white/5 rounded-xl overflow-hidden">
                                                 <div className="bg-white/5 px-4 py-3 flex items-center justify-between border-b border-white/5">
                                                     <div className="font-bold text-white flex items-center gap-2">
