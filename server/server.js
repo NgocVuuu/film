@@ -22,6 +22,7 @@ const searchRoutes = require('./routes/searchRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const adminUpgradeRoutes = require('./routes/adminUpgradeRoutes');
+const adminDramaRoutes = require('./routes/adminDramaRoutes');
 const { authMiddleware, adminMiddleware } = require('./middleware/authMiddleware');
 const movieRoutes = require('./routes/movieRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
@@ -444,6 +445,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 const pipelineRoutes = require('./admin_api');
 app.use('/api/admin/pipeline', authMiddleware, adminMiddleware, pipelineRoutes);
 app.use('/api/admin/upgrades', adminUpgradeRoutes);
+app.use('/api/admin/drama', adminDramaRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health Check
