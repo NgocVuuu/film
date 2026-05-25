@@ -215,7 +215,7 @@ async function runAutoUploadPipeline(jobData) {
 
         console.log("✅ [2] Mở trình duyệt ẩn danh Puppeteer...");
         browser = await puppeteer.launch({ 
-            headless: false, // Để xem quá trình Ouo.io & Cloudflare (Có thể đổi true nếu chạy nền)
+            headless: true, // Chạy nền trên Server VPS
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox',
