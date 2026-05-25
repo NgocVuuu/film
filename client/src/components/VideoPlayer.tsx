@@ -1413,8 +1413,6 @@ export default function VideoPlayer({
                         src={embedUrl}
                         className="w-full h-full border-none rounded-lg"
                         allowFullScreen={true}
-                        webkitallowfullscreen="true"
-                        mozallowfullscreen="true"
                         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                         onLoad={() => setIsLoading(false)}
                     />
