@@ -438,7 +438,7 @@ export function HeroSlider({ movies }: HeroSliderProps) {
     return (
         <div
             ref={sliderRef}
-            className="relative w-full h-auto md:h-screen -mt-[calc(3.5rem+env(safe-area-inset-top))] md:-mt-16 group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing touch-pan-y"
+            className="relative w-full h-auto md:h-screen group overflow-hidden bg-black select-none cursor-grab active:cursor-grabbing touch-pan-y"
             style={{ overscrollBehaviorX: 'none' }}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}

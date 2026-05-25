@@ -29,12 +29,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     const isAdmin = pathname?.startsWith('/admin');
     const isWatchPage = pathname?.includes('/watch');
 
+    const isHome = pathname === '/';
     // Hide top navbar on PWA if not on home page, and also hide it on watch page (it has its own header)
-    const showNavbar = !isAdmin && !isWatchPage && (!isPWA || pathname === '/');
+    const showNavbar = !isAdmin && !isWatchPage && (!isPWA || isHome);
     const isProfile = pathname?.startsWith('/profile');
     // Hide footer on PWA entirely, and on Profile page to allow fullscreen layout
     const showFooter = !isAdmin && !isPWA && !isProfile;
 
+    // Do not apply top padding on the Home page so the HeroSlider can sit directly underneath the transparent Navbar.
+    const applyTopPadding = showNavbar && !isHome;
 
     return (
         <NotificationProvider>
@@ -43,7 +46,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     <Navbar />
                 </Suspense>
             )}
-            <main className={`flex-1 ${!isAdmin ? `${showNavbar ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-16' : 'pt-[env(safe-area-inset-top)]'} ${showFooter ? 'pb-32' : 'pb-24'} ${isProfile ? 'lg:pb-0' : 'lg:pb-8'}` : ''}`}>
+            <main className={`flex-1 ${!isAdmin ? `${applyTopPadding ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-16' : 'pt-0'} ${showFooter ? 'pb-32' : 'pb-24'} ${isProfile ? 'lg:pb-0' : 'lg:pb-8'}` : ''}`}>
                 {children}
             </main>
             {!isAdmin && (
