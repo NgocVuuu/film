@@ -67,15 +67,19 @@ const userSchema = new mongoose.Schema({
     },
     verificationToken: String,
     verificationTokenExpire: Date,
-    lastLogin: Date
+    lastLogin: Date,
+    activeSessions: [{
+        sessionId: String,
+        deviceInfo: String,
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 }, {
     timestamps: true
 });
 
-// Index for faster queries
-userSchema.index({ email: 1 });
-userSchema.index({ phoneNumber: 1 });
-userSchema.index({ googleId: 1 });
-userSchema.index({ discordId: 1 });
+// Indexes are created automatically by unique:true in the schema definition
 
 module.exports = mongoose.model('User', userSchema);

@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 const HostUpload = require('../models/HostUpload');
 const Movie = require('../models/Movie');
-const { PremiumHostService, play4meAPI, seekStreamingAPI } = require('./videoHostProviders');
+const { PremiumHostService, AbyssHostService, play4meAPI, abyssAPI } = require('./videoHostProviders');
 const HostFolder = require('../models/HostFolder');
 
 // map host key to API instance
 const hostApis = {
   Play4Me: play4meAPI,
-  SeekStreaming: seekStreamingAPI
+  Abyss: abyssAPI
 };
 
 function normalizeMovieFolderName(name) {
@@ -125,11 +125,24 @@ async function getUploadByTask(host, taskId) {
 
 async function pollAndSyncStatus(hostService, taskId, docId) {
   try {
+    const doc = await HostUpload.findById(docId);
+    if (!doc) return;
+    
     const status = await hostService.checkUploadStatus(taskId);
     let mapped = 'pending';
-    if (status.status === 'completed') mapped = 'completed';
-    else if (status.status === 'error') mapped = 'failed';
-    else mapped = 'processing';
+    
+    if (status.status === 'completed') {
+        if (doc.subtitleStatus === 'pending' || doc.subtitleStatus === 'processing') {
+            console.log(`[SYNC] Video ${doc.episode} đã xử lý xong trên Host, nhưng phụ đề đang bóc tách. Đợi chu kỳ sau...`);
+            mapped = 'processing';
+        } else {
+            mapped = 'completed';
+        }
+    } else if (status.status === 'error') {
+        mapped = 'failed';
+    } else {
+        mapped = 'processing';
+    }
 
     const updatedDoc = await updateUpload(docId, { status: mapped, notes: status.error || '', videoId: status.videoId || null });
     if (mapped === 'completed' && status.videoId && updatedDoc) {
@@ -222,7 +235,7 @@ async function assignUploadToFolder(host, videoId, series, season, folderName) {
 
 /**
  * Create player on a host and apply initial configuration and ads
- * @param {string} hostKey - one of keys in hostApis (Play4Me, SeekStreaming)
+ * @param {string} hostKey - one of keys in hostApis (Play4Me, Abyss)
  * @param {string} domain - custom domain or subdomain (e.g. embed.pchill.online)
  * @param {Object} config - partial player config to PATCH after creation
  * @param {Array} ads - optional array of ad payloads to create via POST
@@ -268,19 +281,19 @@ async function createAndConfigurePlayer(hostKey, domain, config = {}, ads = []) 
 
     return { ok: errors.length === 0, playerId, errors, createdAds };
   } catch (e) {
-    return { ok: false, playerId: null, errors: [e.message || String(e)] };
+return { ok: false, playerId: null, errors: [e.message || String(e)] };
   }
 }
 
 // Remote upload with robust retry/backoff wrapper
-async function remoteUploadWithRetry(hostKey, videoUrl, title, folderId = null, attempts = 3, backoffs = [5000, 15000, 45000]) {
+async function remoteUploadWithRetry(hostKey, videoUrl, title, folderId = null, uploadId = null, attempts = 3, backoffs = [5000, 15000, 45000]) {
   const api = hostApis[hostKey];
   if (!api) throw new Error(`No API configured for host ${hostKey}`);
 
   let lastErr = null;
   for (let i = 0; i < attempts; i++) {
     try {
-      const taskId = await api.remoteUpload(videoUrl, title, folderId);
+      const taskId = await api.remoteUpload(videoUrl, title, folderId, uploadId);
       return { ok: true, taskId, attempts: i + 1 };
     } catch (e) {
       lastErr = e;

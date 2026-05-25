@@ -19,7 +19,7 @@ const OPTIONS = [
     },
     {
         label: 'WeScan',
-        href: 'https://wescan.vn/dngocvu14',
+        href: 'https://wescan.vn/Paul14',
         content: <WeScanLogo />,
         bg: 'bg-white border border-gray-200',
     },

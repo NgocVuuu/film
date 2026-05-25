@@ -19,6 +19,10 @@ export default function AdminPipelinePage() {
     const [extracting, setExtracting] = useState(false);
     const [extractedLinks, setExtractedLinks] = useState<any[]>([]);
     
+    // Bulk Sync State
+    const [bulkAbyssText, setBulkAbyssText] = useState('');
+    const [isBulkSyncing, setIsBulkSyncing] = useState(false);
+
     // Retry Custom Links State
     const [customLinks, setCustomLinks] = useState<Record<string, string>>({});
 
@@ -84,6 +88,44 @@ export default function AdminPipelinePage() {
             toast.error('Lỗi kết nối tới Server Crawler');
         } finally {
             setCrawlingUrl(false);
+        }
+    };
+
+    const handleBulkSync = async () => {
+        if (!selectedMovie || !bulkAbyssText.trim() || extractedLinks.length === 0) return;
+        
+        setIsBulkSyncing(true);
+        try {
+            const lines = bulkAbyssText.split('\n').map(l => l.trim()).filter(Boolean);
+            if (lines.length === 0) {
+                toast.error('Vui lòng nhập danh sách link hoặc ID Abyss');
+                setIsBulkSyncing(false);
+                return;
+            }
+
+            toast('Bắt đầu đồng bộ hàng loạt. Tiến trình này sẽ chạy ngầm trên server, bạn có thể kiểm tra danh sách phim sau ít phút.', { icon: '🚀', duration: 5000 });
+            
+            const res = await customFetch('/api/admin/pipeline/abyss-bulk-sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    movieId: selectedMovie._id,
+                    abyssLines: lines,
+                    extractedLinks: extractedLinks
+                })
+            });
+            const data = await res.json();
+            
+            if (res.ok && data.ok) {
+                toast.success(`Đã xử lý đồng bộ thành công! ${data.message || ''}`, { duration: 8000 });
+                setBulkAbyssText('');
+            } else {
+                toast.error(data.error || 'Lỗi khi đồng bộ hàng loạt');
+            }
+        } catch (e) {
+            toast.error('Lỗi kết nối API đồng bộ');
+        } finally {
+            setIsBulkSyncing(false);
         }
     };
 
@@ -409,6 +451,7 @@ export default function AdminPipelinePage() {
                                                         {!groupByMovie && <th className="px-6 py-3 font-medium text-gray-400">Series</th>}
                                                         <th className="px-6 py-3 font-medium text-gray-400">Host</th>
                                                         <th className="px-6 py-3 font-medium text-gray-400">Status</th>
+                                                        <th className="px-6 py-3 font-medium text-gray-400">Subtitle</th>
                                                         <th className="px-6 py-3 font-medium text-gray-400">Actions</th>
                                                     </tr>
                                                 </thead>
@@ -442,6 +485,20 @@ export default function AdminPipelinePage() {
                                                                 </span>
                                                                 {u.notes && (
                                                                     <p className="text-[10px] text-red-400 mt-0.5 truncate max-w-[180px]" title={u.notes}>{u.notes}</p>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-6 py-3">
+                                                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                                                    u.subtitleStatus === 'completed' ? 'bg-green-500/20 text-green-500' :
+                                                                    u.subtitleStatus === 'error' ? 'bg-red-500/20 text-red-400' :
+                                                                    u.subtitleStatus === 'processing' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                                    'bg-gray-500/20 text-gray-400'
+                                                                }`}>
+                                                                    {u.subtitleStatus === 'error' && <AlertTriangle className="w-3 h-3 mr-1" />}
+                                                                    {u.subtitleStatus ? u.subtitleStatus.toUpperCase() : 'PENDING'}
+                                                                </span>
+                                                                {u.subtitleLog && (
+                                                                    <p className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[180px]" title={u.subtitleLog}>{u.subtitleLog}</p>
                                                                 )}
                                                             </td>
                                                             <td className="px-6 py-3 flex items-center space-x-2">
@@ -545,41 +602,105 @@ export default function AdminPipelinePage() {
                                 </Button>
                             </div>
 
-                            {extractedLinks.length > 0 && (
-                                <div>
-                                    <h3 className="text-md font-bold text-green-400 mb-3">Kết quả ({extractedLinks.length} files):</h3>
-                                    <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {extractedLinks.map((link, idx) => (
-                                            <div key={idx} className="bg-black/40 border border-white/5 rounded-lg p-3 flex flex-col md:flex-row gap-3 items-start md:items-center justify-between hover:border-white/10 transition-colors">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="font-mono text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-bold">
-                                                            {link.episode}
-                                                        </span>
-                                                        <span className="text-white text-sm font-medium truncate" title={link.name}>
-                                                            {link.name}
-                                                        </span>
+                            {extractedLinks.length > 0 && (() => {
+                                const groupedByHost = extractedLinks.reduce((acc, link) => {
+                                    let host = 'Others';
+                                    if (link.link.includes('pixeldrain.com')) host = 'Pixeldrain';
+                                    else if (link.link.includes('gofile.io')) host = 'Gofile';
+                                    else if (link.link.includes('send.cm')) host = 'Send.cm';
+                                    else if (link.link.includes('send.now')) host = 'Send.now';
+                                    
+                                    if (!acc[host]) acc[host] = [];
+                                    acc[host].push(link);
+                                    return acc;
+                                }, {} as Record<string, any[]>);
+
+                                return (
+                                    <div className="space-y-6">
+                                        <h3 className="text-md font-bold text-green-400">Kết quả ({extractedLinks.length} files):</h3>
+                                        {Object.entries(groupedByHost).map(([host, links]) => (
+                                            <div key={host} className="bg-black/20 border border-white/5 rounded-xl overflow-hidden">
+                                                <div className="bg-white/5 px-4 py-3 flex items-center justify-between border-b border-white/5">
+                                                    <div className="font-bold text-white flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full bg-primary"></span>
+                                                        {host} <span className="text-gray-400 text-xs font-normal">({links.length} links)</span>
                                                     </div>
-                                                    <div className="text-xs text-gray-500 truncate" title={link.link}>
-                                                        {link.link}
-                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            const text = links.map((l: any) => l.link).join('\n');
+                                                            navigator.clipboard.writeText(text);
+                                                            toast.success(`Đã copy ${links.length} link ${host}!`);
+                                                        }}
+                                                        className="bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 text-xs h-8"
+                                                    >
+                                                        Copy Tất Cả ({host})
+                                                    </Button>
                                                 </div>
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="outline"
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(link.link);
-                                                        toast.success('Đã copy link!');
-                                                    }}
-                                                    className="border-white/10 text-gray-300 hover:text-white hover:bg-white/5 whitespace-nowrap"
-                                                >
-                                                    Copy Link
-                                                </Button>
+                                                <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+                                                    {links.map((link: any, idx: number) => (
+                                                        <div key={idx} className="bg-black/40 border border-white/5 rounded-lg p-3 flex flex-col md:flex-row gap-3 items-start md:items-center justify-between hover:border-white/10 transition-colors">
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="font-mono text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-bold">
+                                                                        {link.episode}
+                                                                    </span>
+                                                                    <span className="text-white text-sm font-medium truncate" title={link.name}>
+                                                                        {link.name}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-xs text-gray-500 truncate" title={link.link}>
+                                                                    {link.link}
+                                                                </div>
+                                                            </div>
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(link.link);
+                                                                    toast.success('Đã copy link!');
+                                                                }}
+                                                                className="border-white/10 text-gray-300 hover:text-white hover:bg-white/5 whitespace-nowrap"
+                                                            >
+                                                                Copy
+                                                            </Button>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         ))}
+
+                                        {/* Bulk Sync Section */}
+                                        {selectedMovie && (
+                                            <div className="mt-8 bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
+                                                <h3 className="text-lg font-bold text-blue-400 mb-2">Đồng bộ hàng loạt Abyss (Bulk Sync)</h3>
+                                                <p className="text-sm text-blue-300/70 mb-4">
+                                                    Đang chọn phim: <strong className="text-white">{selectedMovie.name}</strong>. Hãy dán danh sách ID hoặc Link Abyss (mỗi cái 1 dòng) mà bạn vừa tải xong bên Abyss Dashboard vào đây. Hệ thống sẽ tự động đối chiếu, up phụ đề và đăng lên web!
+                                                </p>
+                                                <textarea
+                                                    value={bulkAbyssText}
+                                                    onChange={(e) => setBulkAbyssText(e.target.value)}
+                                                    placeholder="YawKPXtB8&#10;https://abyss.to/xxxx&#10;..."
+                                                    className="w-full h-32 bg-black/40 border border-blue-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-blue-400 mb-4"
+                                                />
+                                                <Button
+                                                    onClick={handleBulkSync}
+                                                    disabled={isBulkSyncing || !bulkAbyssText.trim()}
+                                                    className="bg-blue-600 hover:bg-blue-500 text-white w-full"
+                                                >
+                                                    {isBulkSyncing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang đồng bộ...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Bắt đầu Đồng Bộ & Up Phụ Đề</>}
+                                                </Button>
+                                            </div>
+                                        )}
+                                        {!selectedMovie && (
+                                            <div className="mt-8 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 text-center">
+                                                <p className="text-sm text-yellow-500 mb-2">💡 Bạn chưa chọn phim ở phía trên!</p>
+                                                <p className="text-xs text-yellow-500/70">Để dùng tính năng "Đồng bộ hàng loạt Abyss", hãy cuộn lên mục số 1 và chọn Phim trong Database trước nhé.</p>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })()}
                         </div>
                     )}
                 </>

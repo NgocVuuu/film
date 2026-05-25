@@ -40,7 +40,7 @@ class MkvScraper {
     /**
      * Truy cập linh phim, refresh để reset thời gian chờ, lấy link ouo của link 1 - 2160
      */
-    async getOuoLinkFromMoviePage(movieUrl) {
+    async getOuoLinkFromMoviePage(movieUrl, preferredMirror = 1) {
         if (!this.browser) await this.initBrowser();
         const page = await this.browser.newPage();
         
@@ -55,12 +55,9 @@ class MkvScraper {
                 const isCf = await page.evaluate(() => document.title.includes('moment') || document.body.innerText.includes('Cloudflare'));
                 if (isCf) {
                     console.log(`[MkvScraper] Phát hiện Cloudflare, đang chờ... (${i+1}/5)`);
-                    
-                    // Thử click vào một điểm giữa màn hình (nơi Cloudflare có thể hiển thị checkbox Turnstile)
                     const x = 800 / 2;
                     const y = 600 / 2;
                     await page.mouse.click(x, y);
-
                     await new Promise(r => setTimeout(r, 6000));
                 } else {
                     break;
@@ -80,38 +77,38 @@ class MkvScraper {
             });
             await new Promise(r => setTimeout(r, 1000));
 
-            const ouoLink = await page.evaluate(() => {
+            const ouoLink = await page.evaluate((mirror) => {
                 const links = Array.from(document.querySelectorAll('a'));
                 const ouoLinks = links.filter(a => a.href.includes('ouo.io') || a.href.includes('ouo.press'));
                 
                 // Tìm mục chứa 1080 hoặc 720 (ưu tiên 1080)
                 for (let a of ouoLinks) {
                     const rowText = a.closest('tr')?.innerText.toLowerCase() || a.closest('.row')?.innerText.toLowerCase() || '';
-                    if ((rowText.includes('1080') || rowText.includes('720')) && a.innerText.toLowerCase().includes('link 1')) {
+                    if ((rowText.includes('1080') || rowText.includes('720')) && a.innerText.toLowerCase().includes(`link ${mirror}`)) {
                         return a.href; 
                     }
                 }
                 
-                // Thuật toán dự phòng
-                for (let a of ouoLinks) {
-                    const parentText = (a.parentElement?.parentElement?.innerText || a.parentElement?.innerText || '').toLowerCase();
-                    const grandText = a.closest('tr')?.innerText.toLowerCase() || '';
-                    if (parentText.includes('1080') || grandText.includes('1080p') || parentText.includes('720') || grandText.includes('720p')) {
-                        return a.href;
+                // Thuật toán dự phòng (nếu không tìm thấy Link {mirror}, thử lấy link kế tiếp)
+                if (mirror > 1) {
+                    for (let a of ouoLinks) {
+                        const rowText = a.closest('tr')?.innerText.toLowerCase() || a.closest('.row')?.innerText.toLowerCase() || '';
+                        if ((rowText.includes('1080') || rowText.includes('720')) && a.innerText.toLowerCase().includes(`link 1`)) {
+                            return a.href; 
+                        }
                     }
                 }
 
                 return ouoLinks.length > 0 ? ouoLinks[0].href : null;
-            });
+            }, preferredMirror);
 
             if (!ouoLink) {
-                // Hãy thử in ra toàn bộ text để debug
                 const pageText = await page.evaluate(() => document.body.innerText.substring(0, 1000));
-                console.log(`[MkvScraper] Không tìm thấy link ouo.io nào. Nội dung web: ${pageText}`);
-                throw new Error("Không thể tìm thấy link ouo.io nào cho định dạng 1080/720 trong trang này.");
+                console.log(`[MkvScraper] Không tìm thấy link ouo.io nào cho Link ${preferredMirror}.`);
+                throw new Error(`Không thể tìm thấy link ouo.io cho Link ${preferredMirror}.`);
             }
 
-            console.log(`[MkvScraper] Đã bóc được link ouo: ${ouoLink}`);
+            console.log(`[MkvScraper] Đã bóc được link ouo (Link ${preferredMirror}): ${ouoLink}`);
             return ouoLink;
 
         } finally {

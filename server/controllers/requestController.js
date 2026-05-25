@@ -33,10 +33,17 @@ exports.requestMovie = async (req, res) => {
             status: { $in: ['pending', 'processing'] }
         });
 
+        const userTier = req.user.subscription?.tier;
+        const isVip = userTier === 'vip';
+        const isPremium = userTier === 'premium';
+
         if (request) {
             // Increment request count and priority
             request.requestCount += 1;
             request.priority += 1;
+            if (isVip) request.vipCount += 1;
+            if (isPremium) request.premiumCount += 1;
+            
             await request.save();
 
             return res.json({
@@ -52,7 +59,9 @@ exports.requestMovie = async (req, res) => {
             movieName,
             movieSlug,
             ophimUrl,
-            priority: 1
+            priority: 1,
+            vipCount: isVip ? 1 : 0,
+            premiumCount: isPremium ? 1 : 0
         });
 
         // Note: Processing moved to GitHub Actions (runs every 30 min)

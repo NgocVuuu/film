@@ -1,5 +1,5 @@
 const Movie = require('../models/Movie');
-const { play4meAPI, seekStreamingAPI } = require('../utils/videoHostProviders');
+const { play4meAPI, abyssAPI } = require('../utils/videoHostProviders');
 const { cache } = require('../middleware/cacheMiddleware');
 
 // Helper function to extract videoId from embed link
@@ -112,7 +112,7 @@ exports.updateMovie = async (req, res) => {
         if (filteredUpdates.episodes && movie.episodes) {
             movie.episodes.forEach(oldServer => {
                 const api = oldServer.server_name === 'PChill - Play4Me' ? play4meAPI : 
-                            oldServer.server_name === 'PChill - SeekStreaming' ? seekStreamingAPI : null;
+                            oldServer.server_name === 'PChill - Abyss' ? abyssAPI : null;
                 if (api) {
                     const newServer = filteredUpdates.episodes.find(s => s.server_name === oldServer.server_name);
                     const newEpSlugs = newServer ? newServer.server_data.map(e => e.slug) : [];
@@ -207,7 +207,7 @@ exports.deleteMovie = async (req, res) => {
             if (movie.episodes) {
                 movie.episodes.forEach(serverObj => {
                     const api = serverObj.server_name === 'PChill - Play4Me' ? play4meAPI : 
-                                serverObj.server_name === 'PChill - SeekStreaming' ? seekStreamingAPI : null;
+                                serverObj.server_name === 'PChill - Abyss' ? abyssAPI : null;
                     if (api) {
                         serverObj.server_data.forEach(ep => {
                             const videoId = extractVideoId(ep.link_embed);

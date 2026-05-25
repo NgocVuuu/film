@@ -24,12 +24,32 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Generate JWT token
-const generateToken = (userId) => {
+const generateToken = (userId, sessionId) => {
     return jwt.sign(
-        { userId },
+        { userId, sessionId },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
+};
+
+// Handle Device Limit
+const handleDeviceLimit = (user, req) => {
+    let maxDevices = 10; // Free (Mặc định) = 10 thiết bị
+    if (user.role === 'admin') maxDevices = 999;
+    else if (user.subscription?.tier === 'vip' && user.subscription?.status === 'active') maxDevices = 3; // VIP = 3
+    else if (user.subscription?.tier === 'premium' && user.subscription?.status === 'active') maxDevices = 3; // Premium = 3
+
+    const sessionId = crypto.randomBytes(16).toString('hex');
+    const deviceInfo = req.headers['user-agent'] || 'Unknown Device';
+
+    if (!user.activeSessions) user.activeSessions = [];
+    user.activeSessions.push({ sessionId, deviceInfo, createdAt: new Date() });
+
+    if (user.activeSessions.length > maxDevices) {
+        user.activeSessions.sort((a, b) => a.createdAt - b.createdAt);
+        user.activeSessions = user.activeSessions.slice(-maxDevices);
+    }
+    return sessionId;
 };
 
 // Google OAuth Login
@@ -111,8 +131,12 @@ exports.googleLogin = async (req, res) => {
             await user.save();
         }
 
+        // Device Management
+        const sessionId = handleDeviceLimit(user, req);
+        await user.save();
+
         // Generate JWT
-        const token = generateToken(user._id);
+        const token = generateToken(user._id, sessionId);
 
         // Determine environment to set cookie attributes correctly
         // FIX: Check Origin header to force SameSite=None for cross-site requests (Cloudflare Pages -> VPS)
@@ -266,8 +290,12 @@ exports.discordCallback = async (req, res) => {
             console.warn('Could not add user to Discord guild:', guildErr.message);
         }
 
+        // Device Management
+        const sessionId = handleDeviceLimit(user, req);
+        await user.save();
+
         // Tạo JWT và set cookie
-        const token = generateToken(user._id);
+        const token = generateToken(user._id, sessionId);
 
         const origin = req.headers.origin || '';
         const isProduction = process.env.NODE_ENV === 'production' ||
@@ -340,6 +368,11 @@ exports.getCurrentUser = async (req, res) => {
 // Logout (mainly for client-side token removal)
 exports.logout = async (req, res) => {
     try {
+        if (req.user && req.sessionId) {
+            req.user.activeSessions = req.user.activeSessions.filter(s => s.sessionId !== req.sessionId);
+            await req.user.save();
+        }
+
         const origin = req.headers.origin || '';
         const isProduction = process.env.NODE_ENV === 'production' ||
             (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) ||
@@ -477,8 +510,12 @@ exports.verifyEmail = async (req, res) => {
         user.verificationTokenExpire = undefined;
         await user.save();
 
+        // Device Management
+        const sessionId = handleDeviceLimit(user, req);
+        await user.save();
+
         // Auto login after verification using existing method logic
-        const jwtToken = generateToken(user._id);
+        const jwtToken = generateToken(user._id, sessionId);
 
         res.cookie('token', jwtToken, {
             httpOnly: true,
@@ -603,8 +640,13 @@ exports.login = async (req, res) => {
             });
         }
 
+        // Device Management
+        const sessionId = handleDeviceLimit(user, req);
+        user.lastLogin = new Date();
+        await user.save();
+
         // Login success
-        const token = generateToken(user._id);
+        const token = generateToken(user._id, sessionId);
 
         res.cookie('token', token, {
             httpOnly: true,

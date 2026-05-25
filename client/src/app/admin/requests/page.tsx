@@ -17,6 +17,8 @@ interface MovieRequest {
     type?: string;
     priority: number;
     requestCount: number;
+    vipCount?: number;
+    premiumCount?: number;
     createdAt: string;
     errorMessage?: string;
 }
@@ -209,9 +211,17 @@ export default function AdminRequestsPage() {
                                                 <span className="text-sm font-medium text-white">
                                                     {request.priority}
                                                 </span>
-                                                <span className="text-xs text-gray-500">
-                                                    ({request.requestCount}x)
-                                                </span>
+                                                <div className="flex flex-col ml-1">
+                                                    <span className="text-xs text-yellow-500 font-bold">
+                                                        VIP: {request.vipCount || 0}
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-400 font-medium">
+                                                        Premium: {request.premiumCount || 0}
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-500">
+                                                        Tổng: {request.requestCount}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">

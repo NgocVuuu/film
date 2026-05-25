@@ -11,7 +11,6 @@ import { API_URL } from '@/lib/config';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '@/contexts/auth-context';
 import { PWAAds } from '@/components/PWAAds';
-import { PreRollAd } from '@/components/PreRollAd';
 import { Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { encodeServerForUrl, decodeServerFromUrl } from '@/lib/serverUrl';
@@ -74,9 +73,6 @@ export default function WatchPage() {
 
     // Track if we've already done initial URL-based server selection
     const hasInitialized = useRef(false);
-
-    // Pre-roll ad: true = ad dismissed, player shown; false = ad showing
-    const [adDismissed, setAdDismissed] = useState(false);
 
     // Source State
     const [availableSources, setAvailableSources] = useState<string[]>([]);
@@ -190,8 +186,8 @@ export default function WatchPage() {
             const name = ep.server_name;
             if (name.startsWith('KK -')) sources.add('Server 1');
             else if (name.startsWith('OP -')) sources.add('Server 2');
-            else if (name.includes('PChill - Play4Me')) sources.add('PChill VIP 1');
-            else if (name.includes('PChill - SeekStreaming')) sources.add('PChill VIP 2');
+            else if (name.includes('PChill - Play4Me')) sources.add('PChill VIP 2');
+            else if (name.includes('PChill - Abyss')) sources.add('PChill VIP 1');
             else sources.add('Khác');
         });
 
@@ -213,8 +209,8 @@ export default function WatchPage() {
                     const name = matchedServer.server_name;
                     if (name.startsWith('KK -')) activeSource = 'Server 1';
                     else if (name.startsWith('OP -')) activeSource = 'Server 2';
-                    else if (name.includes('PChill - Play4Me')) activeSource = 'PChill VIP 1';
-                    else if (name.includes('PChill - SeekStreaming')) activeSource = 'PChill VIP 2';
+                    else if (name.includes('PChill - Play4Me')) activeSource = 'PChill VIP 2';
+                    else if (name.includes('PChill - Abyss')) activeSource = 'PChill VIP 1';
                     else activeSource = 'Khác';
                 }
             }
@@ -234,10 +230,10 @@ export default function WatchPage() {
 
             const filtered = validEpisodes.filter((ep: Episode) => {
                 if (activeSource === 'PChill VIP 1') {
-                    return ep.server_name.includes('PChill - Play4Me');
+                    return ep.server_name.includes('PChill - Abyss');
                 }
                 if (activeSource === 'PChill VIP 2') {
-                    return ep.server_name.includes('PChill - SeekStreaming');
+                    return ep.server_name.includes('PChill - Play4Me');
                 }
                 if (activeSource === 'Khác') {
                     return !ep.server_name.startsWith('KK -') &&
@@ -409,10 +405,6 @@ export default function WatchPage() {
             socket.emit('wp_change_episode', { roomId: roomParam, serverName, episodeSlug: episode.slug });
         }
 
-        // Reset pre-roll cho mỗi lần đổi tập
-        if (!isSameEpisode) {
-            setAdDismissed(false);
-        }
 
         // Restore time if switching versions of the same episode
         if (isSameEpisode) {
@@ -447,10 +439,10 @@ export default function WatchPage() {
                 if (ep.server_name.startsWith('NC -') || ep.server_name === 'PChill Server') return false; 
                 
                 if (newSource === 'PChill VIP 1') {
-                    return ep.server_name.includes('PChill - Play4Me');
+                    return ep.server_name.includes('PChill - Abyss');
                 }
                 if (newSource === 'PChill VIP 2') {
-                    return ep.server_name.includes('PChill - SeekStreaming');
+                    return ep.server_name.includes('PChill - Play4Me');
                 }
                 if (newSource === 'Khác') {
                     return !ep.server_name.startsWith('KK -') &&
@@ -494,11 +486,39 @@ export default function WatchPage() {
         }
     };
 
+    const handlePlayerError = () => {
+        if (!currentSource) return;
+
+        // Auto failover strategy
+        let fallbackSource: string | null = null;
+        
+        // Convert Set to Array to check available sources
+        const availableSources = Array.from(sources);
+
+        if (currentSource === 'PChill VIP 1') {
+            fallbackSource = availableSources.includes('PChill VIP 2') ? 'PChill VIP 2' : (availableSources.includes('Server 1') ? 'Server 1' : null);
+        } else if (currentSource === 'PChill VIP 2') {
+            fallbackSource = availableSources.includes('PChill VIP 1') ? 'PChill VIP 1' : (availableSources.includes('Server 1') ? 'Server 1' : null);
+        } else if (currentSource !== 'Server 1' && availableSources.includes('Server 1')) {
+            fallbackSource = 'Server 1';
+        }
+
+        if (fallbackSource) {
+            toast.error(`Trình phát ${currentSource} đang gặp sự cố. Đang tự động chuyển sang ${fallbackSource}...`, { id: 'player-error', duration: 4000 });
+            handleSourceChange(fallbackSource);
+        } else {
+            toast.error(`Trình phát ${currentSource} đang gặp sự cố. Xin vui lòng thử lại sau.`, { id: 'player-error-fatal' });
+        }
+    };
+
     const getCleanServerName = (rawName: string) => {
-        if (rawName.includes('PChill - Play4Me')) return 'PChill VIP 1';
-        if (rawName.includes('PChill - SeekStreaming')) return 'PChill VIP 2';
+        if (!rawName) return '';
 
         const lowerName = rawName.toLowerCase();
+
+        // 0. Map VIP Servers
+        if (lowerName.includes('abyss')) return 'PChill VIP 1';
+        if (lowerName.includes('play4me')) return 'PChill VIP 2';
 
         // 1. Detect Type (Priority)
         if (lowerName.includes('vietsub')) return 'Vietsub';
@@ -594,15 +614,6 @@ export default function WatchPage() {
                     </div>
 
                     <div className="aspect-video w-full bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
-                        {/* Pre-roll ad overlay — auto-hidden for premium users */}
-                        {currentEpisode && !adDismissed && (
-                            <PreRollAd
-                                key={currentEpisode.slug}
-                                onDismiss={() => setAdDismissed(true)}
-                                poster={movie.poster_url}
-                            />
-                        )}
-
                         {/* VIP Lock Overlay */}
                         {currentSource.startsWith('PChill VIP') && !user?.isVip ? (
                             <div className="w-full h-full flex flex-col items-center justify-center bg-black/95 rounded-xl gap-4 text-center p-6 z-50 absolute top-0 left-0">
@@ -636,7 +647,7 @@ export default function WatchPage() {
                                 src={currentEpisode.link_m3u8}
                                 poster={movie.poster_url}
                                 embedUrl={currentEpisode.link_embed}
-                                autoPlay={shouldAutoPlay && adDismissed}
+                                autoPlay={shouldAutoPlay}
                                 movieSlug={movie.slug}
                                 movieName={movie.name}
                                 movieThumb={movie.thumb_url}
@@ -648,6 +659,7 @@ export default function WatchPage() {
                                 startTime={startTime}
                                 onTimeUpdate={(time) => setPlayerTime(time)}
                                 onEnded={handleNextEpisode}
+                                onError={handlePlayerError}
                                 nextEpisodeInfo={nextEpisode ? {
                                     name: nextEpisode.episode.name,
                                     serverName: getCleanServerName(nextEpisode.server)
@@ -705,7 +717,7 @@ export default function WatchPage() {
                                                 <>
                                                     {' • '}
                                                     <span className="inline-block px-2 py-0.5 rounded bg-primary/20 text-primary text-xs font-bold">
-                                                        {getCleanServerName(currentServerName)}
+                                                        {currentSource}
                                                     </span>
                                                 </>
                                             )}
@@ -735,12 +747,13 @@ export default function WatchPage() {
                             const vipSources = availableSources.filter(s => s.startsWith('PChill VIP'));
                             const renderBtn = (source: string) => {
                                 const isVipSource = source.startsWith('PChill VIP');
-                                const canAccess = !isVipSource || user?.isVip;
+                                const canAccess = !isVipSource || user?.isVip || (source === 'PChill VIP 2' && user?.isPremium);
+                                const lockedTitle = source === 'PChill VIP 2' ? 'Dành cho thành viên Premium & VIP' : 'Chỉ dành cho thành viên PChill VIP';
                                 return (
                                     <button
                                         key={source}
                                         onClick={() => canAccess ? handleSourceChange(source) : null}
-                                        title={!canAccess ? 'Chỉ dành cho thành viên PChill VIP' : ''}
+                                        title={!canAccess ? lockedTitle : ''}
                                         className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 ${
                                             currentSource === source
                                                 ? isVipSource ? 'bg-yellow-500 text-black shadow-md' : 'bg-primary text-black shadow-md shadow-primary/20'
@@ -789,12 +802,13 @@ export default function WatchPage() {
                                 const vipSources = availableSources.filter(s => s.startsWith('PChill VIP'));
                                 const renderBtn = (source: string) => {
                                     const isVipSource = source.startsWith('PChill VIP');
-                                    const canAccess = !isVipSource || user?.isVip;
+                                    const canAccess = !isVipSource || user?.isVip || (source === 'PChill VIP 2' && user?.isPremium);
+                                    const lockedTitle = source === 'PChill VIP 2' ? 'Dành cho thành viên Premium & VIP' : 'Chỉ dành cho thành viên PChill VIP';
                                     return (
                                         <button
                                             key={source}
                                             onClick={() => canAccess ? handleSourceChange(source) : null}
-                                            title={!canAccess ? 'Chỉ dành cho thành viên PChill VIP' : ''}
+                                            title={!canAccess ? lockedTitle : ''}
                                             className={`px-3 py-1 max-lg:landscape:px-2 max-lg:landscape:py-0.5 rounded-md text-xs max-lg:landscape:text-[10px] font-bold transition-all whitespace-nowrap flex items-center gap-1.5 max-lg:landscape:gap-1 ${
                                                 currentSource === source
                                                     ? isVipSource ? 'bg-yellow-500 text-black shadow-md' : 'bg-primary text-black shadow-md shadow-primary/20'
@@ -830,7 +844,7 @@ export default function WatchPage() {
 
                         <div className="p-4 max-lg:landscape:p-2 flex-1 space-y-4 max-lg:landscape:space-y-2 flex flex-col">
                             {/* Server/Category Horizontal Tabs */}
-                            {filteredServers.length > 0 && (
+                            {filteredServers.length > 0 && !currentSource.startsWith('PChill VIP') && (
                                 <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar border-b border-white/10 shrink-0">
                                     {filteredServers.map((server) => {
                                         const cleanName = getCleanServerName(server.server_name);

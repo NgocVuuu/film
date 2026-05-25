@@ -52,8 +52,6 @@ const paymentSchema = new mongoose.Schema({
 
 // Index for faster queries
 paymentSchema.index({ userId: 1, createdAt: -1 });
-paymentSchema.index({ transactionId: 1 });
 paymentSchema.index({ status: 1 });
-paymentSchema.index({ code: 1 }); // Index for webhook lookup
 
 module.exports = mongoose.model('Payment', paymentSchema);

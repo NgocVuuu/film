@@ -48,11 +48,14 @@ export default function PricingPage() {
     useEffect(() => {
         if (showModal) {
             document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
+            document.documentElement.style.overflow = 'unset';
         }
         return () => {
             document.body.style.overflow = 'unset';
+            document.documentElement.style.overflow = 'unset';
         };
     }, [showModal]);
 
@@ -94,10 +97,7 @@ export default function PricingPage() {
             const response = await customFetch(`/api/subscriptions/create-upgrade`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    planId: plan.id,
-                    planName: plan.name,
-                    duration: plan.duration,
-                    amount: plan.price
+                    planId: plan.id
                 })
             });
 
@@ -147,9 +147,6 @@ export default function PricingPage() {
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-2">
                         Hỗ trợ thanh toán qua WeScan và BuyMeACoffee.
                     </p>
-                    <p className="text-gray-500 text-sm max-w-xl mx-auto italic">
-                        Ủng hộ ad chút để duy trì web nhé, quả thật server đắt lắm 😭
-                    </p>
                 </div>
 
                 {loading ? (
@@ -162,20 +159,15 @@ export default function PricingPage() {
                         {/* === PREMIUM SECTION === */}
                         {premiumPlans.length > 0 && (
                             <div>
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                                        <span className="text-base">🏅</span>
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl font-bold text-white">Gói Premium</h2>
-                                        <p className="text-sm text-gray-500">Xem phim không quảng cáo</p>
-                                    </div>
+                                <div className="mb-8">
+                                    <h2 className="text-xl font-bold text-white">Gói Premium</h2>
+                                    <p className="text-sm text-gray-500">Xem phim không quảng cáo</p>
                                 </div>
                                 <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
                                     {premiumPlans.map((plan) => (
                                         <div
                                             key={plan.id}
-                                            className={`relative bg-surface-900 border rounded-2xl p-6 transition-all hover:border-primary/50 ${
+                                            className={`relative bg-surface-900 border rounded-2xl p-6 transition-all flex flex-col hover:border-primary/50 ${
                                                 plan.badge ? 'border-primary shadow-xl shadow-primary/10' : 'border-white/10'
                                             }`}
                                         >
@@ -193,7 +185,7 @@ export default function PricingPage() {
                                                     <p className="text-xs text-gray-600 line-through mt-0.5">{formatPrice(plan.originalPrice)}</p>
                                                 )}
                                             </div>
-                                            <ul className="space-y-2 mb-5">
+                                            <ul className="space-y-2 mb-5 flex-grow">
                                                 {plan.features.map((f, i) => (
                                                     <li key={i} className="flex items-start gap-2">
                                                         <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
@@ -204,7 +196,7 @@ export default function PricingPage() {
                                             <Button
                                                 onClick={() => handleSubscribe(plan)}
                                                 disabled={processingPlan !== null}
-                                                className="w-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-bold text-sm"
+                                                className="w-full mt-auto bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-bold text-sm"
                                             >
                                                 {processingPlan === plan.id ? (
                                                     <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Đang xử lý...</>
@@ -221,20 +213,15 @@ export default function PricingPage() {
                         {/* === VIP SECTION === */}
                         {vipPlans.length > 0 && (
                             <div>
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-                                        <span className="text-base">💎</span>
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl font-bold text-white">Gói PChill VIP</h2>
-                                        <p className="text-sm text-yellow-500/70">Tất cả Premium + máy chủ tốc độ cao độc quyền</p>
-                                    </div>
+                                <div className="mb-8">
+                                    <h2 className="text-xl font-bold text-white">Gói PChill VIP</h2>
+                                    <p className="text-sm text-yellow-500/70">Tất cả Premium + máy chủ tốc độ cao độc quyền</p>
                                 </div>
                                 <div className="grid sm:grid-cols-3 gap-5">
                                     {vipPlans.map((plan) => (
                                         <div
                                             key={plan.id}
-                                            className={`relative bg-gradient-to-b from-yellow-500/5 to-surface-900 border rounded-2xl p-6 transition-all hover:border-yellow-500/50 ${
+                                            className={`relative bg-gradient-to-b from-yellow-500/5 to-surface-900 border rounded-2xl p-6 transition-all flex flex-col hover:border-yellow-500/50 ${
                                                 plan.badge ? 'border-yellow-500/60 shadow-xl shadow-yellow-500/10' : 'border-yellow-500/20'
                                             }`}
                                         >
@@ -252,7 +239,7 @@ export default function PricingPage() {
                                                     <p className="text-xs text-gray-600 line-through mt-0.5">{formatPrice(plan.originalPrice)}</p>
                                                 )}
                                             </div>
-                                            <ul className="space-y-2 mb-5">
+                                            <ul className="space-y-2 mb-5 flex-grow">
                                                 {plan.features.map((f, i) => (
                                                     <li key={i} className="flex items-start gap-2">
                                                         <Check className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
@@ -263,7 +250,7 @@ export default function PricingPage() {
                                             <Button
                                                 onClick={() => handleSubscribe(plan)}
                                                 disabled={processingPlan !== null}
-                                                className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-sm shadow-lg shadow-yellow-500/20"
+                                                className="w-full mt-auto bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-sm shadow-lg shadow-yellow-500/20"
                                             >
                                                 {processingPlan === plan.id ? (
                                                     <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Đang xử lý...</>
@@ -278,9 +265,36 @@ export default function PricingPage() {
                         )}
                     </div>
                 )}
+                {/* Discord Instructions */}
+                <div className="max-w-3xl mx-auto mt-4 mb-12">
+                    <div className="bg-[#5865F2]/10 border border-[#5865F2]/30 rounded-2xl p-6 text-center shadow-lg">
+                        <div className="w-12 h-12 bg-[#5865F2] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#5865F2]/20">
+                            <svg className="w-6 h-6 fill-white" viewBox="0 0 24 24">
+                                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.074.11 18.09.12 18.1a19.904 19.904 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+                            </svg>
+                        </div>
+                        <h3 className="text-[#5865F2] font-bold text-lg mb-2">
+                            BƯỚC QUAN TRỌNG: XÁC NHẬN HÓA ĐƠN
+                        </h3>
+                        <p className="text-gray-300 text-sm mb-6 max-w-xl mx-auto leading-relaxed">
+                            Sau khi thực hiện thanh toán, sếp vui lòng chụp lại màn hình hóa đơn chuyển khoản thành công và gửi vào kênh <span className="font-bold text-white px-2 py-0.5 bg-white/10 rounded">#vip</span> hoặc <span className="font-bold text-white px-2 py-0.5 bg-white/10 rounded">#premium</span> trên máy chủ Discord. Admin sẽ kiểm tra và cấp quyền ngay lập tức (Thời gian xử lý: 15-30 phút).
+                        </p>
+                        <a
+                            href="https://discord.gg/bnHvX3FM"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                        >
+                            <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24">
+                                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.074.11 18.09.12 18.1a19.904 19.904 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+                            </svg>
+                            Tham gia Server Discord
+                        </a>
+                    </div>
+                </div>
 
                 {/* Disclaimer */}
-                <div className="text-center mt-12 space-y-2">
+                <div className="text-center mt-8 space-y-2">
                     <p className="text-gray-500 text-sm">
                         Hỗ trợ tất cả ngân hàng tại Việt Nam (VietQR) và thẻ quốc tế (BuyMeACoffee).
                     </p>
@@ -293,7 +307,7 @@ export default function PricingPage() {
             {/* Payment Modal */}
             {showModal && paymentData && (
                 <div
-                    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+                    className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
                     onClick={() => setShowModal(false)}
                 >
                     <div
@@ -349,7 +363,7 @@ export default function PricingPage() {
                                 <p className="text-xs font-bold text-gray-300">BƯỚC 2: Chọn cổng thanh toán và dán Mã Giao Dịch</p>
                                 <div className="grid grid-cols-2 gap-3 mb-1">
                                     <a
-                                        href="https://wescan.vn/dngocvu14"
+                                        href="https://wescan.vn/Paul14"
                                         target="_blank"
                                         className="p-2.5 border border-primary/20 bg-primary/5 rounded-xl text-center hover:bg-primary/20 transition-all flex flex-col justify-center gap-1"
                                     >
@@ -380,9 +394,23 @@ export default function PricingPage() {
                             </div>
 
                             <div className="flex flex-col gap-2 mt-2">
-                                <div className="flex items-center justify-center gap-1.5 text-amber-600 font-medium bg-amber-50 px-3 py-1.5 rounded-full text-[10px] w-fit mx-auto border border-amber-200 shadow-sm">
-                                    <Crown className="w-3.5 h-3.5" />
-                                    Xử lý thủ công (5-30 phút)
+                                <div className="bg-[#5865F2]/10 border border-[#5865F2]/30 rounded-xl p-3 text-center">
+                                    <p className="text-[#5865F2] font-bold text-xs mb-1 flex items-center justify-center gap-1.5">
+                                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.074.11 18.09.12 18.1a19.904 19.904 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+                                        </svg> 
+                                        BƯỚC 3: XÁC NHẬN SIÊU TỐC
+                                    </p>
+                                    <p className="text-gray-300 text-[11px] leading-tight mb-2">
+                                        Sau khi thanh toán, chụp hóa đơn và gửi vào kênh <span className="font-bold text-white">#vip</span> hoặc <span className="font-bold text-white">#premium</span> trên Discord để Admin duyệt ngay lập tức nhé!
+                                    </p>
+                                    <a
+                                        href="https://discord.gg/bnHvX3FM"
+                                        target="_blank"
+                                        className="inline-flex items-center justify-center gap-1.5 bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold py-1.5 px-4 rounded-full transition-colors"
+                                    >
+                                        Tham gia Discord
+                                    </a>
                                 </div>
 
                                 <Button

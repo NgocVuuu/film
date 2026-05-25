@@ -417,7 +417,7 @@ exports.stopCrawler = (req, res) => {
 };
 
 // VIP Host Revenue
-const { play4meAPI, seekStreamingAPI } = require('../utils/videoHostProviders');
+const { play4meAPI, abyssAPI } = require('../utils/videoHostProviders');
 
 exports.getHostRevenue = async (req, res) => {
     try {
@@ -426,16 +426,16 @@ exports.getHostRevenue = async (req, res) => {
             play4meBalance = await play4meAPI.getBalance();
         }
 
-        let seekStreamingBalance = null;
-        if (seekStreamingAPI) {
-            seekStreamingBalance = await seekStreamingAPI.getBalance();
+        let abyssBalance = null;
+        if (abyssAPI && typeof abyssAPI.getBalance === 'function') {
+            abyssBalance = await abyssAPI.getBalance();
         }
 
         res.json({
             success: true,
             data: {
                 play4me: play4meBalance,
-                seekStreaming: seekStreamingBalance
+                abyss: abyssBalance
             }
         });
     } catch (error) {

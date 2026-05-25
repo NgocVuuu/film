@@ -30,6 +30,14 @@ const movieRequestSchema = new mongoose.Schema({
         type: Number,
         default: 1 // Track how many users requested this
     },
+    vipCount: {
+        type: Number,
+        default: 0
+    },
+    premiumCount: {
+        type: Number,
+        default: 0
+    },
     processedAt: Date,
     errorMessage: String
 }, {

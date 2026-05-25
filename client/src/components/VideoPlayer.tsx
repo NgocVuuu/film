@@ -120,7 +120,7 @@ export default function VideoPlayer({
     
     // Iframe Embed Player state
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    const isEmbedPlayer = !!embedUrl && (!src || src === embedUrl || serverName?.includes('Play4Me') || serverName?.includes('SeekStreaming'));
+    const isEmbedPlayer = !!embedUrl && (!src || src === embedUrl || serverName?.includes('Play4Me') || serverName?.includes('Abyss'));
     const [hoverTime, setHoverTime] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<number>(0);
     const [isScrubbing, setIsScrubbing] = useState(false);
@@ -174,6 +174,16 @@ export default function VideoPlayer({
         userRef.current = user;
     }, [user]);
 
+    const isHostRef = useRef(isHost);
+    useEffect(() => {
+        isHostRef.current = isHost;
+    }, [isHost]);
+
+    const isPlayingRef = useRef(isPlaying);
+    useEffect(() => {
+        isPlayingRef.current = isPlaying;
+    }, [isPlaying]);
+
     // Auto Join & Sync (Chỉ chạy 1 lần khi có socket, roomId và user đã tải xong)
     const hasJoinedRef = useRef(false);
     const pendingSyncRef = useRef<{time: number, isPlaying: boolean} | null>(null);
@@ -201,12 +211,24 @@ export default function VideoPlayer({
         const handleRoomUpdate = (state: any) => setRoomState(state);
         socket.on('wp_room_update', handleRoomUpdate);
 
+        const handleError = (data: { message: string }) => {
+            toast.error(data.message);
+            // Redirect out of the room by removing query params
+            window.location.href = window.location.pathname;
+        };
+        socket.on('wp_error', handleError);
+
         const handlePlay = (data: { time: number }) => {
             if (videoRef.current) {
                 videoRef.current.currentTime = data.time;
                 videoRef.current.play().catch(e => {
                     if (e.name !== 'AbortError') console.error('Play error:', e);
                 });
+                setIsPlaying(true);
+            } else if (iframeRef.current) {
+                const playerOrigin = new URL(iframeRef.current.src).origin;
+                iframeRef.current.contentWindow?.postMessage({ command: 'seek', value: data.time }, playerOrigin);
+                iframeRef.current.contentWindow?.postMessage({ command: 'play' }, playerOrigin);
                 setIsPlaying(true);
             }
         };
@@ -216,20 +238,28 @@ export default function VideoPlayer({
                 videoRef.current.currentTime = data.time;
                 videoRef.current.pause();
                 setIsPlaying(false);
+            } else if (iframeRef.current) {
+                const playerOrigin = new URL(iframeRef.current.src).origin;
+                iframeRef.current.contentWindow?.postMessage({ command: 'seek', value: data.time }, playerOrigin);
+                iframeRef.current.contentWindow?.postMessage({ command: 'pause' }, playerOrigin);
+                setIsPlaying(false);
             }
         };
 
         const handleSeek = (data: { time: number }) => {
             if (videoRef.current) {
                 videoRef.current.currentTime = data.time;
+            } else if (iframeRef.current) {
+                const playerOrigin = new URL(iframeRef.current.src).origin;
+                iframeRef.current.contentWindow?.postMessage({ command: 'seek', value: data.time }, playerOrigin);
             }
         };
 
         // --- LATE JOINER SYNC ---
         // Server báo có người mới vào xin sync, nếu mình là Host thì gửi trạng thái hiện tại
         socket.on('wp_request_sync_action', ({ requesterId }: any) => {
+            const { serverName: sName, episodeSlug: eSlug } = episodeDataRef.current;
             if (videoRef.current) {
-                const { serverName: sName, episodeSlug: eSlug } = episodeDataRef.current;
                 socket.emit('wp_sync_state', { 
                     requesterId, 
                     state: { 
@@ -238,6 +268,16 @@ export default function VideoPlayer({
                         serverName: sName,
                         episodeSlug: eSlug
                     } 
+                });
+            } else if (iframeRef.current) {
+                socket.emit('wp_sync_state', {
+                    requesterId,
+                    state: {
+                        time: savedTimeRef.current,
+                        isPlaying: isPlayingRef.current,
+                        serverName: sName,
+                        episodeSlug: eSlug
+                    }
                 });
             }
         });
@@ -292,35 +332,133 @@ export default function VideoPlayer({
         };
     }, [socket, roomId]);
 
+    const iframeTimeUnchangedCount = useRef(0);
+    const iframeLastTime = useRef(-1);
+    const hasReceivedMessage = useRef(false);
+    const hasEnded = useRef(false);
+    const autoPlayEnabledRef = useRef(autoPlay ?? true);
+    const onErrorRef = useRef(onError);
+
+    // Sync autoPlay prop to ref
+    useEffect(() => {
+        autoPlayEnabledRef.current = autoPlay ?? true;
+    }, [autoPlay]);
+
+    // Sync onError prop to ref
+    useEffect(() => {
+        onErrorRef.current = onError;
+    }, [onError]);
+
+    // Reset hasEnded when source changes
+    useEffect(() => {
+        hasEnded.current = false;
+    }, [embedUrl, src]);
+
+    // Error timeout for Embed Players (only runs once per embedUrl)
+    useEffect(() => {
+        if (!isEmbedPlayer || !embedUrl) return;
+
+        hasReceivedMessage.current = false;
+        const errorTimeout = setTimeout(() => {
+            if (!hasReceivedMessage.current && onErrorRef.current) {
+                onErrorRef.current();
+            }
+        }, 20000); // 20 giây không nhận được tín hiệu -> Lỗi
+
+        return () => clearTimeout(errorTimeout);
+    }, [isEmbedPlayer, embedUrl]);
+
     // Iframe message listener for VIP Host
     useEffect(() => {
         if (!isEmbedPlayer || !iframeRef.current) return;
 
         const handleMessage = (e: MessageEvent) => {
             try {
-                const playerOrigin = new URL(iframeRef.current!.src).origin;
-                if (e.origin !== playerOrigin) return;
+                // Log all incoming messages for debugging
+                if (e.data?.currentTime !== undefined || e.data?.playerStatus) {
+                    console.log('[VideoPlayer] Received message:', {
+                        origin: e.origin,
+                        data: e.data,
+                        isMatch: e.source === iframeRef.current?.contentWindow
+                    });
+                }
+
+                // Temporary: Allow all messages for debugging, or check if origin is Abyss/Hydrax
+                const validOrigins = ['abyss', 'hydrax', 'play4me', 'localhost'];
+                const isTrustedOrigin = validOrigins.some(o => e.origin.includes(o));
+                
+                // If it's not from our direct iframe and not a trusted origin, ignore
+                if (e.source !== iframeRef.current?.contentWindow && !isTrustedOrigin) {
+                    return;
+                }
+
+                hasReceivedMessage.current = true;
 
                 if (e.data.playerStatus === 'Ready') {
                     // Restore progress
                     if (initialProgress && initialProgress > 10) {
-                        iframeRef.current?.contentWindow?.postMessage({ command: 'seek', value: initialProgress }, playerOrigin);
+                        iframeRef.current?.contentWindow?.postMessage({ command: 'seek', value: initialProgress }, '*');
                     }
                 }
 
                 if (e.data.currentTime !== undefined) {
                     const time = e.data.currentTime;
-                    setCurrentTime(time);
-                    if (onTimeUpdate) onTimeUpdate(time);
-                    if (movieSlug && episodeSlug) debouncedSave(time, duration || e.data.duration || 0);
+                    // Fix: Check if duration is > 0 to avoid saving zero or wrong progress
+                    if (!duration || duration <= 0) return;
 
-                    // Auto Next Episode check
-                    const dur = e.data.duration || duration || 0;
-                    if (onEnded && nextEpisodeInfo && !cancelledAutoPlay && dur > 0 && dur - time <= 10 && dur - time > 0) {
-                        if (!showNextEpisode) {
-                            setShowNextEpisode(true);
-                            setCountdown(Math.ceil(dur - time));
+                    // Update parent time
+                    onTimeUpdate?.(time);
+
+                    // Save local progress
+                    if (movieSlug && episodeSlug) debouncedSave?.(time, duration || e.data.duration || 0);
+
+                    // Calculate intro/outro skips (only trigger skips if AutoPlay is enabled)
+                    if (autoPlayEnabledRef.current) {
+                        if (time > 0 && time < 10 && intro && intro.length === 2 && time >= intro[0] && time < intro[1]) {
+                            iframeRef.current?.contentWindow?.postMessage({ command: 'seek', value: intro[1] }, '*');
                         }
+
+                        if (time > 0 && time > (duration - 10) && outro && outro.length === 2 && time >= outro[0] && time < outro[1]) {
+                            iframeRef.current?.contentWindow?.postMessage({ command: 'seek', value: outro[1] }, '*');
+                        }
+                    }
+
+                    // End logic
+                    if (time > 0 && time >= duration - 1 && !hasEnded.current) {
+                        hasEnded.current = true;
+                        
+                        // Emit end event to parent only if we want AutoPlay
+                        if (autoPlayEnabledRef.current) {
+                            onEnded?.();
+                        } else {
+                            // If auto-play is off, just show next episode UI but don't force-change
+                            setShowEpisodePanel(true);
+                        }
+                    }
+
+                    // Watch Party Sync Check
+                    if (isHost && isPlayingRef.current) {
+                        const lastT = iframeLastTime.current;
+                        
+                        // Chỉ log n?u nh?y th?i gian ??t ng?t (> 2 giy) m khng ph?i do pause
+                        if (lastT !== -1 && Math.abs(time - lastT) > 2) {
+                            // G?i l?nh seek cho cc client khc
+                            socket?.emit('wp_seek', { roomId, time });
+                        } else {
+                            // Ki?m tra b? ??ng hnh (time khng d?i)
+                            if (lastT === time) {
+                                iframeTimeUnchangedCount.current++;
+                                if (iframeTimeUnchangedCount.current > 1 && isPlayingRef.current) {
+                                    // B? ??ng hnh -> pause t?m
+                                    socket?.emit('wp_pause', { roomId });
+                                    setIsPlaying(false);
+                                }
+                            } else {
+                                iframeTimeUnchangedCount.current = 0;
+                                iframeLastTime.current = time;
+                            }
+                        }
+                        iframeLastTime.current = time;
                     }
                 }
 
@@ -335,9 +473,8 @@ export default function VideoPlayer({
         // Poll for time
         const interval = setInterval(() => {
             try {
-                if (iframeRef.current && iframeRef.current.src) {
-                    const playerOrigin = new URL(iframeRef.current.src).origin;
-                    iframeRef.current.contentWindow?.postMessage({ command: 'getTime' }, playerOrigin);
+                if (iframeRef.current && iframeRef.current.contentWindow) {
+                    iframeRef.current.contentWindow.postMessage({ command: 'getTime' }, '*');
                 }
             } catch (err) {}
         }, 1000);
@@ -346,7 +483,7 @@ export default function VideoPlayer({
             window.removeEventListener('message', handleMessage);
             clearInterval(interval);
         };
-    }, [isEmbedPlayer, initialProgress, onTimeUpdate, movieSlug, episodeSlug, duration, onEnded, nextEpisodeInfo, cancelledAutoPlay, showNextEpisode]);
+    }, [isEmbedPlayer, initialProgress, onTimeUpdate, movieSlug, episodeSlug, duration, onEnded, nextEpisodeInfo, cancelledAutoPlay, showNextEpisode, roomId, socket]);
 
     // -- Logic --
 
@@ -374,12 +511,10 @@ export default function VideoPlayer({
 
         if (!videoRef.current.paused) {
             videoRef.current.pause();
-            socket?.emit('wp_pause', { roomId, time: videoRef.current.currentTime });
         } else {
             videoRef.current.play().catch(e => {
                 if (e.name !== 'AbortError') console.error('Play error:', e);
             });
-            socket?.emit('wp_play', { roomId, time: videoRef.current.currentTime });
         }
         setShowControls(true);
     };
@@ -472,7 +607,6 @@ export default function VideoPlayer({
         if (videoRef.current) {
             videoRef.current.currentTime = scrubTime;
             setCurrentTime(scrubTime);
-            socket?.emit('wp_seek', { roomId, time: scrubTime });
         }
     };
 
@@ -896,8 +1030,21 @@ export default function VideoPlayer({
         const onVideoPlaying = () => {
             setIsLoading(false);
             setIsPlaying(true);
+            if (isHostRef.current && roomId) {
+                socket?.emit('wp_play', { roomId, time: video.currentTime });
+            }
         };
-        const onVideoPause = () => setIsPlaying(false);
+        const onVideoPause = () => {
+            setIsPlaying(false);
+            if (isHostRef.current && roomId) {
+                socket?.emit('wp_pause', { roomId, time: video.currentTime });
+            }
+        };
+        const onVideoSeeked = () => {
+            if (isHostRef.current && roomId) {
+                socket?.emit('wp_seek', { roomId, time: video.currentTime });
+            }
+        };
         const onVideoEnded = () => {
             // Trigger onEnded callback if exists
             if (onEnded && !cancelledAutoPlay) {
@@ -955,6 +1102,7 @@ export default function VideoPlayer({
         video.addEventListener('waiting', onVideoWaiting);
         video.addEventListener('playing', onVideoPlaying);
         video.addEventListener('pause', onVideoPause);
+        video.addEventListener('seeked', onVideoSeeked);
         video.addEventListener('ended', onVideoEnded);
         video.addEventListener('loadedmetadata', onLoadedMetadata);
         video.addEventListener('timeupdate', handleTimeUpdate);
@@ -1257,14 +1405,20 @@ export default function VideoPlayer({
             {/* Main Player Area Wrapper */}
             <div className="relative flex-1 h-full min-w-0">
             {isEmbedPlayer ? (
-                <iframe
-                    id="playerIframeId"
-                    ref={iframeRef}
-                    src={embedUrl}
-                    className="w-full h-full border-none rounded-lg"
-                    allowFullScreen
-                    allow="autoplay; fullscreen"
-                />
+                <div className="w-full h-full relative" onContextMenu={(e) => e.preventDefault()}>
+                    <iframe
+                        key={embedUrl} // Forces iframe to reload when switching episodes
+                        id="playerIframeId"
+                        ref={iframeRef}
+                        src={embedUrl}
+                        className="w-full h-full border-none rounded-lg"
+                        allowFullScreen={true}
+                        webkitallowfullscreen="true"
+                        mozallowfullscreen="true"
+                        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                        onLoad={() => setIsLoading(false)}
+                    />
+                </div>
             ) : (
                 <video
                     ref={videoRef}
@@ -1696,6 +1850,7 @@ export default function VideoPlayer({
             {/* Overlaid UI for Embed Player (Chat & Episode List) */}
             {isEmbedPlayer && (
                 <div className="absolute top-4 right-4 z-[60] flex flex-col gap-2 pointer-events-auto">
+
                     {/* Watch Party Chat Button */}
                     {roomId && socket && (
                         <div className="hidden sm:block bg-black/50 backdrop-blur-md rounded-lg">

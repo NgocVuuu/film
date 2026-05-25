@@ -1,9 +1,10 @@
 const hostManager = require('./hostManager');
-const { play4meAPI, seekStreamingAPI } = require('./videoHostProviders');
+const { play4meAPI, seekStreamingAPI, abyssAPI } = require('./videoHostProviders');
 
 const hostApis = {
   Play4Me: play4meAPI,
-  SeekStreaming: seekStreamingAPI
+  SeekStreaming: seekStreamingAPI,
+  Abyss: abyssAPI
 };
 
 // Poll pending/processing uploads every 2 minutes

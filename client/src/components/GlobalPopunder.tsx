@@ -2,12 +2,19 @@
 
 import Script from 'next/script';
 import { useAuth } from '@/contexts/auth-context';
+import { usePathname } from 'next/navigation';
 
 export function GlobalPopunder() {
     const { user, loading } = useAuth();
+    const pathname = usePathname();
     
-    // Nếu đang tải trạng thái đăng nhập hoặc user là VIP thì không render script quảng cáo Popunder
-    if (loading || user?.isPremium) {
+    // Nếu đang tải trạng thái đăng nhập hoặc user là VIP/Premium thì không render
+    if (loading || user?.isPremium || user?.isVip) {
+        return null;
+    }
+
+    // CHỈ hiển thị popunder ở trang xem phim (URL kết thúc bằng /watch)
+    if (!pathname.endsWith('/watch')) {
         return null;
     }
 

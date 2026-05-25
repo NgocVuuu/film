@@ -34,8 +34,23 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
+        // Check Device Limit (Session Tracking)
+        // If JWT has sessionId, we must verify it's still in the activeSessions array
+        if (decoded.sessionId) {
+            const hasValidSession = user.activeSessions?.some(s => s.sessionId === decoded.sessionId);
+            if (!hasValidSession) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Thiết bị này đã bị đăng xuất do tải khoản đăng nhập ở nơi khác hoặc vượt quá giới hạn thiết bị.'
+                });
+            }
+        }
+
         // Attach user to request
         req.user = user;
+        if (decoded.sessionId) {
+            req.sessionId = decoded.sessionId;
+        }
         next();
     } catch (error) {
         console.error('Auth middleware error:', error);
@@ -71,7 +86,15 @@ const optionalAuthMiddleware = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const user = await User.findById(decoded.userId).select('-__v');
             if (user) {
-                req.user = user;
+                if (decoded.sessionId) {
+                    const hasValidSession = user.activeSessions?.some(s => s.sessionId === decoded.sessionId);
+                    if (hasValidSession) {
+                        req.user = user;
+                        req.sessionId = decoded.sessionId;
+                    }
+                } else {
+                    req.user = user;
+                }
             }
         }
     } catch (error) {

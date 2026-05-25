@@ -184,7 +184,6 @@ io.on('connection', (socket) => {
 
     // --- WATCH PARTY LOGIC ---
     socket.on('wp_join_room', ({ roomId, user: sender }) => {
-        socket.join(`wp_${roomId}`);
         if (!wpRooms[roomId]) {
             wpRooms[roomId] = {
                 host: socket.id,
@@ -195,10 +194,17 @@ io.on('connection', (socket) => {
         
         // Ensure user is not duplicated
         const existingUser = wpRooms[roomId].users.find(u => u.id === socket.id);
+        
         if (!existingUser) {
+            // Check room limit (Max 3 users: 1 host + 2 guests)
+            if (wpRooms[roomId].users.length >= 3) {
+                socket.emit('wp_error', { message: 'Phòng đã đầy (Tối đa 3 người).' });
+                return;
+            }
             wpRooms[roomId].users.push({ id: socket.id, ...sender });
         }
 
+        socket.join(`wp_${roomId}`);
         io.to(`wp_${roomId}`).emit('wp_room_update', wpRooms[roomId]);
     });
 
@@ -413,8 +419,17 @@ mongoose.connect(MONGO_URI, {
     })
     .catch(err => console.error('Lỗi kết nối MongoDB:', err));
 
+// Auth Rate Limiting (Strict)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 requests per windowMs for auth routes
+    message: { success: false, message: 'Bạn đã đăng nhập sai quá nhiều lần, vui lòng thử lại sau 15 phút.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Auth Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 
 // Progress Routes
 app.use('/api/progress', progressRoutes);

@@ -13,6 +13,8 @@ const HostUploadSchema = new mongoose.Schema({
   host: String,
   taskId: String,
   status: { type: String, default: 'pending' }, // pending, processing, completed, failed, unsupported
+  subtitleStatus: { type: String, default: 'pending' }, // pending, processing, completed, error
+  subtitleLog: String,
   notes: String,
   contentHash: String,
   contentLength: Number,
