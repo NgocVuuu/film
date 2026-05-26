@@ -8,7 +8,7 @@ import { API_URL } from '@/lib/config';
 
 export default function AdminPipelinePage() {
     const [uploads, setUploads] = useState<any[]>([]);
-    const [activeTab, setActiveTab] = useState<'uploads' | 'extractor'>('uploads');
+    const [activeTab, setActiveTab] = useState<'uploads' | 'extractor' | 'vipsync'>('uploads');
     const [loading, setLoading] = useState(true);
     const [groupByMovie, setGroupByMovie] = useState(true);
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -96,7 +96,7 @@ export default function AdminPipelinePage() {
     };
 
     const handleBulkSync = async () => {
-        if (!selectedMovie || !bulkAbyssText.trim() || extractedLinks.length === 0) return;
+        if (!selectedMovie || !bulkAbyssText.trim()) return;
         
         setIsBulkSyncing(true);
         try {
@@ -115,7 +115,7 @@ export default function AdminPipelinePage() {
                 body: JSON.stringify({
                     movieId: selectedMovie._id,
                     abyssLines: lines,
-                    extractedLinks: extractedLinks
+                    extractedLinks: extractedLinks || []
                 })
             });
             const data = await res.json();
@@ -134,7 +134,7 @@ export default function AdminPipelinePage() {
     };
 
     const handleBulkSyncPlay4Me = async () => {
-        if (!selectedMovie || !bulkPlay4MeText.trim() || extractedLinks.length === 0) return;
+        if (!selectedMovie || !bulkPlay4MeText.trim()) return;
         
         setIsBulkSyncingPlay4Me(true);
         try {
@@ -153,7 +153,7 @@ export default function AdminPipelinePage() {
                 body: JSON.stringify({
                     movieId: selectedMovie._id,
                     play4meLines: lines,
-                    extractedLinks: extractedLinks
+                    extractedLinks: extractedLinks || []
                 })
             });
             const data = await res.json();
@@ -424,6 +424,16 @@ export default function AdminPipelinePage() {
                     }`}
                 >
                     Link Extractor
+                </button>
+                <button
+                    onClick={() => setActiveTab('vipsync')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${
+                        activeTab === 'vipsync'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                    Đồng bộ VIP
                 </button>
             </div>
 
@@ -711,61 +721,73 @@ export default function AdminPipelinePage() {
                                                 </div>
                                             </div>
                                         ))}
-
-                                        {/* Bulk Sync Section */}
-                                        {selectedMovie && (
-                                            <div className="mt-8 bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
-                                                <h3 className="text-lg font-bold text-blue-400 mb-2">Đồng bộ hàng loạt Abyss (Bulk Sync)</h3>
-                                                <p className="text-sm text-blue-300/70 mb-4">
-                                                    Đang chọn phim: <strong className="text-white">{selectedMovie.name}</strong>. Hãy dán danh sách ID hoặc Link Abyss (mỗi cái 1 dòng) mà bạn vừa tải xong bên Abyss Dashboard vào đây. Hệ thống sẽ tự động đối chiếu, up phụ đề và đăng lên web!
-                                                </p>
-                                                <textarea
-                                                    value={bulkAbyssText}
-                                                    onChange={(e) => setBulkAbyssText(e.target.value)}
-                                                    placeholder="YawKPXtB8&#10;https://abyss.to/xxxx&#10;..."
-                                                    className="w-full h-32 bg-black/40 border border-blue-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-blue-400 mb-4"
-                                                />
-                                                <Button
-                                                    onClick={handleBulkSync}
-                                                    disabled={isBulkSyncing || !bulkAbyssText.trim()}
-                                                    className="bg-blue-600 hover:bg-blue-500 text-white w-full"
-                                                >
-                                                    {isBulkSyncing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang đồng bộ...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Bắt đầu Đồng Bộ & Up Phụ Đề</>}
-                                                </Button>
-                                            </div>
-                                        )}
-
-                                        {/* Play4Me Bulk Sync Section */}
-                                        {selectedMovie && (
-                                            <div className="mt-8 bg-purple-500/10 border border-purple-500/30 rounded-xl p-6">
-                                                <h3 className="text-lg font-bold text-purple-400 mb-2">Đồng bộ hàng loạt Play4Me (Remote Upload)</h3>
-                                                <p className="text-sm text-purple-300/70 mb-4">
-                                                    Đang chọn phim: <strong className="text-white">{selectedMovie.name}</strong>. Hãy dán danh sách Direct Link (Gofile, Pixeldrain...) mà bạn vừa bóc tách được ở trên vào đây. Hệ thống sẽ Remote Upload thẳng sang Play4Me, trích xuất phụ đề và tự lưu vào Database!
-                                                </p>
-                                                <textarea
-                                                    value={bulkPlay4MeText}
-                                                    onChange={(e) => setBulkPlay4MeText(e.target.value)}
-                                                    placeholder="https://gofile.io/d/abc...&#10;https://pixeldrain.com/u/xyz...&#10;..."
-                                                    className="w-full h-32 bg-black/40 border border-purple-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-purple-400 mb-4"
-                                                />
-                                                <Button
-                                                    onClick={handleBulkSyncPlay4Me}
-                                                    disabled={isBulkSyncingPlay4Me || !bulkPlay4MeText.trim()}
-                                                    className="bg-purple-600 hover:bg-purple-500 text-white w-full"
-                                                >
-                                                    {isBulkSyncingPlay4Me ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang đồng bộ...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Bắt đầu Tải Lên Play4Me</>}
-                                                </Button>
-                                            </div>
-                                        )}
-                                        {!selectedMovie && (
-                                            <div className="mt-8 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 text-center">
-                                                <p className="text-sm text-yellow-500 mb-2">💡 Bạn chưa chọn phim ở phía trên!</p>
-                                                <p className="text-xs text-yellow-500/70">Để dùng tính năng "Đồng bộ hàng loạt Abyss", hãy cuộn lên mục số 1 và chọn Phim trong Database trước nhé.</p>
-                                            </div>
-                                        )}
                                     </div>
                                 );
                             })()}
+                        </div>
+                    )}
+
+                    {activeTab === 'vipsync' && (
+                        <div className="bg-surface-900 border border-white/10 rounded-xl p-6">
+                            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                                <RefreshCw className="w-5 h-5 text-primary" />
+                                Đồng bộ VIP (Abyss & Play4Me)
+                            </h2>
+                            
+                            {!selectedMovie && (
+                                <div className="mb-8 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 text-center">
+                                    <p className="text-sm text-yellow-500 mb-2">💡 Bạn chưa chọn phim!</p>
+                                    <p className="text-xs text-yellow-500/70">Vui lòng sử dụng tính năng "Chọn Phim Trong Database" ở khung bên trên cùng để bắt đầu.</p>
+                                </div>
+                            )}
+
+                            {selectedMovie && (
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                    {/* Play4Me Bulk Sync Section */}
+                                    <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-6 flex flex-col">
+                                        <h3 className="text-lg font-bold text-purple-400 mb-2">Đồng bộ Play4Me (Remote Upload)</h3>
+                                        <p className="text-sm text-purple-300/70 mb-4">
+                                            Phim đang chọn: <strong className="text-white">{selectedMovie.name}</strong><br/>
+                                            Dán Direct Link (Gofile, Pixeldrain...) để đẩy lên Play4Me.
+                                        </p>
+                                        <textarea
+                                            value={bulkPlay4MeText}
+                                            onChange={(e) => setBulkPlay4MeText(e.target.value)}
+                                            placeholder="https://gofile.io/d/abc...&#10;https://pixeldrain.com/u/xyz..."
+                                            className="w-full flex-1 min-h-[200px] bg-black/40 border border-purple-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-purple-400 mb-4 custom-scrollbar"
+                                        />
+                                        <Button
+                                            onClick={handleBulkSyncPlay4Me}
+                                            disabled={isBulkSyncingPlay4Me || !bulkPlay4MeText.trim()}
+                                            className="bg-purple-600 hover:bg-purple-500 text-white w-full"
+                                        >
+                                            {isBulkSyncingPlay4Me ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang xử lý...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Remote Upload Play4Me</>}
+                                        </Button>
+                                    </div>
+
+                                    {/* Bulk Sync Section */}
+                                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-6 flex flex-col">
+                                        <h3 className="text-lg font-bold text-blue-400 mb-2">Đồng bộ Abyss (Bulk Sync)</h3>
+                                        <p className="text-sm text-blue-300/70 mb-4">
+                                            Phim đang chọn: <strong className="text-white">{selectedMovie.name}</strong><br/>
+                                            Dán Abyss ID (YawKPXtB8) hoặc Link để đồng bộ & tự up phụ đề.
+                                        </p>
+                                        <textarea
+                                            value={bulkAbyssText}
+                                            onChange={(e) => setBulkAbyssText(e.target.value)}
+                                            placeholder="YawKPXtB8&#10;https://abyss.to/xxxx..."
+                                            className="w-full flex-1 min-h-[200px] bg-black/40 border border-blue-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-blue-400 mb-4 custom-scrollbar"
+                                        />
+                                        <Button
+                                            onClick={handleBulkSync}
+                                            disabled={isBulkSyncing || !bulkAbyssText.trim()}
+                                            className="bg-blue-600 hover:bg-blue-500 text-white w-full"
+                                        >
+                                            {isBulkSyncing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang xử lý...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Đồng bộ & Up Phụ Đề</>}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </>
