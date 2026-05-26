@@ -250,6 +250,40 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
         });
     };
 
+    const generateBulkEpisodes = (serverIdx: number) => {
+        const input = prompt('Nhập số lượng tập muốn tạo nhanh (VD: 20):');
+        if (!input) return;
+        const num = parseInt(input);
+        if (isNaN(num) || num <= 0 || num > 1000) {
+            toast.error('Số tập không hợp lệ (1-1000)');
+            return;
+        }
+
+        setEpisodes(prev => {
+            const next = [...prev];
+            const currentCount = next[serverIdx].server_data.length;
+            const newEps = [];
+            for (let i = 1; i <= num; i++) {
+                newEps.push({
+                    name: `Tập ${currentCount + i}`,
+                    slug: `tap-${currentCount + i}`,
+                    filename: '',
+                    link_embed: '',
+                    link_m3u8: ''
+                });
+            }
+            next[serverIdx] = {
+                ...next[serverIdx],
+                server_data: [
+                    ...next[serverIdx].server_data,
+                    ...newEps
+                ]
+            };
+            return next;
+        });
+        toast.success(`Đã tạo nhanh ${num} tập phim!`);
+    };
+
     const addServer = (serverName: string) => {
         if (!serverName.trim()) return;
         if (episodes.some(s => s.server_name === serverName.trim())) {
@@ -729,12 +763,12 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                                                 ))}
                                             </tbody>
                                         </table>
-                                        <div className="px-4 mt-3 mb-2 flex gap-2">
+                                        <div className="px-4 mt-3 mb-2 flex flex-wrap gap-2">
                                             <Button 
                                                 variant="outline" 
                                                 size="sm" 
                                                 onClick={() => addEpisode(si)}
-                                                className="flex-1 border-white/10 hover:bg-white/5 text-gray-300"
+                                                className="border-white/10 hover:bg-white/5 text-gray-300"
                                             >
                                                 <Plus className="w-4 h-4 mr-2" />
                                                 Thêm tập mới
@@ -742,8 +776,18 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                                             <Button 
                                                 variant="outline" 
                                                 size="sm" 
+                                                onClick={() => generateBulkEpisodes(si)}
+                                                className="border-green-500/20 hover:bg-green-500/10 text-green-400 bg-green-500/5"
+                                                title="Tự động tạo nhiều hàng tập phim cùng lúc"
+                                            >
+                                                <Plus className="w-4 h-4 mr-2" />
+                                                Tạo nhiều tập
+                                            </Button>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
                                                 onClick={() => sortEpisodes(si)}
-                                                className="flex-1 border-white/10 hover:bg-white/5 text-blue-400 border-blue-400/20 bg-blue-400/5 hover:bg-blue-400/10"
+                                                className="border-blue-400/20 hover:bg-blue-400/10 text-blue-400 bg-blue-400/5 ml-auto"
                                                 title="Sắp xếp danh sách tập theo thứ tự tên"
                                             >
                                                 <ArrowUpDown className="w-4 h-4 mr-2" />
