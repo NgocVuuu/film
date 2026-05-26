@@ -750,6 +750,17 @@ async function runAutoUploadPipeline(jobData) {
         
     } catch (error) {
         console.error("\n❌ LỖI NGHIÊM TRỌNG TRONG PIPELINE:", error.message);
+        try {
+            await require('./utils/hostManager').recordUpload({
+                series: jobData?.showName || jobData?.seriesName || 'Auto Pipeline',
+                season: jobData?.seasonName || 'Unknown',
+                episode: jobData?.episodeName || 'Lỗi bóc tách link',
+                sourcePage: jobData?.sourceUrl || 'Unknown',
+                status: 'failed',
+                host: 'System',
+                notes: error.message
+            });
+        } catch(e) { console.error("Lỗi khi lưu log failed:", e.message); }
     } finally {
         if(browser) await browser.close();
         if(server) server.close();
