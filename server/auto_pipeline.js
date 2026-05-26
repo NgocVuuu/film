@@ -209,8 +209,8 @@ async function runAutoUploadPipeline(jobData) {
             console.log(`✅ Phát hiện link trực tiếp (Direct Link): ${movieUrl}. Bỏ qua bước cào Mkvdrama/Viewcrate.`);
             extractedLinks = [movieUrl];
         } else {
-            server = app.listen(9666, () => {
-                console.log("\n✅ [1] Server Fake JDownloader đang chờ ở cổng 9666...\n");
+            server = app.listen(9666, '127.0.0.1', () => {
+                console.log("\n✅ [1] Server Fake JDownloader đang chờ ở cổng 9666 (IPv4 127.0.0.1)...\n");
             });
 
         console.log("✅ [2] Mở trình duyệt ẩn danh Puppeteer...");
