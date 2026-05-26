@@ -104,6 +104,10 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
     const [episodes, setEpisodes] = useState<ServerData[]>([]);
     const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
 
+    // Smart Paste States
+    const [smartPasteServerIdx, setSmartPasteServerIdx] = useState<number | null>(null);
+    const [smartPasteText, setSmartPasteText] = useState('');
+
     const fetchMovieDetail = useCallback(async () => {
         try {
             setLoading(true);
@@ -282,6 +286,76 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
             return next;
         });
         toast.success(`Đã tạo nhanh ${num} tập phim!`);
+    };
+
+    const confirmSmartPaste = () => {
+        if (smartPasteServerIdx === null || !smartPasteText.trim()) return;
+
+        const lines = smartPasteText.split('\n').map(l => l.trim()).filter(Boolean);
+        const newEpisodes: any[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            // Check if line is a URL
+            if (line.startsWith('http') || line.includes('pchill-play.online') || line.includes('.m3u8') || line.includes('.mp4')) {
+                let epName = '';
+                let url = line.startsWith('http') ? line : `https://${line}`;
+                
+                // Try to get name from the previous line if it's not a URL
+                if (i > 0 && !lines[i-1].startsWith('http')) {
+                    const prevLine = lines[i-1];
+                    const match = prevLine.match(/S\d+E(\d+)/i) || prevLine.match(/E(\d+)/i) || prevLine.match(/Tập\s*(\d+)/i) || prevLine.match(/Tap\s*(\d+)/i);
+                    if (match) {
+                        epName = `Tập ${parseInt(match[1])}`;
+                    } else {
+                        epName = prevLine; // Fallback to entire string
+                    }
+                }
+                
+                if (!epName) {
+                    const match = url.match(/e(\d+)/i) || url.match(/tap-?(\d+)/i) || url.match(/tập[ -]?(\d+)/i);
+                    epName = match ? `Tập ${parseInt(match[1])}` : `Tập ?`;
+                }
+
+                let finalName = epName.replace(/\[.*?\]/g, '').replace('.mkv', '').trim();
+
+                newEpisodes.push({
+                    name: finalName,
+                    slug: `tap-${finalName.replace('Tập ', '').trim()}`,
+                    filename: '',
+                    link_embed: (url.includes('.m3u8') || url.includes('.mp4')) ? '' : url,
+                    link_m3u8: (url.includes('.m3u8') || url.includes('.mp4')) ? url : ''
+                });
+            }
+        }
+
+        if (newEpisodes.length === 0) {
+            toast.error('Không tìm thấy link nào hợp lệ trong đoạn text!');
+            return;
+        }
+
+        // Add to state and auto-sort
+        setEpisodes(prev => {
+            const next = [...prev];
+            const mergedData = [...next[smartPasteServerIdx].server_data, ...newEpisodes];
+            
+            // Auto sort
+            const extractEpNum = (name: string) => {
+                const m = name.match(/(\d+)/);
+                return m ? parseInt(m[1]) : 9999;
+            };
+            mergedData.sort((a, b) => extractEpNum(a.name) - extractEpNum(b.name));
+
+            next[smartPasteServerIdx] = {
+                ...next[smartPasteServerIdx],
+                server_data: mergedData
+            };
+            return next;
+        });
+
+        toast.success(`Đã tự động nhận diện & thêm ${newEpisodes.length} tập!`);
+        setSmartPasteServerIdx(null);
+        setSmartPasteText('');
     };
 
     const addServer = (serverName: string) => {
@@ -786,6 +860,15 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                                             <Button 
                                                 variant="outline" 
                                                 size="sm" 
+                                                onClick={() => setSmartPasteServerIdx(si)}
+                                                className="border-yellow-500/20 hover:bg-yellow-500/10 text-yellow-400 bg-yellow-500/5"
+                                            >
+                                                <Plus className="w-4 h-4 mr-2" />
+                                                Dán nhanh (Tên tập & Link)
+                                            </Button>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
                                                 onClick={() => sortEpisodes(si)}
                                                 className="border-blue-400/20 hover:bg-blue-400/10 text-blue-400 bg-blue-400/5 ml-auto"
                                                 title="Sắp xếp danh sách tập theo thứ tự tên"
@@ -834,6 +917,28 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                     <p className="text-gray-500 text-xs mt-3">Nhấn vào tên server để mở rộng và sửa link. Bấm “Lưu thay đổi” để lưu toàn bộ.</p>
                 </div>
             </div>
+
+            {/* Smart Paste Modal */}
+            {smartPasteServerIdx !== null && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#111] border border-white/10 rounded-xl p-6 w-full max-w-2xl flex flex-col">
+                        <h3 className="text-xl font-bold text-white mb-2">Dán nhanh nhiều tập</h3>
+                        <p className="text-gray-400 text-sm mb-4">
+                            Dán text chứa Tên tập (hoặc Tên file) và Link (mỗi link 1 dòng, hoặc format File/Link xen kẽ). Hệ thống sẽ tự nhận diện và sắp xếp thứ tự!
+                        </p>
+                        <textarea
+                            className="w-full h-64 bg-black/50 border border-white/10 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-primary custom-scrollbar mb-4"
+                            placeholder="VD:&#10;Pursuit.of.Jade.S01E21.IQ.H265.2160p.mkv&#10;https://pchill-play.online/#c8gdk&#10;Tập 22&#10;https://..."
+                            value={smartPasteText}
+                            onChange={e => setSmartPasteText(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-3">
+                            <Button variant="ghost" onClick={() => { setSmartPasteServerIdx(null); setSmartPasteText(''); }}>Hủy</Button>
+                            <Button onClick={confirmSmartPaste}>Nhận diện & Thêm</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
