@@ -14,8 +14,8 @@ const SERVER_URL_MAP: Record<string, string> = {
     'OP - Thuyết Minh':       's2t',
     'OP - Lồng Tiếng':        's2l',
     // PChill VIP servers
-    'PChill - Play4Me':       'v1',
-    'PChill - Abyss':  'v2',
+    'PChill - Abyss':         'v1',
+    'PChill - Play4Me':       'v2',
     // Legacy (keep for backwards compat)
     'PChill Server':          'v0',
 };

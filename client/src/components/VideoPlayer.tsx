@@ -358,6 +358,9 @@ export default function VideoPlayer({
     useEffect(() => {
         if (!isEmbedPlayer || !embedUrl) return;
 
+        // Tạm thời tắt timeout lỗi cho Abyss (VIP 1) vì ở production Abyss có thể không gửi postMessage về do cross-origin
+        if (serverName === 'PChill VIP 1' || serverName?.toLowerCase().includes('abyss')) return;
+
         hasReceivedMessage.current = false;
         const errorTimeout = setTimeout(() => {
             if (!hasReceivedMessage.current && onErrorRef.current) {
@@ -387,12 +390,20 @@ export default function VideoPlayer({
                 const validOrigins = ['abyss', 'hydrax', 'play4me', 'localhost'];
                 const isTrustedOrigin = validOrigins.some(o => e.origin.includes(o));
                 
-                // If it's not from our direct iframe and not a trusted origin, ignore
                 if (e.source !== iframeRef.current?.contentWindow && !isTrustedOrigin) {
                     return;
                 }
 
                 hasReceivedMessage.current = true;
+
+                // Handle external fullscreen requests from players like Abyss/Hydrax
+                if (e.data === 'fullscreen' || e.data?.command === 'fullscreen' || e.data?.action === 'fullscreen' || e.data?.event === 'fullscreen') {
+                    const container = containerRef.current;
+                    if (container) {
+                        const requestFS = container.requestFullscreen || (container as any).webkitRequestFullscreen || (container as any).mozRequestFullScreen || (container as any).msRequestFullscreen;
+                        if (requestFS) requestFS.call(container).catch(() => {});
+                    }
+                }
 
                 if (e.data.playerStatus === 'Ready') {
                     // Restore progress
@@ -860,14 +871,14 @@ export default function VideoPlayer({
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             const isStandalone = (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
-            const hasNativeFallback = !!(video as any).webkitEnterFullscreen;
+            const hasNativeFallback = video ? !!(video as any).webkitEnterFullscreen : false;
 
             // Current state check (more robust)
             const activeFullscreenElement = document.fullscreenElement ||
                 (document as any).webkitFullscreenElement ||
                 (document as any).mozFullScreenElement ||
                 (document as any).msFullscreenElement ||
-                (video as any).webkitDisplayingFullscreen;
+                (video ? (video as any).webkitDisplayingFullscreen : false);
 
             if (!activeFullscreenElement) {
                 // ENTER FULLSCREEN
@@ -1413,9 +1424,30 @@ export default function VideoPlayer({
                         src={embedUrl}
                         className="w-full h-full border-none rounded-lg"
                         allowFullScreen={true}
+                        // @ts-ignore
+                        webkitallowfullscreen="true"
+                        // @ts-ignore
+                        mozallowfullscreen="true"
                         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                         onLoad={() => setIsLoading(false)}
                     />
+                    
+                    {/* Nút Fullscreen dự phòng cho trình phát nhúng (luôn hiển thị góc phải trên) */}
+                    <div className="absolute top-2 right-2 md:top-4 md:right-4 z-50 pointer-events-auto">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="bg-black/60 hover:bg-black/90 text-white border border-white/10 rounded-full w-10 h-10 shadow-xl transition-all"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleFullscreen(e);
+                            }}
+                            title="Phóng to toàn màn hình"
+                        >
+                            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                        </Button>
+                    </div>
                 </div>
             ) : (
                 <video
@@ -1607,8 +1639,8 @@ export default function VideoPlayer({
                 )
             }
 
-            {/* Controls Overlay */}
-            {!isEmbedPlayer && (
+            {/* Video Controls Overlay */}
+            {(!isEmbedPlayer || (!!roomId && isHost && isEmbedPlayer)) && (
             <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end px-2 py-2 sm:px-3 sm:py-3 md:p-4 transition-opacity duration-300 z-10 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
 
                 {/* Progress Bar */}
