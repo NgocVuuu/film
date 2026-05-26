@@ -611,8 +611,8 @@ export default function WatchPage() {
                     </div>
 
                     <div className="aspect-video w-full bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
-                        {/* VIP Lock Overlay */}
-                        {currentSource.startsWith('PChill VIP') && !user?.isVip && !(currentSource === 'PChill VIP 2' && user?.isPremium) ? (
+                        {/* VIP Lock Overlay (Hidden for now to allow free access) */}
+                        {false && currentSource.startsWith('PChill VIP') && !user?.isVip && !(currentSource === 'PChill VIP 2' && user?.isPremium) ? (
                             <div className="w-full h-full flex flex-col items-center justify-center bg-black/95 rounded-xl gap-4 text-center p-6 z-50 absolute top-0 left-0">
                                 <div className="w-20 h-20 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
                                     <Crown className="w-10 h-10 text-yellow-400" />
@@ -733,7 +733,8 @@ export default function WatchPage() {
                             const vipSources = availableSources.filter(s => s.startsWith('PChill VIP'));
                             const renderBtn = (source: string) => {
                                 const isVipSource = source.startsWith('PChill VIP');
-                                const canAccess = !isVipSource || user?.isVip || (source === 'PChill VIP 2' && user?.isPremium);
+                                // const canAccess = !isVipSource || user?.isVip || (source === 'PChill VIP 2' && user?.isPremium);
+                                const canAccess = true; // Temporarily allow all access
                                 const lockedTitle = source === 'PChill VIP 2' ? 'Dành cho thành viên Premium & VIP' : 'Chỉ dành cho thành viên PChill VIP';
                                 return (
                                     <button
@@ -788,7 +789,8 @@ export default function WatchPage() {
                                 const vipSources = availableSources.filter(s => s.startsWith('PChill VIP'));
                                 const renderBtn = (source: string) => {
                                     const isVipSource = source.startsWith('PChill VIP');
-                                    const canAccess = !isVipSource || user?.isVip || (source === 'PChill VIP 2' && user?.isPremium);
+                                    // const canAccess = !isVipSource || user?.isVip || (source === 'PChill VIP 2' && user?.isPremium);
+                                    const canAccess = true; // Temporarily allow all access
                                     const lockedTitle = source === 'PChill VIP 2' ? 'Dành cho thành viên Premium & VIP' : 'Chỉ dành cho thành viên PChill VIP';
                                     return (
                                         <button

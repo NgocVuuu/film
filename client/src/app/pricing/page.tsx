@@ -41,6 +41,13 @@ export default function PricingPage() {
     const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
+        router.push('/');
+    }, [router]);
+
+    // Redirect early to hide UI while preserving code for future
+    if (true) return null;
+
+    useEffect(() => {
         fetchPlans();
     }, []);
 
@@ -334,8 +341,8 @@ export default function PricingPage() {
                                 <div className="bg-black/30 p-3 rounded-lg border border-primary/30 relative group shadow-inner">
                                     <p className="text-gray-400 text-[10px] uppercase mb-1">Mã Giao Dịch (BẮT BUỘC)</p>
                                     <div className="flex justify-between items-center">
-                                        <p className="font-mono font-bold text-lg text-yellow-400">{paymentData.content}</p>
-                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.content)} className="text-gray-400 hover:text-white h-6 w-6 p-0 group">
+                                        <p className="font-mono font-bold text-lg text-yellow-400">{paymentData?.content}</p>
+                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData?.content || '')} className="text-gray-400 hover:text-white h-6 w-6 p-0 group">
                                             <Copy className="w-3.5 h-3.5 group-active:scale-95 transition-transform" />
                                         </Button>
                                     </div>
@@ -345,8 +352,8 @@ export default function PricingPage() {
                                     <div className="bg-black/30 p-2.5 rounded-lg border border-white/5 shadow-inner">
                                         <p className="text-gray-400 text-[10px] uppercase mb-1">Số tiền (WeScan)</p>
                                         <div className="flex justify-between items-center">
-                                            <p className="font-mono font-bold text-base text-primary/90">{formatPrice(paymentData.amount)}</p>
-                                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData.amount.toString())} className="text-gray-400 hover:text-white h-6 w-6 p-0 group shrink-0">
+                                            <p className="font-mono font-bold text-base text-primary/90">{paymentData?.amount ? formatPrice(paymentData!.amount) : ''}</p>
+                                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentData?.amount?.toString() || '')} className="text-gray-400 hover:text-white h-6 w-6 p-0 group shrink-0">
                                                 <Copy className="w-3.5 h-3.5 group-active:scale-95 transition-transform" />
                                             </Button>
                                         </div>
