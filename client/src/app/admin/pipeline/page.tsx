@@ -21,6 +21,7 @@ export default function AdminPipelinePage() {
     
     // Bulk Sync State
     const [bulkAbyssText, setBulkAbyssText] = useState('');
+    const [bulkAbyssSourceLinksText, setBulkAbyssSourceLinksText] = useState('');
     const [isBulkSyncing, setIsBulkSyncing] = useState(false);
 
     // Bulk Sync Play4Me State
@@ -107,6 +108,16 @@ export default function AdminPipelinePage() {
                 return;
             }
 
+            let finalExtractedLinks = extractedLinks || [];
+            if (bulkAbyssSourceLinksText.trim()) {
+                const sourceLines = bulkAbyssSourceLinksText.split('\n').map(l => l.trim()).filter(Boolean);
+                finalExtractedLinks = sourceLines.map((link, idx) => {
+                    const epMatch = link.match(/e(\d+)/i) || link.match(/tap-?(\d+)/i) || link.match(/tập[ -]?(\d+)/i);
+                    const episode = epMatch ? `Tập ${parseInt(epMatch[1])}` : `Tập ${idx + 1}`;
+                    return { episode, link, name: `Episode ${episode}` };
+                });
+            }
+
             toast('Bắt đầu đồng bộ hàng loạt. Tiến trình này sẽ chạy ngầm trên server, bạn có thể kiểm tra danh sách phim sau ít phút.', { icon: '🚀', duration: 5000 });
             
             const res = await customFetch('/api/admin/pipeline/abyss-bulk-sync', {
@@ -115,7 +126,7 @@ export default function AdminPipelinePage() {
                 body: JSON.stringify({
                     movieId: selectedMovie._id,
                     abyssLines: lines,
-                    extractedLinks: extractedLinks || []
+                    extractedLinks: finalExtractedLinks
                 })
             });
             const data = await res.json();
@@ -772,12 +783,26 @@ export default function AdminPipelinePage() {
                                             Phim đang chọn: <strong className="text-white">{selectedMovie.name}</strong><br/>
                                             Dán Abyss ID (YawKPXtB8) hoặc Link để đồng bộ & tự up phụ đề.
                                         </p>
-                                        <textarea
-                                            value={bulkAbyssText}
-                                            onChange={(e) => setBulkAbyssText(e.target.value)}
-                                            placeholder="YawKPXtB8&#10;https://abyss.to/xxxx..."
-                                            className="w-full flex-1 min-h-[200px] bg-black/40 border border-blue-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-blue-400 mb-4 custom-scrollbar"
-                                        />
+                                        <div className="flex gap-4 mb-4 flex-col lg:flex-row">
+                                            <div className="flex-1">
+                                                <p className="text-xs text-blue-400 mb-1 font-bold">Abyss IDs / Links</p>
+                                                <textarea
+                                                    value={bulkAbyssText}
+                                                    onChange={(e) => setBulkAbyssText(e.target.value)}
+                                                    placeholder="YawKPXtB8&#10;https://abyss.to/xxxx..."
+                                                    className="w-full min-h-[200px] bg-black/40 border border-blue-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-blue-400 custom-scrollbar"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-xs text-blue-400 mb-1 font-bold">Link gốc (Direct Links) để lấy Sub</p>
+                                                <textarea
+                                                    value={bulkAbyssSourceLinksText}
+                                                    onChange={(e) => setBulkAbyssSourceLinksText(e.target.value)}
+                                                    placeholder="https://.../video.mp4&#10;Dán theo đúng thứ tự tập của Abyss để tách phụ đề tự động"
+                                                    className="w-full min-h-[200px] bg-black/40 border border-blue-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-blue-400 custom-scrollbar"
+                                                />
+                                            </div>
+                                        </div>
                                         <Button
                                             onClick={handleBulkSync}
                                             disabled={isBulkSyncing || !bulkAbyssText.trim()}
