@@ -250,6 +250,21 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
         });
     };
 
+    const addServer = (serverName: string) => {
+        if (!serverName.trim()) return;
+        if (episodes.some(s => s.server_name === serverName.trim())) {
+            toast.error(`Server "${serverName}" đã tồn tại!`);
+            return;
+        }
+        setEpisodes(prev => [...prev, { server_name: serverName.trim(), server_data: [] }]);
+        setExpandedServers(prev => {
+            const next = new Set(prev);
+            next.add(serverName.trim());
+            return next;
+        });
+        toast.success(`Đã thêm server "${serverName}"`);
+    };
+
     const sortEpisodes = (serverIdx: number) => {
         setEpisodes(prev => {
             const next = [...prev];
@@ -740,8 +755,37 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                             </div>
                         ))}
                         {episodes.length === 0 && (
-                            <p className="text-gray-500 text-sm">Chưa có tập nào</p>
+                            <p className="text-gray-500 text-sm mb-4">Chưa có tập nào</p>
                         )}
+                        <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t border-white/5">
+                            <Button
+                                variant="outline"
+                                onClick={() => addServer('VIP 1 (Play4Me)')}
+                                className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Thêm Server VIP 1 (Play4Me)
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => addServer('VIP 2 (Abyss)')}
+                                className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Thêm Server VIP 2 (Abyss)
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    const name = prompt('Nhập tên Server mới:');
+                                    if (name) addServer(name);
+                                }}
+                                className="border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Thêm Server khác
+                            </Button>
+                        </div>
                     </div>
                     <p className="text-gray-500 text-xs mt-3">Nhấn vào tên server để mở rộng và sửa link. Bấm “Lưu thay đổi” để lưu toàn bộ.</p>
                 </div>
