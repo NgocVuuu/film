@@ -564,19 +564,63 @@ async function runAutoUploadPipeline(jobData) {
 
         // Nếu fake JDownloader không trả lời, thử fallback đọc thẳng từ DOM (gọi khi CNL không gửi về)
         if (extractedLinks === "TIMEOUT" || !Array.isArray(extractedLinks) || extractedLinks.length === 0) {
-            console.log("⚠️ Fake JDownloader không trả lời trong thời hạn. Thử fallback quét DOM trên ViewCrate để lấy link...");
-            try {
-                const fallback = await viewcratePage.evaluate(() => {
-                    const html = document.body.innerHTML;
-                    const urls = html.match(/https?:\/\/(?:www\.)?(?:gofile\.io\/d\/[A-Za-z0-9]+|pixeldrain\.com\/u\/[A-Za-z0-9]+|send\.now\/[A-Za-z0-9]+|send\.cm\/[A-Za-z0-9]+)/g);
-                    return urls || [];
-                });
-                if (fallback && fallback.length > 0) {
-                    extractedLinks = fallback;
-                    console.log(`🔎 Fallback tìm được ${extractedLinks.length} link từ DOM.`);
+            console.log("⚠️ Fake JDownloader không trả lời trong thời hạn. Thử fallback lấy trực tiếp mã hóa từ DOM...");
+            
+            // 1. Thử lấy crypted & jk từ DOM
+            let cnlData = null;
+            for (const frame of viewcratePage.frames()) {
+                try {
+                    const data = await frame.evaluate(() => {
+                        const cryptedEl = document.querySelector('[name="crypted"]');
+                        const jkEl = document.querySelector('[name="jk"]');
+                        if (cryptedEl && jkEl && cryptedEl.value && jkEl.value) {
+                            return { crypted: cryptedEl.value, jk: jkEl.value };
+                        }
+                        return null;
+                    });
+                    if (data) { cnlData = data; break; }
+                } catch(e) {}
+            }
+
+            if (cnlData) {
+                console.log("🔓 [FALLBACK] Đã tìm thấy mã Crypted và JK trong DOM! Đang tự giải mã...");
+                try {
+                    const crypto = require('crypto');
+                    const keyStr = eval(`(${cnlData.jk})()`);
+                    const key = Buffer.from(keyStr, 'hex');
+
+                    const cryptedBuffer = Buffer.from(cnlData.crypted, 'base64');
+                    const decipher = crypto.createDecipheriv('aes-128-cbc', key, key);
+                    decipher.setAutoPadding(false); 
+                    
+                    let decrypted = decipher.update(cryptedBuffer, undefined, 'utf8');
+                    decrypted += decipher.final('utf8');
+
+                    const links = decrypted.replace(/\x00/g, '').split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
+                    if (links.length > 0) {
+                        extractedLinks = links;
+                        console.log(`✅ [FALLBACK] Tự giải mã thành công ${links.length} link Click'n'Load từ DOM!`);
+                    }
+                } catch(err) {
+                    console.log("⚠️ [FALLBACK] Tự giải mã thất bại:", err.message);
                 }
-            } catch (e) {
-                console.log('⚠️ Fallback DOM extraction thất bại:', e.message);
+            }
+
+            // 2. Nếu vẫn thất bại, tìm link trần trụi trên HTML
+            if (!Array.isArray(extractedLinks) || extractedLinks.length === 0) {
+                try {
+                    const fallback = await viewcratePage.evaluate(() => {
+                        const html = document.body.innerHTML;
+                        const urls = html.match(/https?:\/\/(?:www\.)?(?:gofile\.io\/d\/[A-Za-z0-9]+|pixeldrain\.com\/u\/[A-Za-z0-9]+|send\.now\/[A-Za-z0-9]+|send\.cm\/[A-Za-z0-9]+)/g);
+                        return urls || [];
+                    });
+                    if (fallback && fallback.length > 0) {
+                        extractedLinks = fallback;
+                        console.log(`🔎 Fallback tìm được ${extractedLinks.length} link từ DOM.`);
+                    }
+                } catch (e) {
+                    console.log('⚠️ Fallback DOM extraction thất bại:', e.message);
+                }
             }
         }
         
