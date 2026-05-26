@@ -181,6 +181,19 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
     };
 
     const handleEpisodeFieldChange = (serverIdx: number, epIdx: number, field: 'name' | 'link_m3u8' | 'link_embed', value: string) => {
+        let processedValue = value;
+        
+        // Tự động bóc tách link src="" nếu user dán nguyên cả cụm thẻ iframe (bao gồm cả trường hợp bị mã hóa &lt;iframe)
+        if (field === 'link_embed') {
+            const decodedValue = value.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+            if (decodedValue.includes('<iframe')) {
+                const srcMatch = decodedValue.match(/src=["']([^"']+)["']/);
+                if (srcMatch && srcMatch[1]) {
+                    processedValue = srcMatch[1];
+                }
+            }
+        }
+
         setEpisodes(prev => {
             const next = prev.map((s, si) => {
                 if (si !== serverIdx) return s;
@@ -188,7 +201,7 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                     ...s,
                     server_data: s.server_data.map((ep, ei) => {
                         if (ei !== epIdx) return ep;
-                        return { ...ep, [field]: value };
+                        return { ...ep, [field]: processedValue };
                     })
                 };
             });

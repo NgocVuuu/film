@@ -369,7 +369,9 @@ export default function VideoPlayer({
         }, 20000); // 20 giây không nhận được tín hiệu -> Lỗi
 
         return () => clearTimeout(errorTimeout);
-    }, [isEmbedPlayer, embedUrl]);
+    }, [isEmbedPlayer, embedUrl, serverName]);
+
+
 
     // Iframe message listener for VIP Host
     useEffect(() => {
@@ -983,7 +985,7 @@ export default function VideoPlayer({
         if (!user && movieSlug && episodeSlug) {
             // Wait a bit to ensure it's a real view (e.g. 5s)
             const timer = setTimeout(() => {
-                fetch('/api/progress/track-view', {
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/progress/track-view`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ movieSlug, episodeSlug })
@@ -1388,6 +1390,19 @@ export default function VideoPlayer({
 
 
 
+    if (isEmbedPlayer) {
+        return (
+            <div className="w-full h-full relative aspect-video bg-black rounded-lg flex items-center justify-center">
+                <div 
+                    className="w-full h-full border-none relative z-20"
+                    dangerouslySetInnerHTML={{
+                        __html: `<iframe id="playerIframeId" src="${embedUrl}" width="100%" height="100%" frameborder="0" scrolling="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="fullscreen"></iframe>`
+                    }}
+                />
+            </div>
+        );
+    }
+
     return (
         <div
             ref={containerRef}
@@ -1409,37 +1424,6 @@ export default function VideoPlayer({
         >
             {/* Main Player Area Wrapper */}
             <div className="relative flex-1 h-full min-w-0">
-            {isEmbedPlayer ? (
-                <div className="w-full h-full relative" onContextMenu={(e) => e.preventDefault()}>
-                    <iframe
-                        key={embedUrl} // Forces iframe to reload when switching episodes
-                        id="playerIframeId"
-                        ref={iframeRef}
-                        src={embedUrl}
-                        className="w-full h-full border-none rounded-lg"
-                        allowFullScreen={true}
-                        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                        onLoad={() => setIsLoading(false)}
-                    />
-                    
-                    {/* Nút Fullscreen dự phòng cho trình phát nhúng (luôn hiển thị góc phải trên) */}
-                    <div className="absolute top-2 right-2 md:top-4 md:right-4 z-50 pointer-events-auto">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="bg-black/60 hover:bg-black/90 text-white border border-white/10 rounded-full w-10 h-10 shadow-xl transition-all"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                toggleFullscreen(e);
-                            }}
-                            title="Phóng to toàn màn hình"
-                        >
-                            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                        </Button>
-                    </div>
-                </div>
-            ) : (
                 <video
                     ref={videoRef}
                     poster={poster}
@@ -1447,7 +1431,6 @@ export default function VideoPlayer({
                     playsInline
                     autoPlay={autoPlay}
                 />
-            )}
 
             {/* Error Overlay */}
             {error && (
