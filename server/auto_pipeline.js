@@ -69,12 +69,20 @@ const app = express();
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json());
 
+// Helper to set broad CORS including PNA
+const setCorsHeaders = (req, res) => {
+    const origin = req.headers.origin || '*';
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, HEAD');
+    res.header('Access-Control-Allow-Headers', '*');
+    res.header('Access-Control-Allow-Private-Network', 'true');
+    res.header('Access-Control-Allow-Credentials', 'true');
+};
+
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    setCorsHeaders(req, res);
     if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
+        return res.status(200).end();
     }
     next();
 });
@@ -218,7 +226,7 @@ async function runAutoUploadPipeline(jobData) {
 
         console.log("✅ [2] Mở trình duyệt ẩn danh Puppeteer...");
         browser = await puppeteer.launch({ 
-            headless: true, // Chạy nền trên Server VPS
+            headless: process.env.NODE_ENV === 'production' ? true : false, // Hiển thị GUI ở Local, chạy ngầm ở VPS
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox',
@@ -234,8 +242,30 @@ async function runAutoUploadPipeline(jobData) {
         // Khóa luồng điều hướng toàn cục để chống quảng cáo tự redirect trang chính
         await page.setRequestInterception(true);
         page.on('request', req => {
+            const u = req.url();
+            
+            // Intercept CNL payload directly from the browser (bulletproof fallback)
+            if (u.includes('127.0.0.1:9666/flash/addcrypted2') && req.method() === 'POST') {
+                try {
+                    const postData = req.postData();
+                    console.log("🔥 [PUPPETEER INTERCEPT] Đã bắt được gói tin gửi tới Fake JDownloader từ trình duyệt!");
+                    if (postData) {
+                        const parsed = require('querystring').parse(postData);
+                        if (parsed.crypted && parsed.jk && !extractedLinks.length) {
+                            console.log("🔥 [PUPPETEER INTERCEPT] Trích xuất thành công crypted và jk. Gửi tới bộ giải mã Node.js...");
+                            axios.post('http://127.0.0.1:9666/flash/addcrypted2', postData, {
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                            }).catch(() => {});
+                        }
+                    }
+                } catch (e) {
+                    console.log("Lỗi intercept CNL:", e.message);
+                }
+                req.continue();
+                return;
+            }
+
             if (req.isNavigationRequest() && req.frame() === page.mainFrame()) {
-                const u = req.url();
                 if (u !== 'about:blank' && !u.includes('viewcrate') && !u.includes('filecrypt') && !u.includes('ouo') && !u.includes('mkvdrama') && !u.includes('google') && !u.includes('recaptcha') && !u.includes('turnstile')) {
                     console.log(`🚫 Đã chặn trang chính tự chuyển hướng sang quảng cáo: ${u}`);
                     req.abort('aborted');
@@ -243,6 +273,13 @@ async function runAutoUploadPipeline(jobData) {
                 }
             }
             req.continue();
+        });
+        
+        page.on('requestfailed', request => {
+            const u = request.url();
+            if (u.includes('127.0.0.1') || u.includes('localhost')) {
+                console.log(`🚨 [Puppeteer] Request tới ${u} bị fail! Lỗi: ${request.failure().errorText}`);
+            }
         });
 
         // ---- BƯỚC 1: LẤY LINK OUO 2160P ----
@@ -568,6 +605,7 @@ async function runAutoUploadPipeline(jobData) {
             
             // 1. Thử lấy crypted & jk từ DOM
             let cnlData = null;
+            console.log(`[FALLBACK] Checking ${viewcratePage.frames().length} frames...`);
             for (const frame of viewcratePage.frames()) {
                 try {
                     const data = await frame.evaluate(() => {
@@ -576,10 +614,36 @@ async function runAutoUploadPipeline(jobData) {
                         if (cryptedEl && jkEl && cryptedEl.value && jkEl.value) {
                             return { crypted: cryptedEl.value, jk: jkEl.value };
                         }
-                        return null;
+                        
+                        // Also try input#crypted or other selectors just in case
+                        const cryptedEl2 = document.getElementById('crypted');
+                        const jkEl2 = document.querySelector('script[type="text/javascript"]');
+                        let altJk = null;
+                        if (jkEl2 && jkEl2.innerText.includes('function(')) {
+                            // Try to extract jk from script
+                            const match = jkEl2.innerText.match(/function[^{]+\{.*return\s+['"]([a-f0-9]+)['"]/i);
+                            if (match) altJk = `function(){return '${match[1]}';}`;
+                        }
+                        
+                        return { 
+                            foundCrypted: !!(cryptedEl || cryptedEl2), 
+                            foundJk: !!(jkEl || altJk),
+                            crypted: (cryptedEl ? cryptedEl.value : (cryptedEl2 ? cryptedEl2.value : null)),
+                            jk: (jkEl ? jkEl.value : altJk)
+                        };
                     });
-                    if (data) { cnlData = data; break; }
-                } catch(e) {}
+                    
+                    if (data && data.foundCrypted) {
+                        console.log(`[FALLBACK] Frame ${frame.url()} found crypted!`);
+                    }
+
+                    if (data && data.crypted && data.jk) { 
+                        cnlData = data; 
+                        break; 
+                    }
+                } catch(e) {
+                    console.log(`[FALLBACK] Frame error: ${e.message}`);
+                }
             }
 
             if (cnlData) {
@@ -600,10 +664,14 @@ async function runAutoUploadPipeline(jobData) {
                     if (links.length > 0) {
                         extractedLinks = links;
                         console.log(`✅ [FALLBACK] Tự giải mã thành công ${links.length} link Click'n'Load từ DOM!`);
+                    } else {
+                        console.log(`⚠️ [FALLBACK] Giải mã ra text rỗng hoặc không có link:`, decrypted.substring(0, 50));
                     }
                 } catch(err) {
                     console.log("⚠️ [FALLBACK] Tự giải mã thất bại:", err.message);
                 }
+            } else {
+                console.log("⚠️ [FALLBACK] Không tìm thấy input Crypted hoặc JK trong bất kỳ frame nào.");
             }
 
             // 2. Nếu vẫn thất bại, tìm link trần trụi trên HTML

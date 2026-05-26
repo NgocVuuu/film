@@ -539,5 +539,91 @@ router.post('/abyss-bulk-sync', async (req, res) => {
     }
 });
 
+router.post('/play4me-bulk-sync', async (req, res) => {
+    try {
+        const { movieId, play4meLines, extractedLinks } = req.body;
+        if (!movieId || !play4meLines || !extractedLinks) return res.status(400).send('Missing params');
+
+        const Movie = require('./models/Movie');
+        const movie = await Movie.findById(movieId);
+        if (!movie) return res.status(404).send('Movie not found');
+
+        const videoHostProviders = require('./utils/videoHostProviders');
+        const play4meApi = videoHostProviders.play4meAPI;
+        if (!play4meApi) return res.status(400).send('Play4Me API not configured');
+
+        const hostUpload = require('./models/HostUpload');
+
+        let successCount = 0;
+        
+        // This process runs in the background
+        (async () => {
+            console.log(`\n🚀 [ADMIN-BULK-SYNC] Bắt đầu đồng bộ ${play4meLines.length} link Play4Me cho phim: "${movie.name}"`);
+            
+            // Create folder for movie on Play4Me
+            let folderId = null;
+            try {
+                folderId = await play4meApi.createFolder(movie.name);
+                if (folderId) console.log(`[Bulk Sync] Tạo/Tìm thấy thư mục Play4Me cho phim: ${movie.name} (ID: ${folderId})`);
+            } catch(e) {
+                console.log(`[Bulk Sync] ⚠️ Không thể tạo thư mục Play4Me:`, e.message);
+            }
+
+            for (let line of play4meLines) {
+                let directUrl = line.trim();
+                if (!directUrl || !directUrl.startsWith('http')) continue;
+
+                // Match with extractedLinks to get episode and name
+                const matchedLinkObj = extractedLinks.find(el => el.link === directUrl);
+                
+                let episodeString = null;
+                let filename = 'Video';
+                
+                if (matchedLinkObj) {
+                    episodeString = matchedLinkObj.episode;
+                    filename = matchedLinkObj.name;
+                } else {
+                    console.log(`[Bulk Sync Play4Me] ⚠️ Không tìm thấy link ${directUrl} trong danh sách Extracted Links! Cố đoán tập...`);
+                    // Fallback to extract from filename or url
+                    const epMatch = directUrl.match(/e(\d+)/i) || directUrl.match(/tap-?(\d+)/i) || directUrl.match(/tập[ -]?(\d+)/i);
+                    episodeString = epMatch ? `Tập ${parseInt(epMatch[1])}` : `Tập ?`;
+                }
+
+                try {
+                    console.log(`[Bulk Sync Play4Me] Bắt đầu Remote Upload: ${episodeString} (${filename})`);
+                    // Call Play4Me Remote Upload
+                    const taskId = await play4meApi.remoteUpload(directUrl, filename, folderId);
+                    
+                    if (taskId) {
+                        // Add to hostUpload collection for tracking
+                        await hostUpload.create({
+                            movieId: movie._id,
+                            series: movie.name,
+                            season: 'S01',
+                            episode: episodeString,
+                            filename: filename,
+                            host: 'Play4Me',
+                            sourcePage: directUrl,
+                            status: 'processing', // Remote upload takes time, cron will check
+                            taskId: taskId,
+                            notes: 'Đồng bộ từ Bulk Sync Play4Me',
+                            createdAt: new Date()
+                        });
+
+                        successCount++;
+                    }
+                } catch(e) {
+                    console.log(`[Bulk Sync Play4Me] Error for ${directUrl}:`, e.message);
+                }
+            }
+            console.log(`[Bulk Sync Play4Me] 🎉 Hoàn tất đẩy ${successCount} tập phim vào hàng đợi Play4Me cho ${movie.name}`);
+        })();
+
+        res.json({ ok: true, message: `Hệ thống đã nhận lệnh và đang đồng bộ ngầm lên Play4Me.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;
 // Trigger nodemon restart

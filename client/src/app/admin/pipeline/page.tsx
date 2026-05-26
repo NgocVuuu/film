@@ -23,6 +23,10 @@ export default function AdminPipelinePage() {
     const [bulkAbyssText, setBulkAbyssText] = useState('');
     const [isBulkSyncing, setIsBulkSyncing] = useState(false);
 
+    // Bulk Sync Play4Me State
+    const [bulkPlay4MeText, setBulkPlay4MeText] = useState('');
+    const [isBulkSyncingPlay4Me, setIsBulkSyncingPlay4Me] = useState(false);
+
     // Retry Custom Links State
     const [customLinks, setCustomLinks] = useState<Record<string, string>>({});
 
@@ -126,6 +130,44 @@ export default function AdminPipelinePage() {
             toast.error('Lỗi kết nối API đồng bộ');
         } finally {
             setIsBulkSyncing(false);
+        }
+    };
+
+    const handleBulkSyncPlay4Me = async () => {
+        if (!selectedMovie || !bulkPlay4MeText.trim() || extractedLinks.length === 0) return;
+        
+        setIsBulkSyncingPlay4Me(true);
+        try {
+            const lines = bulkPlay4MeText.split('\n').map(l => l.trim()).filter(Boolean);
+            if (lines.length === 0) {
+                toast.error('Vui lòng nhập danh sách link trực tiếp');
+                setIsBulkSyncingPlay4Me(false);
+                return;
+            }
+
+            toast('Bắt đầu đồng bộ hàng loạt lên Play4Me. Tiến trình sẽ chạy ngầm trên server.', { icon: '🚀', duration: 5000 });
+            
+            const res = await customFetch('/api/admin/pipeline/play4me-bulk-sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    movieId: selectedMovie._id,
+                    play4meLines: lines,
+                    extractedLinks: extractedLinks
+                })
+            });
+            const data = await res.json();
+            
+            if (res.ok && data.ok) {
+                toast.success(`Đã gửi yêu cầu đồng bộ Play4Me thành công! ${data.message || ''}`, { duration: 8000 });
+                setBulkPlay4MeText('');
+            } else {
+                toast.error(data.error || 'Lỗi khi đồng bộ hàng loạt Play4Me');
+            }
+        } catch (e) {
+            toast.error('Lỗi kết nối API đồng bộ Play4Me');
+        } finally {
+            setIsBulkSyncingPlay4Me(false);
         }
     };
 
@@ -689,6 +731,29 @@ export default function AdminPipelinePage() {
                                                     className="bg-blue-600 hover:bg-blue-500 text-white w-full"
                                                 >
                                                     {isBulkSyncing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang đồng bộ...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Bắt đầu Đồng Bộ & Up Phụ Đề</>}
+                                                </Button>
+                                            </div>
+                                        )}
+
+                                        {/* Play4Me Bulk Sync Section */}
+                                        {selectedMovie && (
+                                            <div className="mt-8 bg-purple-500/10 border border-purple-500/30 rounded-xl p-6">
+                                                <h3 className="text-lg font-bold text-purple-400 mb-2">Đồng bộ hàng loạt Play4Me (Remote Upload)</h3>
+                                                <p className="text-sm text-purple-300/70 mb-4">
+                                                    Đang chọn phim: <strong className="text-white">{selectedMovie.name}</strong>. Hãy dán danh sách Direct Link (Gofile, Pixeldrain...) mà bạn vừa bóc tách được ở trên vào đây. Hệ thống sẽ Remote Upload thẳng sang Play4Me, trích xuất phụ đề và tự lưu vào Database!
+                                                </p>
+                                                <textarea
+                                                    value={bulkPlay4MeText}
+                                                    onChange={(e) => setBulkPlay4MeText(e.target.value)}
+                                                    placeholder="https://gofile.io/d/abc...&#10;https://pixeldrain.com/u/xyz...&#10;..."
+                                                    className="w-full h-32 bg-black/40 border border-purple-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-purple-400 mb-4"
+                                                />
+                                                <Button
+                                                    onClick={handleBulkSyncPlay4Me}
+                                                    disabled={isBulkSyncingPlay4Me || !bulkPlay4MeText.trim()}
+                                                    className="bg-purple-600 hover:bg-purple-500 text-white w-full"
+                                                >
+                                                    {isBulkSyncingPlay4Me ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang đồng bộ...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Bắt đầu Tải Lên Play4Me</>}
                                                 </Button>
                                             </div>
                                         )}
