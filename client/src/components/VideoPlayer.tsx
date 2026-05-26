@@ -377,14 +377,7 @@ export default function VideoPlayer({
 
         const handleMessage = (e: MessageEvent) => {
             try {
-                // Log all incoming messages for debugging
-                if (e.data?.currentTime !== undefined || e.data?.playerStatus) {
-                    console.log('[VideoPlayer] Received message:', {
-                        origin: e.origin,
-                        data: e.data,
-                        isMatch: e.source === iframeRef.current?.contentWindow
-                    });
-                }
+                console.log('[IFRAME MESSAGE]', e.origin, e.data);
 
                 // Temporary: Allow all messages for debugging, or check if origin is Abyss/Hydrax
                 const validOrigins = ['abyss', 'hydrax', 'play4me', 'localhost'];
@@ -852,7 +845,8 @@ export default function VideoPlayer({
             const container = containerRef.current;
             const video = videoRef.current;
 
-            if (!container || !video) return;
+            if (!container) return;
+            if (!video && !isEmbedPlayer) return;
 
             // Check if standard fullscreen calls are available on container
             const requestFS = container.requestFullscreen ||
@@ -1424,10 +1418,6 @@ export default function VideoPlayer({
                         src={embedUrl}
                         className="w-full h-full border-none rounded-lg"
                         allowFullScreen={true}
-                        // @ts-ignore
-                        webkitallowfullscreen="true"
-                        // @ts-ignore
-                        mozallowfullscreen="true"
                         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                         onLoad={() => setIsLoading(false)}
                     />
