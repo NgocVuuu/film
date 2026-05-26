@@ -354,22 +354,12 @@ export default function VideoPlayer({
         hasEnded.current = false;
     }, [embedUrl, src]);
 
-    // Error timeout for Embed Players (only runs once per embedUrl)
+    // Remove error timeout for Embed Players - we cannot reliably detect failures 
+    // via postMessage because third-party players (Abyss, Play4Me) may not send them
     useEffect(() => {
         if (!isEmbedPlayer || !embedUrl) return;
-
-        // Tạm thời tắt timeout lỗi cho Abyss (VIP 1) vì ở production Abyss có thể không gửi postMessage về do cross-origin
-        if (serverName === 'PChill VIP 1' || serverName?.toLowerCase().includes('abyss')) return;
-
-        hasReceivedMessage.current = false;
-        const errorTimeout = setTimeout(() => {
-            if (!hasReceivedMessage.current && onErrorRef.current) {
-                onErrorRef.current();
-            }
-        }, 20000); // 20 giây không nhận được tín hiệu -> Lỗi
-
-        return () => clearTimeout(errorTimeout);
-    }, [isEmbedPlayer, embedUrl, serverName]);
+        hasReceivedMessage.current = true; // Assume success
+    }, [isEmbedPlayer, embedUrl]);
 
 
 
@@ -1392,13 +1382,31 @@ export default function VideoPlayer({
 
     if (isEmbedPlayer) {
         return (
-            <div className="w-full h-full relative aspect-video bg-black rounded-lg flex items-center justify-center">
+            <div ref={containerRef} className="w-full h-full relative aspect-video bg-black rounded-lg flex items-center justify-center group">
                 <div 
                     className="w-full h-full border-none relative z-20"
                     dangerouslySetInnerHTML={{
                         __html: `<iframe id="playerIframeId" src="${embedUrl}" width="100%" height="100%" frameborder="0" scrolling="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="fullscreen"></iframe>`
                     }}
                 />
+                {/* Nút Fullscreen dự phòng (chỉ hiện khi di chuột và chỉ dành cho Abyss VIP 1) */}
+                {(serverName === 'PChill VIP 1' || serverName?.toLowerCase().includes('abyss')) && (
+                    <div className="absolute top-2 right-2 md:top-4 md:right-4 z-[99] opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="bg-black/60 hover:bg-black/90 text-white border border-white/10 rounded-full w-10 h-10 shadow-xl"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleFullscreen(e);
+                            }}
+                            title="Phóng to toàn màn hình"
+                        >
+                            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                        </Button>
+                    </div>
+                )}
             </div>
         );
     }
