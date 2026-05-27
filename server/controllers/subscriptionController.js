@@ -10,7 +10,7 @@ const PLANS = [
         name: 'Premium 1 Tháng',
         tier: 'premium',
         duration: 1,
-        price: 35000,
+        price: 25000,
         features: [
             'Bỏ hoàn toàn quảng cáo (banner & pop-up)',
             'Xem được Server VIP 2 (Tốc độ cao)'
@@ -21,12 +21,12 @@ const PLANS = [
         name: 'Premium 3 Tháng',
         tier: 'premium',
         duration: 3,
-        price: 95000, 
-        originalPrice: 105000,
+        price: 69000, 
+        originalPrice: 75000,
         features: [
             'Bỏ hoàn toàn quảng cáo (banner & pop-up)',
             'Xem được Server VIP 2 (Tốc độ cao)',
-            'Giảm 10% so với 1 tháng'
+            'Giảm ~8% so với 1 tháng'
         ]
     },
     {
@@ -34,13 +34,13 @@ const PLANS = [
         name: 'Premium 6 Tháng',
         tier: 'premium',
         duration: 6,
-        price: 179000,
-        originalPrice: 210000,
+        price: 129000,
+        originalPrice: 150000,
         badge: 'Phổ biến',
         features: [
             'Bỏ hoàn toàn quảng cáo (banner & pop-up)',
             'Xem được Server VIP 2 (Tốc độ cao)',
-            'Giảm 15% so với 1 tháng'
+            'Giảm ~14% so với 1 tháng'
         ]
     },
     {
@@ -48,12 +48,12 @@ const PLANS = [
         name: 'Premium 1 Năm',
         tier: 'premium',
         duration: 12,
-        price: 339000,
-        originalPrice: 420000,
+        price: 249000,
+        originalPrice: 300000,
         features: [
             'Bỏ hoàn toàn quảng cáo (banner & pop-up)',
             'Xem được Server VIP 2 (Tốc độ cao)',
-            'Giảm 20% so với 1 tháng'
+            'Giảm ~17% so với 1 tháng'
         ]
     },
     // ===== VIP PLANS (No Ads + VIP Servers) =====
@@ -62,7 +62,7 @@ const PLANS = [
         name: 'PChill VIP - 1 Tháng',
         tier: 'vip',
         duration: 1,
-        price: 60000,
+        price: 50000,
         features: [
             'Như gói Premium',
             'Xem máy chủ VIP 1',
@@ -74,14 +74,28 @@ const PLANS = [
         name: 'PChill VIP - 3 Tháng',
         tier: 'vip',
         duration: 3,
-        price: 169000,
-        originalPrice: 180000,
+        price: 139000,
+        originalPrice: 150000,
+        features: [
+            'Như gói Premium',
+            'Xem máy chủ VIP 1',
+            'Yêu cầu phim VIP 1,2',
+            'Giảm ~7% so với 1 tháng'
+        ]
+    },
+    {
+        id: 'vip-6m',
+        name: 'PChill VIP - 6 Tháng',
+        tier: 'vip',
+        duration: 6,
+        price: 259000,
+        originalPrice: 300000,
         badge: '💎 Phổ biến VIP',
         features: [
             'Như gói Premium',
             'Xem máy chủ VIP 1',
             'Yêu cầu phim VIP 1,2',
-            'Giảm 6% so với 1 tháng'
+            'Giảm ~14% so với 1 tháng'
         ]
     },
     {
@@ -89,14 +103,14 @@ const PLANS = [
         name: 'PChill VIP - 1 Năm',
         tier: 'vip',
         duration: 12,
-        price: 599000,
-        originalPrice: 720000,
+        price: 499000,
+        originalPrice: 600000,
         badge: '💎 Tốt nhất',
         features: [
             'Như gói Premium',
             'Xem máy chủ VIP 1',
             'Yêu cầu phim VIP 1,2',
-            'Giảm 16% so với 1 tháng'
+            'Giảm ~17% so với 1 tháng'
         ]
     }
 ];

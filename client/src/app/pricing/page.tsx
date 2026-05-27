@@ -41,13 +41,6 @@ export default function PricingPage() {
     const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
-        router.push('/');
-    }, [router]);
-
-    // Redirect early to hide UI while preserving code for future
-    if (true) return null;
-
-    useEffect(() => {
         fetchPlans();
     }, []);
 
@@ -224,7 +217,7 @@ export default function PricingPage() {
                                     <h2 className="text-xl font-bold text-white">Gói PChill VIP</h2>
                                     <p className="text-sm text-yellow-500/70">Tất cả Premium + máy chủ tốc độ cao độc quyền</p>
                                 </div>
-                                <div className="grid sm:grid-cols-3 gap-5">
+                                <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
                                     {vipPlans.map((plan) => (
                                         <div
                                             key={plan.id}

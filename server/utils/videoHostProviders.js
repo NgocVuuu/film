@@ -449,16 +449,27 @@ class AbyssHostService {
                                         is_default: track.isDefault ? 1 : 0,
                                         isDefault: track.isDefault ? true : false,
                                         default_sub: track.isDefault ? 1 : 0
-                                    });
+                                    }).catch(e => e.response || { data: { status: false, msg: e.message }});
                                     
                                     if (hydraxResp.data && hydraxResp.data.status === true) {
                                         console.log(`[${this.hostName}] ✅ Gắn phụ đề "${track.label}" thành công.`);
                                     } else {
-                                        console.log(`[${this.hostName}] ⚠️ Hydrax API lỗi cho "${track.label}":`, hydraxResp.data);
+                                        const errMsg = hydraxResp.data?.msg || JSON.stringify(hydraxResp.data);
+                                        console.log(`[${this.hostName}] ⚠️ Hydrax API lỗi cho "${track.label}":`, errMsg);
+                                        if (track.label === 'Tiếng Việt' || track.isDefault) {
+                                            throw new Error(`Abyss API từ chối phụ đề: ${errMsg}. Link: ${publicUrl}`);
+                                        }
+                                    }
+                                } else {
+                                    if (track.label === 'Tiếng Việt' || track.isDefault) {
+                                        throw new Error(`Tải phụ đề lên Cloudinary thất bại cho track ${track.index}`);
                                     }
                                 }
                             } catch (err) {
-                                console.log(`[${this.hostName}] ❌ Lỗi upload Cloudinary track ${track.index}:`, err.message);
+                                console.log(`[${this.hostName}] ❌ Lỗi upload Cloudinary/Abyss track ${track.index}:`, err.message);
+                                if (track.label === 'Tiếng Việt' || track.isDefault) {
+                                    throw err; // Re-throw to trigger the catch block below
+                                }
                             }
                         }
                         
@@ -466,12 +477,18 @@ class AbyssHostService {
                         try { if (fs.existsSync(track.vttPath)) fs.unlinkSync(track.vttPath); } catch (e) {}
                     }
                 } catch (err) {
-                    console.log(`[${this.hostName}] ❌ Lỗi quá trình bóc tách đồng loạt:`, err.message);
+                    console.log(`[${this.hostName}] ❌ Lỗi quá trình bóc tách/gắn phụ đề đồng loạt:`, err.message);
                     // Dọn dẹp nếu có lỗi
                     for (let track of subtitleTracks) {
                         try { if (fs.existsSync(track.vttPath)) fs.unlinkSync(track.vttPath); } catch (e) {}
                     }
-                    throw err; // Ném ra ngoài để cập nhật DB thành error
+                    if (uploadId) {
+                        await HostUpload.findByIdAndUpdate(uploadId, { 
+                            subtitleStatus: 'failed', 
+                            subtitleLog: `Lỗi: ${err.message}` 
+                        }).catch(() => {});
+                    }
+                    throw err; // Ném ra ngoài
                 }
                 
                 if (uploadId) {

@@ -34,6 +34,34 @@ export default function AdminPipelinePage() {
     const [mkvUrlInput, setMkvUrlInput] = useState('');
     const [crawlingUrl, setCrawlingUrl] = useState(false);
 
+    // Auto download failed subtitles
+    useEffect(() => {
+        uploads.forEach(u => {
+            if ((u.subtitleStatus === 'failed' || u.subtitleStatus === 'error') && u.subtitleLog?.includes('http')) {
+                const storageKey = `downloaded_sub_${u._id}`;
+                if (!localStorage.getItem(storageKey)) {
+                    localStorage.setItem(storageKey, 'true');
+                    const urlMatch = u.subtitleLog.match(new RegExp('https?://[^\\\\s]+'));
+                    if (urlMatch && urlMatch[0]) {
+                        let downloadUrl = urlMatch[0];
+                        // Add Cloudinary attachment flag to force download instead of viewing in browser
+                        if (downloadUrl.includes('/upload/')) {
+                            downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+                        }
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.target = '_blank';
+                        a.download = `subtitle-${u.episode || u._id}.vtt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        toast.success(`Đang tự động tải phụ đề tập ${u.episode || ''}...`);
+                    }
+                }
+            }
+        });
+    }, [uploads]);
+
     // Movie search debounce hook
     useEffect(() => {
         if (!searchQuery.trim()) {
@@ -500,7 +528,14 @@ export default function AdminPipelinePage() {
                                                                     {u.subtitleStatus ? u.subtitleStatus.toUpperCase() : 'PENDING'}
                                                                 </span>
                                                                 {u.subtitleLog && (
-                                                                    <p className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[180px]" title={u.subtitleLog}>{u.subtitleLog}</p>
+                                                                    <div className="mt-0.5 flex flex-col gap-1">
+                                                                        <p className="text-[10px] text-gray-400 truncate max-w-[180px]" title={u.subtitleLog}>{u.subtitleLog}</p>
+                                                                        {u.subtitleLog.includes('http') && (
+                                                                            <a href={u.subtitleLog.match(new RegExp('https?://[^\\\\s]+'))?.[0]} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline inline-flex items-center gap-1">
+                                                                                <ExternalLink className="w-3 h-3" /> Tải/Mở Link Phụ đề
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
                                                                 )}
                                                             </td>
                                                             <td className="px-6 py-3 flex items-center space-x-2">

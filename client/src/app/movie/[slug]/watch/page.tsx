@@ -611,30 +611,30 @@ export default function WatchPage() {
                     </div>
 
                     <div className="aspect-video w-full bg-black md:rounded-xl overflow-visible shadow-2xl border-t border-b md:border border-white/10 relative">
-                        {/* VIP Lock Overlay (Hidden for now to allow free access) */}
-                        {false && currentSource.startsWith('PChill VIP') && !user?.isVip && !(currentSource === 'PChill VIP 2' && user?.isPremium) ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-black/95 rounded-xl gap-4 text-center p-6 z-50 absolute top-0 left-0">
-                                <div className="w-20 h-20 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-                                    <Crown className="w-10 h-10 text-yellow-400" />
+                        {/* VIP Lock Overlay */}
+                        {currentSource.startsWith('PChill VIP') && !user?.isVip && !(currentSource === 'PChill VIP 2' && user?.isPremium) ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-black/95 rounded-xl gap-2 md:gap-3 text-center p-4 z-50 absolute top-0 left-0">
+                                <div className="w-12 h-12 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
+                                    <Crown className="w-6 h-6 text-yellow-400" />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-bold text-white mb-2">Nội dung dành riêng cho VIP</h3>
-                                    <p className="text-gray-400 text-sm max-w-sm">
-                                        Máy chủ <span className="text-yellow-400 font-bold">{currentSource}</span> chỉ dành cho thành viên <span className="text-yellow-400 font-bold">PChill VIP</span>. Nâng cấp để xem tốc độ cao, không giới hạn.
+                                    <h3 className="text-base md:text-lg font-bold text-white mb-0.5">Nội dung dành riêng cho VIP</h3>
+                                    <p className="text-gray-400 text-xs md:text-sm max-w-[280px] md:max-w-sm mx-auto leading-relaxed">
+                                        Máy chủ <span className="text-yellow-400 font-bold">{currentSource}</span> yêu cầu tài khoản <span className="text-yellow-400 font-bold">PChill VIP</span>. Nâng cấp để mở khóa.
                                     </p>
                                 </div>
                                 <a
                                     href="/pricing"
-                                    className="px-6 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-yellow-500/20"
+                                    className="px-4 py-1.5 md:py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-xs md:text-sm rounded-lg transition-all flex items-center gap-1.5 shadow-lg shadow-yellow-500/20 mt-1"
                                 >
-                                    <Crown className="w-4 h-4" />
+                                    <Crown className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                     Nâng cấp VIP ngay
                                 </a>
                                 <button
                                     onClick={() => handleSourceChange('Server 1')}
-                                    className="text-sm text-gray-500 hover:text-gray-300 transition-colors z-[60] relative"
+                                    className="text-[10px] md:text-xs text-gray-500 hover:text-gray-300 transition-colors z-[60] relative mt-1"
                                 >
-                                    Tiếp tục xem bằng Server miễn phí →
+                                    Tiếp tục xem Server miễn phí →
                                 </button>
                             </div>
                         ) : currentEpisode ? (

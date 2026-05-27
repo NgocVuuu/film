@@ -274,16 +274,14 @@ export function Navbar() {
                             </svg>
                         </a>
 
-                        {/* Upgrade Premium Button (Hidden for now) */}
-                        {false && (
-                            <Link 
-                                href="/pricing" 
-                                className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 hover:from-yellow-500/20 hover:to-yellow-600/20 border border-yellow-500/30 rounded-full transition-all text-yellow-400 text-xs md:text-sm font-bold"
-                            >
-                                <Crown className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                <span className="hidden sm:inline">Nâng Cấp</span>
-                            </Link>
-                        )}
+                        {/* Upgrade Premium Button */}
+                        <Link 
+                            href="/pricing" 
+                            className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 hover:from-yellow-500/20 hover:to-yellow-600/20 border border-yellow-500/30 rounded-full transition-all text-yellow-400 text-xs md:text-sm font-bold"
+                        >
+                            <Crown className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                            <span className="hidden sm:inline">Nâng Cấp</span>
+                        </Link>
 
                         {/* Notifications */}
                         {user && (
