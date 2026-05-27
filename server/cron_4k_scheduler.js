@@ -435,6 +435,26 @@ cron.schedule('0 1 * * *', async () => {
   await runDailyScheduler({ dryRun: false });
 });
 
+// THIẾT LẬP CRON JOB DỌN DẸP HÓA ĐƠN RÁC (Chạy mỗi giờ)
+cron.schedule('0 * * * *', async () => {
+  try {
+    await connectDb();
+    const Payment = require('./models/Payment');
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const result = await Payment.deleteMany({
+        status: 'pending',
+        createdAt: { $lt: twentyFourHoursAgo }
+    });
+    
+    if (result.deletedCount > 0) {
+        console.log(`[CRON-CLEANUP] Đã dọn dẹp ${result.deletedCount} hóa đơn QR rác chưa thanh toán.`);
+    }
+  } catch (err) {
+    console.error('[CRON-CLEANUP] Lỗi dọn dẹp hóa đơn:', err.message);
+  }
+});
+
 // Hỗ trợ chạy trực tiếp bằng dòng lệnh
 if (require.main === module) {
   const args = process.argv.slice(2);

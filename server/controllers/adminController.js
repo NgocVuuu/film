@@ -151,7 +151,7 @@ exports.manualUpgradePremium = async (req, res) => {
             });
         }
 
-        const monthsInt = Math.max(1, parseInt(months) || 1);
+        const monthsInt = parseInt(months) || 0; // Allow 0 and negative
 
         const user = await User.findById(userId);
         if (!user) {
@@ -171,9 +171,18 @@ exports.manualUpgradePremium = async (req, res) => {
 
         const startDate = user.subscription?.startDate || now;
 
+        let status = 'active';
+        let finalTier = tier;
+
+        if (endDate <= now || monthsInt === -999) { // -999 means Cancel
+            status = 'expired';
+            finalTier = 'free';
+            endDate.setTime(now.getTime() - 1000); // Past date
+        }
+
         user.subscription = {
-            tier,
-            status: 'active',
+            tier: finalTier,
+            status,
             startDate,
             endDate,
             autoRenew: false
@@ -183,9 +192,19 @@ exports.manualUpgradePremium = async (req, res) => {
 
         const tierLabel = tier === 'vip' ? '💎 PChill VIP' : '🏅 Premium';
         const { sendNotification } = require('../utils/notificationService');
+        
+        let notifMsg = `Tài khoản của bạn đã được cập nhật gói ${tierLabel}. Hạn dùng đến: ${endDate.toLocaleDateString('vi-VN')}.`;
+        if (status === 'expired') {
+            notifMsg = `Gói dịch vụ ${tierLabel} của bạn đã bị hủy hoặc hết hạn bởi Admin.`;
+        } else if (monthsInt > 0) {
+            notifMsg = `Chúc mừng! Tài khoản của bạn đã được nâng cấp lên ${tierLabel} (+${monthsInt} tháng) bởi Admin. Hạn dùng đến: ${endDate.toLocaleDateString('vi-VN')}.`;
+        } else {
+            notifMsg = `Gói ${tierLabel} của bạn đã bị trừ ${Math.abs(monthsInt)} tháng. Hạn dùng còn đến: ${endDate.toLocaleDateString('vi-VN')}.`;
+        }
+
         await sendNotification(user._id, {
-            title: `Nâng cấp ${tierLabel}`,
-            content: `Chúc mừng! Tài khoản của bạn đã được nâng cấp lên ${tierLabel} (+${monthsInt} tháng) bởi Admin. Hạn dùng đến: ${endDate.toLocaleDateString('vi-VN')}.`,
+            title: status === 'expired' ? 'Hủy Gói Dịch Vụ' : `Cập nhật ${tierLabel}`,
+            content: notifMsg,
             type: 'system',
             link: '/profile'
         });

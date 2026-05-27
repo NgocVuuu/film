@@ -356,13 +356,15 @@ export default function AdminUsersPage() {
 
                         {/* Months Selector */}
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Số tháng cộng (cộng dồn)</label>
-                            <div className="flex gap-2">
+                            <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Thời hạn thao tác</label>
+                            
+                            <div className="text-[10px] text-gray-500 mb-1">Cộng dồn thêm tháng:</div>
+                            <div className="flex gap-2 mb-3">
                                 {[1, 3, 6, 12].map(m => (
                                     <button
-                                        key={m}
+                                        key={`add-${m}`}
                                         onClick={() => setUpgradeMonths(m)}
-                                        className={`flex-1 py-2 rounded-lg border text-sm font-bold transition-all ${
+                                        className={`flex-1 py-1.5 rounded-lg border text-sm font-bold transition-all ${
                                             upgradeMonths === m
                                                 ? upgradeTier === 'vip' ? 'border-yellow-500 bg-yellow-500/10 text-yellow-400' : 'border-primary bg-primary/10 text-primary'
                                                 : 'border-white/10 text-gray-400 hover:border-white/20'
@@ -372,19 +374,55 @@ export default function AdminUsersPage() {
                                     </button>
                                 ))}
                             </div>
+
+                            <div className="text-[10px] text-gray-500 mb-1">Trừ bớt tháng hoặc Hủy:</div>
+                            <div className="flex gap-2">
+                                {[-1, -3].map(m => (
+                                    <button
+                                        key={`sub-${m}`}
+                                        onClick={() => setUpgradeMonths(m)}
+                                        className={`flex-1 py-1.5 rounded-lg border text-sm font-bold transition-all ${
+                                            upgradeMonths === m
+                                                ? 'border-orange-500 bg-orange-500/10 text-orange-400'
+                                                : 'border-white/10 text-gray-400 hover:border-white/20'
+                                        }`}
+                                    >
+                                        {m}T
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => setUpgradeMonths(-999)}
+                                    className={`flex-[2] py-1.5 rounded-lg border text-sm font-bold transition-all ${
+                                        upgradeMonths === -999
+                                            ? 'border-red-500 bg-red-500/10 text-red-400'
+                                            : 'border-white/10 text-gray-400 hover:border-white/20'
+                                    }`}
+                                >
+                                    Hủy Gói
+                                </button>
+                            </div>
                         </div>
 
                         <Button
                             onClick={handleUpgradePremium}
                             disabled={upgrading}
                             className={`w-full font-bold ${
-                                upgradeTier === 'vip'
-                                    ? 'bg-yellow-500 hover:bg-yellow-400 text-black'
-                                    : 'bg-primary hover:bg-primary/90 text-black'
+                                upgradeMonths === -999 
+                                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                                    : upgradeMonths < 0
+                                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                                        : upgradeTier === 'vip'
+                                            ? 'bg-yellow-500 hover:bg-yellow-400 text-black'
+                                            : 'bg-primary hover:bg-primary/90 text-black'
                             }`}
                         >
                             {upgrading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                            Xác nhận: +{upgradeMonths} tháng {upgradeTier === 'vip' ? 'PChill VIP' : 'Premium'}
+                            {upgradeMonths === -999 
+                                ? `Xác nhận: Hủy gói` 
+                                : upgradeMonths < 0 
+                                    ? `Xác nhận: Trừ ${Math.abs(upgradeMonths)} tháng` 
+                                    : `Xác nhận: +${upgradeMonths} tháng ${upgradeTier === 'vip' ? 'PChill VIP' : 'Premium'}`
+                            }
                         </Button>
                     </div>
                 </div>

@@ -296,9 +296,22 @@ exports.handleSepayWebhook = async (req, res) => {
         }
 
         const now = new Date();
-        const endDate = user.subscription.status === 'active' && user.subscription.endDate > now
-            ? new Date(user.subscription.endDate)
-            : new Date();
+        let endDate = new Date();
+        
+        // Tỷ lệ quy đổi: VIP đắt gấp đôi Premium
+        const PRICE_RATIO = 0.5; // 1 ngày Premium = 0.5 ngày VIP
+        
+        if (user.subscription.status === 'active' && user.subscription.endDate > now) {
+            if (user.subscription.tier === 'premium' && payment.subscriptionTier === 'vip') {
+                // Đang Premium -> Up VIP: Quy đổi ngày dư cũ sang ngày VIP
+                const remainingTimeMs = user.subscription.endDate.getTime() - now.getTime();
+                const convertedTimeMs = remainingTimeMs * PRICE_RATIO;
+                endDate = new Date(now.getTime() + convertedTimeMs);
+            } else {
+                // Cùng gói (Premium -> Premium, hoặc VIP -> VIP)
+                endDate = new Date(user.subscription.endDate);
+            }
+        }
 
         endDate.setMonth(endDate.getMonth() + payment.subscriptionDuration);
 
@@ -310,6 +323,19 @@ exports.handleSepayWebhook = async (req, res) => {
             autoRenew: false
         };
         await user.save();
+
+        // Send notification to user
+        try {
+            const { sendNotification } = require('../utils/notificationService');
+            await sendNotification(user._id, {
+                title: `Thanh toán thành công`,
+                content: `Gói ${payment.subscriptionTier === 'vip' ? 'PChill VIP' : 'Premium'} của bạn đã được kích hoạt (+${payment.subscriptionDuration} tháng). Hạn dùng mới: ${endDate.toLocaleDateString('vi-VN')}.`,
+                type: 'system',
+                link: '/profile'
+            });
+        } catch (e) {
+            console.error('Lỗi gửi thông báo thanh toán:', e);
+        }
 
         // Update payment status
         payment.status = 'completed';
