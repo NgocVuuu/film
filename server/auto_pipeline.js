@@ -841,7 +841,8 @@ async function runAutoUploadPipeline(jobData) {
                         series: seriesName, season: seasonName, episode: episodeName, tmdbId: tmdbMatch?.tmdbId || null, 
                         movieId: localMovieId,
                         sourcePage: viewcrateUrl, sourceDirectUrl: directLinkToUpload, filename: finalFilename, 
-                        host: hostKey, taskId: taskId, status: 'pending', retries: res.attempts - 1 
+                        host: hostKey, taskId: taskId, status: 'pending', retries: res.attempts - 1,
+                        subtitleStatus: 'completed' // Play4Me does not use subtitle extraction queue
                     });
                     
                     const apiToPoll = play4meAPI;

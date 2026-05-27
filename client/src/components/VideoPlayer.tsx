@@ -1382,31 +1382,17 @@ export default function VideoPlayer({
 
     if (isEmbedPlayer) {
         return (
-            <div ref={containerRef} className="w-full h-full relative aspect-video bg-black rounded-lg flex items-center justify-center group">
-                <div 
-                    className="w-full h-full border-none relative z-20"
-                    dangerouslySetInnerHTML={{
-                        __html: `<iframe id="playerIframeId" src="${embedUrl}" width="100%" height="100%" frameborder="0" scrolling="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="fullscreen"></iframe>`
-                    }}
+            <div className="w-full relative aspect-video bg-black rounded-lg overflow-hidden">
+                <iframe
+                    key={embedUrl}
+                    id="playerIframeId"
+                    src={embedUrl}
+                    className="absolute inset-0 w-full h-full border-none z-20"
+                    frameBorder="0"
+                    scrolling="no"
+                    allowFullScreen={true}
+                    allow="fullscreen"
                 />
-                {/* Nút Fullscreen dự phòng (chỉ hiện khi di chuột và chỉ dành cho Abyss VIP 1) */}
-                {(serverName === 'PChill VIP 1' || serverName?.toLowerCase().includes('abyss')) && (
-                    <div className="absolute top-2 right-2 md:top-4 md:right-4 z-[99] opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="bg-black/60 hover:bg-black/90 text-white border border-white/10 rounded-full w-10 h-10 shadow-xl"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                toggleFullscreen(e);
-                            }}
-                            title="Phóng to toàn màn hình"
-                        >
-                            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                        </Button>
-                    </div>
-                )}
             </div>
         );
     }
