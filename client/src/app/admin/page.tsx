@@ -62,7 +62,7 @@ import {
 export default function AdminDashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
-    const [hostRevenue, setHostRevenue] = useState<{ play4me?: any, abyss?: any } | null>(null);
+    const [hostRevenue, setHostRevenue] = useState<{ play4me?: any, seekstreaming?: any } | null>(null);
 
     useEffect(() => {
         fetchStats();
@@ -274,9 +274,9 @@ export default function AdminDashboardPage() {
                         </div>
                     </div>
                     <h3 className="text-2xl font-bold text-white mb-1 relative z-10">
-                        {hostRevenue?.abyss ? `N/A (Abyss API chưa cấp SDK Doanh thu)` : 'N/A'}
+                        {hostRevenue?.seekstreaming ? `N/A (Seekstreaming API chưa cấp SDK Doanh thu)` : 'N/A'}
                     </h3>
-                    <p className="text-cyan-400 text-sm relative z-10 font-medium">Doanh thu Abyss VIP 1</p>
+                    <p className="text-cyan-400 text-sm relative z-10 font-medium">Doanh thu Seekstreaming VIP 1</p>
                     <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
                         <CreditCard className="w-24 h-24 text-cyan-500 translate-x-4 translate-y-4" />
                     </div>

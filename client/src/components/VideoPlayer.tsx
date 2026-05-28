@@ -120,7 +120,7 @@ export default function VideoPlayer({
     
     // Iframe Embed Player state
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    const isEmbedPlayer = !!embedUrl && (!src || src === embedUrl || serverName?.includes('Play4Me') || serverName?.includes('Abyss'));
+    const isEmbedPlayer = !!embedUrl && (!src || src === embedUrl || serverName?.includes('Play4Me') || serverName?.includes('Seekstreaming'));
     const [hoverTime, setHoverTime] = useState<number | null>(null);
     const [hoverPosition, setHoverPosition] = useState<number>(0);
     const [isScrubbing, setIsScrubbing] = useState(false);
@@ -355,7 +355,7 @@ export default function VideoPlayer({
     }, [embedUrl, src]);
 
     // Remove error timeout for Embed Players - we cannot reliably detect failures 
-    // via postMessage because third-party players (Abyss, Play4Me) may not send them
+    // via postMessage because third-party players (Seekstreaming, Play4Me) may not send them
     useEffect(() => {
         if (!isEmbedPlayer || !embedUrl) return;
         hasReceivedMessage.current = true; // Assume success
@@ -371,8 +371,8 @@ export default function VideoPlayer({
             try {
                 console.log('[IFRAME MESSAGE]', e.origin, e.data);
 
-                // Temporary: Allow all messages for debugging, or check if origin is Abyss/Hydrax
-                const validOrigins = ['abyss', 'hydrax', 'play4me', 'localhost'];
+                // Temporary: Allow all messages for debugging, or check if origin is Seekstreaming/Hydrax
+                const validOrigins = ['seekstreaming', 'hydrax', 'play4me', 'localhost'];
                 const isTrustedOrigin = validOrigins.some(o => e.origin.includes(o));
                 
                 if (e.source !== iframeRef.current?.contentWindow && !isTrustedOrigin) {
@@ -381,7 +381,7 @@ export default function VideoPlayer({
 
                 hasReceivedMessage.current = true;
 
-                // Handle external fullscreen requests from players like Abyss/Hydrax
+                // Handle external fullscreen requests from players like Seekstreaming/Hydrax
                 if (e.data === 'fullscreen' || e.data?.command === 'fullscreen' || e.data?.action === 'fullscreen' || e.data?.event === 'fullscreen') {
                     const container = containerRef.current;
                     if (container) {

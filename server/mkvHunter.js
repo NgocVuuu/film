@@ -12,27 +12,27 @@ const play4me = new PremiumHostService(
     process.env.PLAY4ME_API_KEY || 'your_play4me_token'
 );
 
-const abyssService = require('./utils/videoHostProviders').abyssAPI;
+const seekstreamingService = require('./utils/videoHostProviders').seekstreamingAPI;
 
-// --- BACKGROUND QUEUE FOR ABYSS ---
-const abyssUploadQueue = [];
-let isAbyssUploading = false;
+// --- BACKGROUND QUEUE FOR SEEKSTREAMING ---
+const seekstreamingUploadQueue = [];
+let isSeekstreamingUploading = false;
 
-async function processAbyssQueue() {
-    if (isAbyssUploading) return;
-    isAbyssUploading = true;
-    while(abyssUploadQueue.length > 0) {
-        const job = abyssUploadQueue.shift();
+async function processSeekstreamingQueue() {
+    if (isSeekstreamingUploading) return;
+    isSeekstreamingUploading = true;
+    while(seekstreamingUploadQueue.length > 0) {
+        const job = seekstreamingUploadQueue.shift();
         try {
-            console.log(`\n[Abyss Queue] Đang tải lên: ${job.title}... (Còn ${abyssUploadQueue.length} tập)`);
-            const abyssSlug = await abyssService.remoteUpload(job.mkvUrl, job.title);
-            console.log(`  ✅ [Abyss Queue] Upload thành công! Slug: ${abyssSlug}`);
+            console.log(`\n[Seekstreaming Queue] Đang tải lên: ${job.title}... (Còn ${seekstreamingUploadQueue.length} tập)`);
+            const slug = await seekstreamingService.remoteUpload(job.mkvUrl, job.title);
+            console.log(`  ✅ [Seekstreaming Queue] Upload thành công! Slug: ${slug}`);
         } catch (e) {
-            console.error(`  ❌ [Abyss Queue] Lỗi Upload ${job.title}:`, e.message);
+            console.error(`  ❌ [Seekstreaming Queue] Lỗi Upload ${job.title}:`, e.message);
         }
     }
-    isAbyssUploading = false;
-    console.log(`\n🎉 [Abyss Queue] Đã hoàn thành toàn bộ hàng đợi Abyss!`);
+    isSeekstreamingUploading = false;
+    console.log(`\n🎉 [Seekstreaming Queue] Đã hoàn thành toàn bộ hàng đợi Seekstreaming!`);
 }
 
 class MkvHunter {
@@ -90,7 +90,7 @@ class MkvHunter {
                             console.log(`\n📎 Đang xử lý tập: ${file.name}`);
                             console.log(`🔗 Gofile Download Link: ${file.link}`);
                             
-                            // Bước 4: Remote Upload sang Play4Me / Abyss
+                            // Bước 4: Remote Upload sang Play4Me / Seekstreaming
                             await this.uploadToPremiumHosts(file.link, file.name);
                         }
                     } else {
@@ -129,10 +129,10 @@ class MkvHunter {
             console.error(`  ❌ [Play4Me] Lỗi Upload:`, e.message);
         }
 
-        // Push to Abyss via Background Queue
-        console.log(`  -> Đưa [Abyss] vào hàng đợi chạy ngầm (Background Queue) để không làm chậm tiến trình...`);
-        abyssUploadQueue.push({ mkvUrl, title });
-        processAbyssQueue().catch(()=>{});
+        // Push to Seekstreaming via Background Queue
+        console.log(`  -> Đưa [Seekstreaming] vào hàng đợi chạy ngầm (Background Queue) để không làm chậm tiến trình...`);
+        seekstreamingUploadQueue.push({ mkvUrl, title });
+        processSeekstreamingQueue().catch(()=>{});
     }
 }
 

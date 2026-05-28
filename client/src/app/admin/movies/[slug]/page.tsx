@@ -900,11 +900,11 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
                         <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t border-white/5">
                             <Button
                                 variant="outline"
-                                onClick={() => addServer('PChill - Abyss')}
+                                onClick={() => addServer('PChill - Seekstreaming')}
                                 className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
                             >
                                 <Plus className="w-4 h-4 mr-2" />
-                                Thêm Server VIP 1 (Abyss)
+                                Thêm Server VIP 1 (Seekstreaming)
                             </Button>
                             <Button
                                 variant="outline"

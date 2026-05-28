@@ -20,8 +20,10 @@ export default function AdminPipelinePage() {
     const [extractedLinks, setExtractedLinks] = useState<any[]>([]);
     
     // Bulk Sync State
-    const [bulkAbyssText, setBulkAbyssText] = useState('');
-    const [isBulkSyncing, setIsBulkSyncing] = useState(false);
+    const [bulkSeekstreamingText, setBulkSeekstreamingText] = useState('');
+    const [bulkPlay4meText, setBulkPlay4meText] = useState('');
+    const [isBulkSyncingSeek, setIsBulkSyncingSeek] = useState(false);
+    const [isBulkSyncingPlay, setIsBulkSyncingPlay] = useState(false);
 
     // Retry Custom Links State
     const [customLinks, setCustomLinks] = useState<Record<string, string>>({});
@@ -119,41 +121,50 @@ export default function AdminPipelinePage() {
         }
     };
 
-    const handleBulkSync = async () => {
-        if (!selectedMovie || !bulkAbyssText.trim()) return;
+    const handleBulkSync = async (hostType: 'seekstreaming' | 'play4me') => {
+        const textToSync = hostType === 'seekstreaming' ? bulkSeekstreamingText : bulkPlay4meText;
+        if (!selectedMovie || !textToSync.trim()) return;
         
-        setIsBulkSyncing(true);
+        const setSyncing = hostType === 'seekstreaming' ? setIsBulkSyncingSeek : setIsBulkSyncingPlay;
+        const apiRoute = hostType === 'seekstreaming' ? '/api/admin/pipeline/seekstreaming-bulk-sync' : '/api/admin/pipeline/play4me-bulk-sync';
+        const linesKey = hostType === 'seekstreaming' ? 'seekstreamingLines' : 'play4meLines';
+        const hostName = hostType === 'seekstreaming' ? 'Seekstreaming' : 'Play4Me';
+
+        setSyncing(true);
         try {
-            const lines = bulkAbyssText.split('\n').map(l => l.trim()).filter(Boolean);
+            const lines = textToSync.split('\n').map(l => l.trim()).filter(Boolean);
             if (lines.length === 0) {
-                toast.error('Vui lòng nhập danh sách link hoặc ID Abyss');
-                setIsBulkSyncing(false);
+                toast.error(`Vui lòng nhập danh sách link hoặc ID ${hostName}`);
+                setSyncing(false);
                 return;
             }
 
-            toast('Bắt đầu đồng bộ hàng loạt. Tiến trình này sẽ chạy ngầm trên server, bạn có thể kiểm tra danh sách phim sau ít phút.', { icon: '🚀', duration: 5000 });
+            toast(`Bắt đầu đồng bộ hàng loạt lên ${hostName}. Tiến trình này sẽ chạy ngầm trên server...`, { icon: '🚀', duration: 5000 });
             
-            const res = await customFetch('/api/admin/pipeline/abyss-bulk-sync', {
+            const payload = {
+                movieId: selectedMovie._id,
+                extractedLinks: extractedLinks || []
+            } as any;
+            payload[linesKey] = lines;
+
+            const res = await customFetch(apiRoute, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    movieId: selectedMovie._id,
-                    abyssLines: lines,
-                    extractedLinks: extractedLinks || []
-                })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             
             if (res.ok && data.ok) {
                 toast.success(`Đã xử lý đồng bộ thành công! ${data.message || ''}`, { duration: 8000 });
-                setBulkAbyssText('');
+                if (hostType === 'seekstreaming') setBulkSeekstreamingText('');
+                else setBulkPlay4meText('');
             } else {
-                toast.error(data.error || 'Lỗi khi đồng bộ hàng loạt');
+                toast.error(data.error || `Lỗi khi đồng bộ hàng loạt lên ${hostName}`);
             }
         } catch (e) {
             toast.error('Lỗi kết nối API đồng bộ');
         } finally {
-            setIsBulkSyncing(false);
+            setSyncing(false);
         }
     };
 
@@ -710,33 +721,64 @@ export default function AdminPipelinePage() {
                                 );
                             })()}
 
-                            {/* Đồng bộ Abyss nằm ngay dưới phần Extractor */}
+                            {/* Đồng bộ Hosts nằm ngay dưới phần Extractor */}
                             {selectedMovie && extractedLinks && extractedLinks.length > 0 && (
-                                <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-6 flex flex-col mt-6">
-                                    <h3 className="text-lg font-bold text-blue-400 mb-2 flex items-center gap-2">
-                                        <RefreshCw className="w-5 h-5" />
-                                        Đồng bộ Abyss
-                                    </h3>
-                                    <p className="text-sm text-blue-300/70 mb-4">
-                                        Phim đang chọn: <strong className="text-white">{selectedMovie.name}</strong><br/>
-                                        Dán Abyss ID (YawKPXtB8) hoặc Link để đồng bộ & tự up phụ đề dựa trên các link gốc (Direct Links) đã bóc tách được ở trên.
-                                    </p>
-                                    <div className="mb-4">
-                                        <p className="text-xs text-blue-400 mb-1 font-bold">Abyss IDs / Links</p>
-                                        <textarea
-                                            value={bulkAbyssText}
-                                            onChange={(e) => setBulkAbyssText(e.target.value)}
-                                            placeholder="YawKPXtB8&#10;https://abyss.to/xxxx..."
-                                            className="w-full min-h-[200px] bg-black/40 border border-blue-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-blue-400 custom-scrollbar"
-                                        />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                    {/* SEEKSTREAMING */}
+                                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-6 flex flex-col">
+                                        <h3 className="text-lg font-bold text-blue-400 mb-2 flex items-center gap-2">
+                                            <RefreshCw className="w-5 h-5" />
+                                            Đồng bộ Seekstreaming
+                                        </h3>
+                                        <p className="text-sm text-blue-300/70 mb-4">
+                                            Phim đang chọn: <strong className="text-white">{selectedMovie.name}</strong><br/>
+                                            Dán Link Seekstreaming để đồng bộ dựa trên các link gốc đã bóc.
+                                        </p>
+                                        <div className="mb-4">
+                                            <p className="text-xs text-blue-400 mb-1 font-bold">Seekstreaming Links</p>
+                                            <textarea
+                                                value={bulkSeekstreamingText}
+                                                onChange={(e) => setBulkSeekstreamingText(e.target.value)}
+                                                placeholder="https://seekstreaming.com/..."
+                                                className="w-full min-h-[200px] bg-black/40 border border-blue-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-blue-400 custom-scrollbar"
+                                            />
+                                        </div>
+                                        <Button
+                                            onClick={() => handleBulkSync('seekstreaming')}
+                                            disabled={isBulkSyncingSeek || !bulkSeekstreamingText.trim()}
+                                            className="bg-blue-600 hover:bg-blue-500 text-white w-full"
+                                        >
+                                            {isBulkSyncingSeek ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang xử lý...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Đồng bộ Seekstreaming</>}
+                                        </Button>
                                     </div>
-                                    <Button
-                                        onClick={handleBulkSync}
-                                        disabled={isBulkSyncing || !bulkAbyssText.trim()}
-                                        className="bg-blue-600 hover:bg-blue-500 text-white w-full"
-                                    >
-                                        {isBulkSyncing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang xử lý...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Đồng bộ & Up Phụ Đề Abyss</>}
-                                    </Button>
+
+                                    {/* PLAY4ME */}
+                                    <div className="bg-pink-500/5 border border-pink-500/20 rounded-xl p-6 flex flex-col">
+                                        <h3 className="text-lg font-bold text-pink-400 mb-2 flex items-center gap-2">
+                                            <RefreshCw className="w-5 h-5" />
+                                            Đồng bộ Play4Me
+                                        </h3>
+                                        <p className="text-sm text-pink-300/70 mb-4">
+                                            Phim đang chọn: <strong className="text-white">{selectedMovie.name}</strong><br/>
+                                            Dán Link Play4Me để đồng bộ dựa trên các link gốc đã bóc.
+                                        </p>
+                                        <div className="mb-4">
+                                            <p className="text-xs text-pink-400 mb-1 font-bold">Play4Me Links</p>
+                                            <textarea
+                                                value={bulkPlay4meText}
+                                                onChange={(e) => setBulkPlay4meText(e.target.value)}
+                                                placeholder="https://player4me.com/..."
+                                                className="w-full min-h-[200px] bg-black/40 border border-pink-500/30 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-pink-400 custom-scrollbar"
+                                            />
+                                        </div>
+                                        <Button
+                                            onClick={() => handleBulkSync('play4me')}
+                                            disabled={isBulkSyncingPlay || !bulkPlay4meText.trim()}
+                                            className="bg-pink-600 hover:bg-pink-500 text-white w-full"
+                                        >
+                                            {isBulkSyncingPlay ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang xử lý...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Đồng bộ Play4Me</>}
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                         </div>

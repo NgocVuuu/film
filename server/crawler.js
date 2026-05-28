@@ -128,113 +128,6 @@ const ADAPTERS = {
             const base = 'https://phimimg.com';
             return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
         }
-    },
-    NGUONC: {
-        name: 'NGUONC',
-        prefix: 'NC',
-        getPage: async (page = 1) => {
-            try {
-                const res = await axios.get(`${NGUONC_API_HOME}?page=${page}`);
-                return res.data.items || [];
-            } catch (e) { return []; }
-        },
-        getDetail: async (slug) => {
-            try {
-                const res = await axios.get(`${NGUONC_API_DETAIL}/${slug}`);
-                if (res.data.status === 'error') return null;
-                const movie = res.data.movie;
-                const rawEpisodes = movie.episodes || [];
-                const episodes = rawEpisodes.map(server => ({
-                    server_name: server.server_name || 'Vietsub',
-                    server_data: server.items.map(item => ({
-                        name: item.name,
-                        slug: item.slug,
-                        link_m3u8: item.m3u8,
-                        link_embed: item.embed,
-                        filename: item.name
-                    }))
-                }));
-
-                // NGUONC category is an object with numeric keys, e.g.:
-                // { "0": { group: { name: "Thể loại" }, list: [{id, name, slug}] }, "1": { group: { name: "Năm" }, ... } }
-                // Normalize it to the standard array format: [{id, name, slug}]
-                let year = movie.year;
-                let normalizedCategory = [];
-                if (movie.category && typeof movie.category === 'object' && !Array.isArray(movie.category)) {
-                    const catValues = Object.values(movie.category);
-                    // Extract year from "Năm" group if missing
-                    if (!year) {
-                        const yearGroup = catValues.find(g => g.group && g.group.name === 'Năm');
-                        if (yearGroup && yearGroup.list && yearGroup.list.length > 0) {
-                            year = parseInt(yearGroup.list[0].name);
-                        }
-                    }
-                    // Extract genres from "Thể loại" group
-                    const genreGroup = catValues.find(g => g.group && g.group.name === 'Thể loại');
-                    if (genreGroup && genreGroup.list) {
-                        normalizedCategory = genreGroup.list.map(item => {
-                            let slug = item.slug || null;
-                            // Infer slug from name if missing
-                            if (!slug && item.name) {
-                                const slugMap = {
-                                    'Hành Động': 'hanh-dong', 'Tình Cảm': 'tinh-cam', 'Hài Hước': 'hai-huoc',
-                                    'Phim Hài': 'hai-huoc', 'Hoạt Hình': 'hoat-hinh', 'Kinh Dị': 'kinh-di',
-                                    'Viễn Tưởng': 'vien-tuong', 'Khoa Học Viễn Tưởng': 'khoa-hoc-vien-tuong',
-                                    'Phiêu Lưu': 'phieu-luu', 'Bí Ẩn': 'bi-an', 'Gây Cấn': 'gay-can',
-                                    'Chính Kịch': 'chinh-kich', 'Tâm Lý': 'tam-ly', 'Cổ Trang': 'co-trang',
-                                    'Võ Thuật': 'vo-thuat', 'Lịch Sử': 'lich-su', 'Chiến Tranh': 'chien-tranh',
-                                    'Gia Đình': 'gia-dinh', 'Lãng Mạn': 'lang-man', 'Tài Liệu': 'tai-lieu',
-                                    'Hình Sự': 'hinh-su', 'Giả Tưởng': 'gia-tuong', 'Phim 18+': 'phim-18',
-                                    'Phim Nhạc': 'am-nhac', 'Âm Nhạc': 'am-nhac',
-                                };
-                                slug = slugMap[item.name] || item.name.toLowerCase()
-                                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                                    .replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-                            }
-                            return { id: item.id, name: item.name, slug };
-                        });
-                    }
-                } else if (Array.isArray(movie.category)) {
-                    normalizedCategory = movie.category;
-                }
-
-                const normalizedMovie = {
-                    ...movie,
-                    origin_name: movie.original_name,
-                    thumb_url: movie.thumb_url,
-                    poster_url: movie.poster_url,
-                    category: normalizedCategory,
-                    year: year || movie.year,
-                };
-
-                return { movie: normalizedMovie, episodes };
-            } catch (e) {
-                return null;
-            }
-        },
-        search: async (query) => {
-            try {
-                const res = await axios.get(`https://phim.nguonc.com/api/films/search?keyword=${encodeURIComponent(query)}`);
-                if (res.data.status === 'error' || !res.data.items) return [];
-                return res.data.items.map(m => ({
-                    name: m.name,
-                    origin_name: m.original_name,
-                    slug: m.slug,
-                    year: m.year, // Nguonc year logic might be better here but we take standard
-                    thumb_url: m.thumb_url.startsWith('http') ? m.thumb_url : `https://phim.nguonc.com${m.thumb_url.startsWith('/') ? m.thumb_url : `/${m.thumb_url}`}`,
-                    source: 'NGUONC'
-                }));
-            } catch (e) {
-                console.error('Error searching NGUONC:', e.message);
-                return [];
-            }
-        },
-        processImage: (path) => {
-            if (!path) return '';
-            if (path.startsWith('http')) return path;
-            const base = 'https://phim.nguonc.com';
-            return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
-        }
     }
 };
 
@@ -313,8 +206,7 @@ async function processMovie(adapter, slug, retryCount = 0) {
                 if (name.startsWith(`${adapter.prefix} -`)) return false;
                 if (adapter.prefix === 'OP') {
                     const isKK = name.startsWith('KK -');
-                    const isNC = name.startsWith('NC -');
-                    if (!isKK && !isNC) return false;
+                    if (!isKK) return false;
                 }
                 return true;
             });
@@ -327,7 +219,6 @@ async function processMovie(adapter, slug, retryCount = 0) {
                 if (!name) return 0;
                 const upperName = name.toUpperCase();
                 if (upperName.includes('KK -')) return 30;
-                if (upperName.includes('NC -')) return 20;
                 if (upperName.includes('OP -')) return 10;
                 return 0; // Fallback
             };
@@ -524,14 +415,13 @@ async function syncAll(options = {}) {
             addLog(`Crawling page ${page}...`, 'info');
 
             // Sequential adapters per page to be gentle
-            // Order: OPHIM -> NGUONC -> KKPHIM
+            // Order: OPHIM -> KKPHIM
             // This ensures KKPHIM (Priority 1) metadata overwrites others if they exist
             const countOP = await syncPage(ADAPTERS.OPHIM, page);
-            const countNC = await syncPage(ADAPTERS.NGUONC, page);
             const countKK = await syncPage(ADAPTERS.KKPHIM, page);
 
-            totalProcessed += (countOP + countKK + countNC);
-            addLog(`Page ${page} completed. Found ${countOP + countKK + countNC} movies.`, 'success');
+            totalProcessed += (countOP + countKK);
+            addLog(`Page ${page} completed. Found ${countOP + countKK} movies.`, 'success');
 
             // Small break between pages
             if (isFull || (toPage - fromPage > 1)) await sleep(1000);
@@ -602,7 +492,7 @@ async function syncSpecificMovie(slug, sourceName = null) {
         if (sourceName) {
             const adapter = ADAPTERS[sourceName.toUpperCase()];
             if (!adapter) {
-                return { success: false, error: `Nguồn '${sourceName}' không hợp lệ. Chọn: OPHIM, KKPHIM, NGUONC` };
+                return { success: false, error: `Nguồn '${sourceName}' không hợp lệ. Chọn: OPHIM, KKPHIM` };
             }
             const result = await processMovie(adapter, slug);
             if (result.success) {
@@ -611,8 +501,8 @@ async function syncSpecificMovie(slug, sourceName = null) {
             return result;
         }
 
-        // Try all sources in priority order: KKPHIM -> NGUONC -> OPHIM
-        const sources = [ADAPTERS.KKPHIM, ADAPTERS.NGUONC, ADAPTERS.OPHIM];
+        // Try all sources in priority order: KKPHIM -> OPHIM
+        const sources = [ADAPTERS.KKPHIM, ADAPTERS.OPHIM];
 
         for (const adapter of sources) {
             addLog(`[FETCH-SPECIFIC] Trying ${adapter.name}... cho phim ${slug}`, 'info');
@@ -629,9 +519,7 @@ async function syncSpecificMovie(slug, sourceName = null) {
             await sleep(500);
         }
 
-        addLog(`[FETCH-SPECIFIC] ✗ Failed to fetch ${slug} from all sources`, 'error');
-        console.log(`[FETCH-SPECIFIC] ✗ Failed to fetch ${slug} from all sources`);
-        return { success: false, error: 'Không tìm thấy phim từ bất kỳ nguồn nào (OPHIM, KKPHIM, NGUONC)' };
+        return { success: false, error: 'Không tìm thấy phim từ bất kỳ nguồn nào (OPHIM, KKPHIM)' };
 
     } catch (error) {
         console.error(`[FETCH-SPECIFIC] Error:`, error);

@@ -161,7 +161,7 @@ export default function PricingPage() {
                             <div>
                                 <div className="mb-8">
                                     <h2 className="text-xl font-bold text-white">Gói Premium</h2>
-                                    <p className="text-sm text-gray-500">Xem phim không quảng cáo</p>
+                                    <p className="text-sm text-gray-500">Mở khóa Server VIP 1 & VIP 2</p>
                                 </div>
                                 <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
                                     {premiumPlans.map((plan) => (
@@ -212,17 +212,20 @@ export default function PricingPage() {
 
                         {/* === VIP SECTION === */}
                         {vipPlans.length > 0 && (
-                            <div>
-                                <div className="mb-8">
-                                    <h2 className="text-xl font-bold text-white">Gói PChill VIP</h2>
-                                    <p className="text-sm text-yellow-500/70">Tất cả Premium + máy chủ tốc độ cao độc quyền</p>
+                            <div className="relative">
+                                {/* Background glow for glassmorphism effect */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-yellow-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+                                <div className="mb-8 relative z-10">
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2">Gói VIP 4K</h2>
+                                    <p className="text-sm text-yellow-500/70 mt-1">Bao gồm Premium + Xem phim 4K nguyên gốc trên App Smartphone & Smart TV <span className="inline-block ml-1 px-2 py-0.5 bg-yellow-500 text-black text-xs font-bold rounded animate-pulse shadow-[0_0_10px_rgba(234,179,8,0.5)]">APP ĐANG ĐƯỢC PHÁT TRIỂN</span></p>
                                 </div>
-                                <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 relative z-10 blur-[10px] opacity-40 pointer-events-none select-none transition-all duration-700 grayscale-[50%]">
                                     {vipPlans.map((plan) => (
                                         <div
                                             key={plan.id}
-                                            className={`relative bg-gradient-to-b from-yellow-500/5 to-surface-900 border rounded-2xl p-6 transition-all flex flex-col hover:border-yellow-500/50 ${
-                                                plan.badge ? 'border-yellow-500/60 shadow-xl shadow-yellow-500/10' : 'border-yellow-500/20'
+                                            className={`relative bg-white/5 backdrop-blur-2xl border rounded-2xl p-6 transition-all flex flex-col hover:bg-white/10 hover:border-yellow-500/50 ${
+                                                plan.badge ? 'border-yellow-500/50 shadow-[0_8px_32px_0_rgba(234,179,8,0.2)]' : 'border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]'
                                             }`}
                                         >
                                             {plan.badge && (

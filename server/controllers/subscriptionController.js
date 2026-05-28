@@ -12,8 +12,7 @@ const PLANS = [
         duration: 1,
         price: 25000,
         features: [
-            'Bỏ hoàn toàn quảng cáo (banner & pop-up)',
-            'Xem được Server VIP 2 (Tốc độ cao)'
+            'Xem được Server VIP 1, 2'
         ]
     },
     {
@@ -24,8 +23,7 @@ const PLANS = [
         price: 69000, 
         originalPrice: 75000,
         features: [
-            'Bỏ hoàn toàn quảng cáo (banner & pop-up)',
-            'Xem được Server VIP 2 (Tốc độ cao)',
+            'Xem được Server VIP 1, 2',
             'Giảm ~8% so với 1 tháng'
         ]
     },
@@ -38,8 +36,7 @@ const PLANS = [
         originalPrice: 150000,
         badge: 'Phổ biến',
         features: [
-            'Bỏ hoàn toàn quảng cáo (banner & pop-up)',
-            'Xem được Server VIP 2 (Tốc độ cao)',
+            'Xem được Server VIP 1, 2',
             'Giảm ~14% so với 1 tháng'
         ]
     },
@@ -51,8 +48,7 @@ const PLANS = [
         price: 249000,
         originalPrice: 300000,
         features: [
-            'Bỏ hoàn toàn quảng cáo (banner & pop-up)',
-            'Xem được Server VIP 2 (Tốc độ cao)',
+            'Xem được Server VIP 1, 2',
             'Giảm ~17% so với 1 tháng'
         ]
     },

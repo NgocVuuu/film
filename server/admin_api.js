@@ -398,142 +398,70 @@ router.post('/captcha/:id/resolve', async (req, res) => {
   res.json({ ok: true });
 });
 
-router.post('/abyss-bulk-sync', async (req, res) => {
+router.post('/seekstreaming-bulk-sync', async (req, res) => {
     try {
-        const { movieId, abyssLines, extractedLinks } = req.body;
-        if (!movieId || !abyssLines || !extractedLinks) return res.status(400).send('Missing params');
+        const { movieId, seekstreamingLines, extractedLinks } = req.body;
+        if (!movieId || !seekstreamingLines || !extractedLinks) return res.status(400).send('Missing params');
 
         const Movie = require('./models/Movie');
         const movie = await Movie.findById(movieId);
         if (!movie) return res.status(404).send('Movie not found');
 
         const videoHostProviders = require('./utils/videoHostProviders');
-        const abyssApi = videoHostProviders.abyssAPI;
-        if (!abyssApi) return res.status(400).send('Abyss API not configured');
+        const seekstreamingApi = videoHostProviders.seekstreamingAPI;
+        if (!seekstreamingApi) return res.status(400).send('Seekstreaming API not configured');
 
+        const hostUpload = require('./models/HostUpload');
         let successCount = 0;
         
-        // This process can take time (subtitle upload), so we run it in background
         (async () => {
-            console.log(`\n🚀 [ADMIN-BULK-SYNC] Bắt đầu đồng bộ ${abyssLines.length} link Abyss cho phim: "${movie.name}"`);
-            for (let line of abyssLines) {
-                let originalLine = line.trim();
-                let slug = originalLine;
-                let providedFilename = null;
-                
-                // If it's a | separated string, the first part is usually the filename
-                if (originalLine.includes('|')) {
-                    const parts = originalLine.split('|');
-                    providedFilename = parts[0].trim();
-                }
+            console.log(`\n🚀 [ADMIN-BULK-SYNC] Bắt đầu đồng bộ ${seekstreamingLines.length} link Seekstreaming cho phim: "${movie.name}"`);
+            
+            let folderId = null;
+            try {
+                folderId = await seekstreamingApi.createFolder(movie.name);
+            } catch(e) {}
 
-                // Extract slug from URL if pasted as URL or embedded string
-                const urlMatch = originalLine.match(/(?:abyss\.to|hydrax\.net|abyssplayer\.com)\/([a-zA-Z0-9_-]+)/);
-                if (urlMatch) {
-                    slug = urlMatch[1];
-                } else if (originalLine.includes('|')) {
-                    const parts = originalLine.split('|');
-                    if (parts[1]) {
-                        const m = parts[1].match(/\/([a-zA-Z0-9_-]+)$/);
-                        if (m) slug = m[1];
-                        else slug = parts[1].trim(); // Fallback
-                    }
-                }
+            for (let line of seekstreamingLines) {
+                let directUrl = line.trim();
+                if (!directUrl || !directUrl.startsWith('http')) continue;
+
+                const matchedLinkObj = extractedLinks.find(el => el.link === directUrl);
+                let episodeString = null;
+                let filename = 'Video';
                 
-                if (!slug || slug.length < 5 || slug.includes('<') || slug.includes(' ')) {
-                    console.log(`[Bulk Sync] ⚠️ Bỏ qua dòng không hợp lệ: ${originalLine}`);
-                    continue;
+                if (matchedLinkObj) {
+                    episodeString = matchedLinkObj.episode;
+                    filename = matchedLinkObj.name;
+                } else {
+                    const epMatch = directUrl.match(/e(\d+)/i) || directUrl.match(/tap-?(\d+)/i) || directUrl.match(/tập[ -]?(\d+)/i);
+                    episodeString = epMatch ? `Tập ${parseInt(epMatch[1])}` : `Tập ?`;
                 }
 
                 try {
-                    let name = providedFilename;
-                    
-                    // Ask Abyss for the filename if not provided
-                    if (!name) {
-                        const axios = require('axios');
-                        let foundItem = null;
-                        for (let page = 1; page <= 3; page++) { // Check up to 3 recent pages
-                            const hydraxUrl = `https://api.hydrax.net/${process.env.ABYSS_API_KEY}/list?page=${page}`;
-                            const resp = await axios.get(hydraxUrl);
-                            if (resp.data && resp.data.items) {
-                                foundItem = resp.data.items.find(i => i.slug === slug);
-                                if (foundItem) break;
-                            }
-                        }
-                        if (foundItem) name = foundItem.name;
-                    }
-
-                    if (name) {
-                        // Parse Episode from filename
-                        const epMatch = name.match(/s?\d{1,2}e(\d{2,3})/i) || name.match(/e(\d{2,3})/i) || name.match(/T[a-zA-Z\s]*(\d{1,3})/i);
-                        let episodeString = null;
-                        if (epMatch) {
-                            episodeString = `Tập ${parseInt(epMatch[1], 10)}`;
-                        } else if (name.includes('Tập')) {
-                            const tMatch = name.match(/Tập\s*(\d{1,3})/i);
-                            if (tMatch) episodeString = `Tập ${parseInt(tMatch[1], 10)}`;
-                        } else {
-                            // Fallback, see if it is just a number
-                            const numMatch = name.match(/^(\d{1,3})$/);
-                            if (numMatch) episodeString = `Tập ${parseInt(numMatch[1], 10)}`;
-                        }
-
-                        if (!episodeString) {
-                            console.log(`[Bulk Sync] ⚠️ Không nhận diện được tập cho file: ${name}`);
-                            continue;
-                        }
-
-                        // Map with extractedLinks to get directLink
-                        const matchedLinkObj = extractedLinks.find(el => {
-                           if (el.episode === episodeString) return true;
-                           const epNum = episodeString.replace('Tập ', '');
-                           if (el.name && el.name.includes(`E${epNum.padStart(2, '0')}`)) return true;
-                           return false;
-                        });
-
-                        const directUrl = matchedLinkObj ? matchedLinkObj.link : null;
-                        console.log(`[Bulk Sync] Khớp ${episodeString} (${slug}) -> DirectLink: ${directUrl ? 'OK' : 'MISSING'}`);
-
-                        // Add to hostUpload collection for tracking
-                        const newUpload = await hostUpload.create({
+                    const taskId = await seekstreamingApi.remoteUpload(directUrl, filename, folderId);
+                    if (taskId) {
+                        await hostUpload.create({
                             movieId: movie._id,
                             series: movie.name,
                             season: 'S01',
                             episode: episodeString,
-                            filename: name,
-                            host: 'Abyss',
-                            sourcePage: directUrl || 'bulk-sync-manual',
-                            status: 'completed',
-                            taskId: slug,
-                            notes: 'Đồng bộ từ Bulk Sync',
+                            filename: filename,
+                            host: 'Seekstreaming',
+                            sourcePage: directUrl,
+                            status: 'processing',
+                            taskId: taskId,
+                            notes: 'Đồng bộ từ Bulk Sync Seekstreaming',
                             createdAt: new Date()
                         });
-
-                        // Sync to Movie DB
-                        await hostManager.syncMovieEpisode(newUpload, slug);
-                        
-                        // Upload subtitle if directUrl exists
-                        if (directUrl && directUrl.includes('pixeldrain')) {
-                            let realVideoUrl = directUrl;
-                            if (realVideoUrl.includes('/u/')) {
-                                realVideoUrl = realVideoUrl.replace('/u/', '/api/file/');
-                            }
-                            console.log(`[Bulk Sync] Đang kích hoạt trích xuất phụ đề cho ${episodeString}...`);
-                            await abyssApi.uploadSubtitleFromVideo(realVideoUrl, slug, newUpload._id).catch(e => console.log('Sub error:', e.message));
-                        }
-                        
                         successCount++;
-                    } else {
-                        console.log(`[Bulk Sync] ❌ Không tìm thấy thông tin trên Abyss cho ID: ${slug}`);
                     }
-                } catch(e) {
-                    console.log(`[Bulk Sync] Error for slug ${slug}:`, e.message);
-                }
+                } catch(e) {}
             }
-            console.log(`[Bulk Sync] 🎉 Hoàn tất đồng bộ ${successCount} tập phim cho ${movie.name}`);
+            console.log(`[Bulk Sync Seekstreaming] 🎉 Hoàn tất đẩy ${successCount} tập phim vào hàng đợi Seekstreaming cho ${movie.name}`);
         })();
 
-        res.json({ ok: true, message: `Hệ thống đã nhận lệnh và đang đồng bộ ngầm.` });
+        res.json({ ok: true, message: `Hệ thống đã nhận lệnh và đang đồng bộ ngầm lên Seekstreaming.` });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

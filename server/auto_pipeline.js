@@ -7,62 +7,13 @@ const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
 
-const { PremiumHostService, AbyssHostService, play4meAPI, abyssAPI } = require('./utils/videoHostProviders');
+const { PremiumHostService, play4meAPI, seekstreamingAPI } = require('./utils/videoHostProviders');
 const gofileService = require('./utils/gofileService');
 const hostManager = require('./utils/hostManager');
 const tmdbService = require('./utils/tmdbService');
 const mongoose = require('mongoose');
 const Movie = require('./models/Movie');
-
-// API Clients
-const play4me = new PremiumHostService('Play4Me', 'https://player4me.com', process.env.PLAY4ME_API_KEY);
-const abyssService = abyssAPI;
 const axios = require('axios');
-
-// --- BACKGROUND QUEUE FOR SLOW HOSTS (ABYSS) ---
-const abyssUploadQueue = [];
-let isAbyssUploading = false;
-
-async function processAbyssQueue() {
-    if (isAbyssUploading) return;
-    isAbyssUploading = true;
-    try {
-        while(abyssUploadQueue.length > 0) {
-            const job = abyssUploadQueue.shift();
-            try {
-                console.log(`\n[Abyss Queue] Bắt đầu đẩy: ${job.finalFilename}... (Còn ${abyssUploadQueue.length} tập ở hàng đợi)`);
-                const folderId = await hostManager.createOrGetFolder(job.seriesName, job.seasonName, job.hostKey, job.folderName);
-                const res = await hostManager.remoteUploadWithRetry(job.hostKey, job.directLinkToUpload, job.finalFilename, folderId);
-                
-                if (res.ok) {
-                    console.log(`[Abyss Queue] ✅ Xong! Task ID: ${res.taskId}`);
-                    const doc = await hostManager.recordUpload({ 
-                        series: job.seriesName, season: job.seasonName, episode: job.episodeName, tmdbId: job.tmdbId, 
-                        movieId: job.localMovieId,
-                        sourcePage: job.viewcrateUrl, sourceDirectUrl: job.directLinkToUpload, filename: job.finalFilename, 
-                        host: job.hostKey, taskId: res.taskId, status: 'pending', retries: res.attempts - 1 
-                    });
-                    hostManager.pollAndSyncStatus(abyssAPI, res.taskId, doc._id).catch(()=>{});
-                } else {
-                    throw new Error(res.error || 'upload failed');
-                }
-            } catch (e) {
-                console.log(`[Abyss Queue] ❌ Lỗi upload tập ${job.episodeName}: ${e.message}`);
-                try {
-                    await hostManager.recordUpload({ 
-                        series: job.seriesName, season: job.seasonName, episode: job.episodeName, sourcePage: job.viewcrateUrl, 
-                        sourceDirectUrl: job.directLinkToUpload, filename: job.finalFilename, host: job.hostKey, taskId: null, status: 'failed', notes: e.message 
-                    });
-                } catch(dbErr) {
-                    console.log(`[Abyss Queue] Lỗi lưu DB khi failed:`, dbErr.message);
-                }
-            }
-        }
-    } finally {
-        isAbyssUploading = false;
-        console.log(`\n[Abyss Queue] 🎉 Đã xử lý xong toàn bộ hàng đợi!`);
-    }
-}
 
 // -- 1. SETUP FAKE JDOWNLOADER SERVER --
 const app = express();
@@ -798,7 +749,7 @@ async function runAutoUploadPipeline(jobData) {
                 } catch(e) {}
             }
 
-            const priorityHosts = ['Play4Me']; // Đã ẩn Abyss theo yêu cầu của User
+            const priorityHosts = ['Play4Me', 'Seekstreaming'];
             let uploadSuccessCount = 0;
 
             for (const hostKey of priorityHosts) {
@@ -812,22 +763,8 @@ async function runAutoUploadPipeline(jobData) {
                     }
                 }
 
-                if (hostKey === 'Abyss') {
-                    // Push to Background Queue
-                    const folderName = seriesName ? `${seriesName} - ${seasonName}` : 'PhimMoi';
-                    console.log(`⏳ [Abyss] Đẩy file vào hàng đợi ngầm (Background Queue) để tránh treo hệ thống...`);
-                    abyssUploadQueue.push({ 
-                        hostKey, directLinkToUpload, finalFilename, folderId: null, folderName,
-                        seriesName, seasonName, episodeName, tmdbId: tmdbMatch?.tmdbId || null, 
-                        localMovieId, viewcrateUrl 
-                    });
-                    processAbyssQueue().catch(()=>{});
-                    uploadSuccessCount += 1;
-                    continue; // Chuyển sang tập tiếp theo ngay lập tức!
-                }
-
                 try {
-                    // Play4Me Logic (Fast URL Remote Upload)
+                    // Fast URL Remote Upload Logic
                     const folderName = seriesName ? `${seriesName} - ${seasonName}` : 'PhimMoi';
                     const folderId = await hostManager.createOrGetFolder(seriesName, seasonName, hostKey, folderName);
                     
@@ -845,7 +782,7 @@ async function runAutoUploadPipeline(jobData) {
                         subtitleStatus: 'completed' // Play4Me does not use subtitle extraction queue
                     });
                     
-                    const apiToPoll = play4meAPI;
+                    const apiToPoll = hostKey === 'Seekstreaming' ? seekstreamingAPI : play4meAPI;
                     hostManager.pollAndSyncStatus(apiToPoll, taskId, doc._id).catch(()=>{});
                     uploadSuccessCount += 1;
                 } catch (e) {

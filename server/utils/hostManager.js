@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 const HostUpload = require('../models/HostUpload');
 const Movie = require('../models/Movie');
-const { PremiumHostService, AbyssHostService, play4meAPI, abyssAPI } = require('./videoHostProviders');
+const { PremiumHostService, AbyssHostService, play4meAPI, seekstreamingAPI } = require('./videoHostProviders');
 const HostFolder = require('../models/HostFolder');
 
 // map host key to API instance
 const hostApis = {
   Play4Me: play4meAPI,
-  Abyss: abyssAPI
+  Seekstreaming: seekstreamingAPI
 };
 
 function normalizeMovieFolderName(name) {

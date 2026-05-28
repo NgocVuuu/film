@@ -15,11 +15,10 @@ const multiSourceSearch = async (keyword) => {
     const cached = searchCache.get(cacheKey);
     if (cached) return cached;
 
-    // Parallel search across 3 sources
+    // Parallel search across 2 sources
     const results = await Promise.allSettled([
         axios.get(`https://ophim1.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}`, { timeout: 3000 }), // Adjusted to 3s
-        axios.get(`https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}`, { timeout: 3000 }), // Adjusted to 3s
-        axios.get(`https://phim.nguonc.com/api/films/search?keyword=${encodeURIComponent(keyword)}`, { timeout: 3000 }) // Adjusted to 3s
+        axios.get(`https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}`, { timeout: 3000 }) // Adjusted to 3s
     ]);
 
     const allMovies = new Map(); // Use Map to merge by slug
@@ -55,28 +54,6 @@ const multiSourceSearch = async (keyword) => {
                         }
                     });
                 }
-                // NguonC (Index 2)
-                else if (index === 2) {
-                    const data = result.value.data;
-                    const items = data?.items || [];
-                    items.forEach(m => {
-                        if (!allMovies.has(m.slug)) {
-                            allMovies.set(m.slug, {
-                                name: m.name,
-                                slug: m.slug,
-                                origin_name: m.original_name, // NguonC uses original_name
-                                thumb_url: m.thumb_url,
-                                poster_url: m.poster_url,
-                                year: m.year, // Verify if NguonC provides year
-                                type: m.type,
-                                quality: m.quality,
-                                episode_current: m.current_episode, // NguonC might use different field
-                                fromExternal: true,
-                                source: 'NguonC'
-                            });
-                        }
-                    });
-                }
             } catch (err) {
                 console.error(`Error processing result from source ${index}:`, err.message);
             }
@@ -91,7 +68,6 @@ const multiSourceSearch = async (keyword) => {
             if (!path || path.startsWith('http')) return path || '';
             let base = '';
             if (source === 'KKPhim') base = 'https://phimimg.com';
-            if (source === 'NguonC') base = 'https://phim.nguonc.com';
             if (source === 'Ophim') base = 'https://img.ophim.live/uploads/movies';
 
             if (!base) return path;

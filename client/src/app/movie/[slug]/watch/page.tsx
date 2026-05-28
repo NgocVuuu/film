@@ -187,7 +187,7 @@ export default function WatchPage() {
             if (name.startsWith('KK -')) sources.add('Server 1');
             else if (name.startsWith('OP -')) sources.add('Server 2');
             else if (name.includes('PChill - Play4Me')) sources.add('PChill VIP 2');
-            else if (name.includes('PChill - Abyss')) sources.add('PChill VIP 1');
+            else if (name.includes('PChill - Seekstreaming')) sources.add('PChill VIP 1');
             else sources.add('Khác');
         });
 
@@ -210,7 +210,7 @@ export default function WatchPage() {
                     if (name.startsWith('KK -')) activeSource = 'Server 1';
                     else if (name.startsWith('OP -')) activeSource = 'Server 2';
                     else if (name.includes('PChill - Play4Me')) activeSource = 'PChill VIP 2';
-                    else if (name.includes('PChill - Abyss')) activeSource = 'PChill VIP 1';
+                    else if (name.includes('PChill - Seekstreaming')) activeSource = 'PChill VIP 1';
                     else activeSource = 'Khác';
                 }
             }
@@ -230,7 +230,7 @@ export default function WatchPage() {
 
             const filtered = validEpisodes.filter((ep: Episode) => {
                 if (activeSource === 'PChill VIP 1') {
-                    return ep.server_name.includes('PChill - Abyss');
+                    return ep.server_name.includes('PChill - Seekstreaming');
                 }
                 if (activeSource === 'PChill VIP 2') {
                     return ep.server_name.includes('PChill - Play4Me');
@@ -439,7 +439,7 @@ export default function WatchPage() {
                 if (ep.server_name.startsWith('NC -') || ep.server_name === 'PChill Server') return false; 
                 
                 if (newSource === 'PChill VIP 1') {
-                    return ep.server_name.includes('PChill - Abyss');
+                    return ep.server_name.includes('PChill - Seekstreaming');
                 }
                 if (newSource === 'PChill VIP 2') {
                     return ep.server_name.includes('PChill - Play4Me');
