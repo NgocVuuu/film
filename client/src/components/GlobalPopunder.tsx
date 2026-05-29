@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 
 const SMARTLINK_URL = 'https://www.effectivecpmnetwork.com/ymvcj08wdc?key=d13c3bfc1b46a1af5fd851f84b923aec';
-const CLICKS_BEFORE_NEXT_AD = 7; // Cần 7 lượt click rác/an toàn trước khi hiện lại quảng cáo
+const CLICKS_BEFORE_NEXT_AD = 5; // Cần 5 lượt click rác/an toàn trước khi hiện lại quảng cáo
 const STORAGE_KEY = 'ad_popunder_click_count';
 
 export function GlobalPopunder() {
