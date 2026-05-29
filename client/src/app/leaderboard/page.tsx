@@ -69,7 +69,7 @@ export default function LeaderboardPage() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white pt-20 pb-12 relative overflow-hidden">
+        <div className="min-h-screen bg-black text-white pt-14 md:pt-20 pb-12 relative overflow-hidden">
             {/* Background Glowing Blobs */}
             <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/10 blur-[120px] rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2"></div>
             <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-yellow-500/10 blur-[150px] rounded-full pointer-events-none translate-x-1/3 translate-y-1/3"></div>
@@ -93,12 +93,12 @@ export default function LeaderboardPage() {
             </div>
 
             <div className="container mx-auto px-4 max-w-4xl relative z-10">
-                <div className="flex flex-col items-center mb-10 text-center">
-                    <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6 border border-primary/20 shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)] relative">
-                        <div className="absolute inset-0 bg-gradient-to-tr from-primary/30 to-transparent rounded-3xl animate-pulse"></div>
-                        <Trophy className="w-10 h-10 text-primary drop-shadow-[0_0_15px_rgba(var(--primary-rgb),0.8)]" />
+                <div className="flex flex-col items-center mb-6 md:mb-10 text-center">
+                    <div className="w-14 h-14 md:w-20 md:h-20 bg-primary/10 rounded-2xl md:rounded-3xl flex items-center justify-center mb-4 md:mb-6 border border-primary/20 shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)] relative">
+                        <div className="absolute inset-0 bg-gradient-to-tr from-primary/30 to-transparent rounded-2xl md:rounded-3xl animate-pulse"></div>
+                        <Trophy className="w-7 h-7 md:w-10 md:h-10 text-primary drop-shadow-[0_0_15px_rgba(var(--primary-rgb),0.8)]" />
                     </div>
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-4 bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-200 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(250,204,21,0.3)] py-4 leading-normal">
+                    <h1 className="text-3xl md:text-5xl font-black mb-2 md:mb-3 bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-200 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(250,204,21,0.3)] py-4 leading-normal">
                         BẢNG XẾP HẠNG
                     </h1>
                     <p className="text-gray-400 max-w-lg text-sm md:text-base">
@@ -150,17 +150,16 @@ export default function LeaderboardPage() {
                             users.map((user, index) => (
                                 <div
                                     key={user._id}
-                                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50 hover:bg-white/[0.03] cursor-default ${getRankColor(index)}`}
+                                    className={`relative p-3 md:p-4 rounded-xl md:rounded-2xl border transition-all duration-300 flex items-center justify-between ${getRankColor(index)}`}
                                 >
-                                    <div className="flex-shrink-0 w-10 md:w-14 flex justify-center items-center font-black">
-                                        {getRankIcon(index)}
+                                    <div className="flex items-center gap-2 md:gap-3">
+                                        <div className="w-6 md:w-8 flex justify-center">{getRankIcon(index)}</div>
+                                        <img
+                                            src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user._id}&backgroundColor=b6e3f4`}
+                                            alt={user.displayName}
+                                            className={`w-10 h-10 md:w-12 md:h-12 rounded-full border-2 bg-surface-800 object-cover shadow-inner ${index === 0 ? 'border-yellow-400' : index === 1 ? 'border-gray-300' : index === 2 ? 'border-amber-600' : 'border-white/10'}`}
+                                        />
                                     </div>
-                                    
-                                    <img
-                                        src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user._id}&backgroundColor=b6e3f4`}
-                                        alt={user.displayName}
-                                        className={`rounded-full border-2 bg-surface-800 object-cover w-12 h-12 shadow-inner ${index === 0 ? 'border-yellow-400' : index === 1 ? 'border-gray-300' : index === 2 ? 'border-amber-600' : 'border-white/10'}`}
-                                    />
 
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">

@@ -123,38 +123,38 @@ export default function MomentsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#0f0f11] text-white pt-20 pb-20">
-            <div className="container mx-auto px-4 max-w-2xl">
-                <div className="mb-10 text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 text-primary rounded-3xl mb-4 border border-primary/20 shadow-[0_0_30px_rgba(var(--primary-rgb),0.15)]">
-                        <Film className="w-8 h-8" />
+        <div className="min-h-screen bg-[#0f0f11] text-white pt-14 md:pt-20 pb-16 md:pb-20">
+            <div className="container mx-auto px-2 md:px-4 max-w-2xl">
+                <div className="mb-6 md:mb-10 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-primary/10 text-primary rounded-2xl md:rounded-3xl mb-3 md:mb-4 border border-primary/20 shadow-[0_0_30px_rgba(var(--primary-rgb),0.15)]">
+                        <Film className="w-6 h-6 md:w-8 md:h-8" />
                     </div>
-                    <h1 className="text-3xl md:text-4xl font-black mb-3 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                    <h1 className="text-2xl md:text-4xl font-black mb-2 md:mb-3 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
                         Bảng Tin Khoảnh Khắc
                     </h1>
                     <p className="text-gray-400">Khám phá những cảnh phim đắt giá nhất từ cộng đồng PChiller</p>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-4 md:space-y-6">
                     {loading ? (
                         Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="bg-surface-900 rounded-2xl h-64 animate-pulse border border-white/5"></div>
+                            <div key={i} className="bg-surface-900 rounded-xl md:rounded-2xl h-64 animate-pulse border border-white/5"></div>
                         ))
                     ) : moments.length === 0 ? (
-                        <div className="text-center py-20 text-gray-500 bg-surface-900 rounded-2xl border border-white/5">
+                        <div className="text-center py-16 md:py-20 text-gray-500 bg-surface-900 rounded-xl md:rounded-2xl border border-white/5 text-sm md:text-base">
                             Chưa có khoảnh khắc nào được chia sẻ.
                         </div>
                     ) : (
                         moments.map(moment => (
-                            <div key={moment._id} className="bg-surface-900/60 backdrop-blur-md rounded-2xl border border-white/5 shadow-xl hover:bg-surface-900 transition-colors">
+                            <div key={moment._id} className="bg-surface-900/60 backdrop-blur-md rounded-xl md:rounded-2xl border border-white/5 shadow-xl hover:bg-surface-900 transition-colors">
                                 {/* Header: User info */}
-                                <div className="p-4 flex items-center justify-between">
+                                <div className="p-3 md:p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="relative">
                                             <img 
                                                 src={moment.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${moment.user?._id || 'guest'}&backgroundColor=b6e3f4`}
                                                 alt={moment.user?.displayName || 'User'} 
-                                                className="w-11 h-11 rounded-full border border-white/10 object-cover bg-surface-800"
+                                                className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-white/10 object-cover bg-surface-800"
                                             />
                                             {moment.user?.role === 'admin' && (
                                                 <div className="absolute -bottom-1 -right-1 bg-primary rounded-full p-0.5 border-2 border-surface-900 shadow-sm">
@@ -188,8 +188,8 @@ export default function MomentsPage() {
                                 </div>
 
                                 {/* Content */}
-                                <div className="px-4 pb-4">
-                                    <p className="text-gray-100 whitespace-pre-wrap text-[15px] leading-relaxed mb-4">
+                                <div className="px-3 md:px-4 pb-3 md:pb-4">
+                                    <p className="text-gray-100 whitespace-pre-wrap text-[14px] md:text-[15px] leading-relaxed mb-3 md:mb-4">
                                         {moment.content}
                                     </p>
                                     
@@ -242,7 +242,7 @@ export default function MomentsPage() {
                                 {/* Stats & Actions */}
                                 <div>
                                     {/* Stats (Likes/Comments count) */}
-                                    <div className="px-4 py-2 flex items-center justify-between text-xs text-gray-500 border-b border-white/5">
+                                    <div className="px-3 md:px-4 py-1.5 md:py-2 flex items-center justify-between text-[10px] md:text-xs text-gray-500 border-b border-white/5">
                                         <div className="flex items-center gap-1.5">
                                             <div className="w-4 h-4 rounded-full bg-pink-500/20 flex items-center justify-center">
                                                 <Heart className="w-2.5 h-2.5 text-pink-500 fill-pink-500" />
@@ -256,20 +256,20 @@ export default function MomentsPage() {
                                     </div>
                                     
                                     {/* Action Buttons */}
-                                    <div className="px-2 py-1 flex justify-between text-gray-400">
+                                    <div className="px-1 md:px-2 py-0.5 md:py-1 flex justify-between text-gray-400">
                                         <button 
                                             onClick={() => handleLike(moment._id)}
-                                            className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-lg hover:bg-white/5 transition-colors font-medium group ${moment.likes?.includes(currentUser?._id || '') ? 'text-pink-500' : ''}`}
+                                            className={`flex-1 flex justify-center items-center gap-1.5 md:gap-2 py-2 md:py-2.5 rounded-lg hover:bg-white/5 transition-colors text-[11px] md:text-sm font-medium group ${moment.likes?.includes(currentUser?._id || '') ? 'text-pink-500' : ''}`}
                                         >
-                                            <Heart className={`w-5 h-5 transition-colors ${moment.likes?.includes(currentUser?._id || '') ? 'fill-pink-500' : 'group-hover:text-pink-500'}`} />
+                                            <Heart className={`w-4 h-4 md:w-5 md:h-5 transition-colors ${moment.likes?.includes(currentUser?._id || '') ? 'fill-pink-500' : 'group-hover:text-pink-500'}`} />
                                             <span className="group-hover:text-white transition-colors">Thích</span>
                                         </button>
-                                        <button onClick={() => handleCommentClick(moment)} className="flex-1 flex justify-center items-center gap-2 py-2.5 rounded-lg hover:bg-white/5 transition-colors font-medium group">
-                                            <MessageCircle className="w-5 h-5 group-hover:text-primary transition-colors" />
+                                        <button onClick={() => handleCommentClick(moment)} className="flex-1 flex justify-center items-center gap-1.5 md:gap-2 py-2 md:py-2.5 rounded-lg hover:bg-white/5 transition-colors text-[11px] md:text-sm font-medium group">
+                                            <MessageCircle className="w-4 h-4 md:w-5 md:h-5 group-hover:text-primary transition-colors" />
                                             <span className="group-hover:text-white transition-colors">Bình luận</span>
                                         </button>
-                                        <button onClick={() => handleShare(moment)} className="flex-1 flex justify-center items-center gap-2 py-2.5 rounded-lg hover:bg-white/5 transition-colors font-medium group">
-                                            <Share2 className="w-5 h-5 group-hover:text-blue-400 transition-colors" />
+                                        <button onClick={() => handleShare(moment)} className="flex-1 flex justify-center items-center gap-1.5 md:gap-2 py-2 md:py-2.5 rounded-lg hover:bg-white/5 transition-colors text-[11px] md:text-sm font-medium group">
+                                            <Share2 className="w-4 h-4 md:w-5 md:h-5 group-hover:text-blue-400 transition-colors" />
                                             <span className="group-hover:text-white transition-colors">Chia sẻ</span>
                                         </button>
                                     </div>
