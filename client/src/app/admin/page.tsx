@@ -42,6 +42,8 @@ interface DashboardStats {
                 rss: number;
             };
         };
+        todayTotalViews: number;
+        todayAnonymousViews: number;
     };
 }
 
@@ -282,6 +284,50 @@ export default function AdminDashboardPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Today's Views Section */}
+            {stats?.tracking && (
+                <div className="mb-8">
+                    <h2 className="text-xl font-bold text-white mb-6">Thống kê lượt xem (Hôm nay)</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-surface-900 border border-white/10 rounded-xl p-6 relative overflow-hidden group">
+                            <div className="flex items-center justify-between mb-4 relative z-10">
+                                <div className="p-3 bg-indigo-500/10 rounded-lg">
+                                    <Eye className="w-6 h-6 text-indigo-500" />
+                                </div>
+                                <span className="text-sm text-gray-400">
+                                    Từ 00:00 hôm nay
+                                </span>
+                            </div>
+                            <h3 className="text-3xl font-bold text-white mb-1 relative z-10">
+                                {formatNumber(stats.tracking.todayTotalViews || 0)}
+                            </h3>
+                            <p className="text-indigo-400 text-sm relative z-10 font-medium">Tổng lượt xem phim hôm nay</p>
+                            <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                                <Eye className="w-24 h-24 text-indigo-500 translate-x-4 translate-y-4" />
+                            </div>
+                        </div>
+
+                        <div className="bg-surface-900 border border-white/10 rounded-xl p-6 relative overflow-hidden group">
+                            <div className="flex items-center justify-between mb-4 relative z-10">
+                                <div className="p-3 bg-pink-500/10 rounded-lg">
+                                    <UserPlus className="w-6 h-6 text-pink-500" />
+                                </div>
+                                <span className="text-sm text-pink-400 bg-pink-500/10 px-2 py-1 rounded">
+                                    Tiềm năng chuyển đổi!
+                                </span>
+                            </div>
+                            <h3 className="text-3xl font-bold text-white mb-1 relative z-10">
+                                {formatNumber(stats.tracking.todayAnonymousViews || 0)}
+                            </h3>
+                            <p className="text-pink-400 text-sm relative z-10 font-medium">Lượt xem Ẩn Danh (Khách chưa Đăng nhập)</p>
+                            <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                                <Users className="w-24 h-24 text-pink-500 translate-x-4 translate-y-4" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Tracking & System Status Section */}
             {stats?.tracking && (

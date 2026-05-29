@@ -5,7 +5,7 @@ const viewCache = new NodeCache({ stdTTL: 24 * 60 * 60 }); // 24 hours standard 
 // Save or update watch progress
 exports.saveProgress = async (req, res) => {
     try {
-        const userId = req.user._id;
+        const userId = req.user ? req.user._id : null;
         // sendBeacon sends body as Blob with application/octet-stream; parse manually if needed
         let body = req.body;
         if (!body || !body.movieSlug) {
@@ -23,7 +23,8 @@ exports.saveProgress = async (req, res) => {
             episodeName,
             serverName,
             currentTime,
-            duration
+            duration,
+            guestId
         } = body;
 
         // Validate required fields
@@ -38,11 +39,17 @@ exports.saveProgress = async (req, res) => {
         console.log('[saveProgress] Request:', { userId, movieSlug, episodeSlug, currentTime, duration });
 
         // Check if progress already exists for this episode, ignoring serverName so progress is shared between servers
-        const allProgress = await WatchProgress.find({
-            userId,
-            movieSlug,
-            episodeSlug
-        }).sort({ lastWatched: -1 });
+        const query = { movieSlug, episodeSlug };
+        if (userId) {
+            query.userId = userId;
+        } else if (guestId) {
+            query.guestId = guestId;
+            query.userId = { $exists: false }; // Ensure we only match guests
+        } else {
+            return res.status(400).json({ success: false, message: 'Thiếu định danh người dùng' });
+        }
+
+        const allProgress = await WatchProgress.find(query).sort({ lastWatched: -1 });
 
         let progress = allProgress[0];
 
@@ -72,7 +79,7 @@ exports.saveProgress = async (req, res) => {
             // Create new progress
 
             // CHECK PREMIUM LIMIT (Max 20 for free users)
-            if (req.user.subscription?.tier !== 'premium') {
+            if (userId && (!req.user.subscription || req.user.subscription.tier !== 'premium')) {
                 const count = await WatchProgress.countDocuments({ userId });
                 if (count >= 20) {
                     const oldest = await WatchProgress.findOne({ userId }).sort({ lastWatched: 1 });
@@ -80,12 +87,20 @@ exports.saveProgress = async (req, res) => {
                         await WatchProgress.deleteOne({ _id: oldest._id });
                     }
                 }
+            } else if (!userId && guestId) {
+                // Limit guests to 20 watch progress as well
+                const count = await WatchProgress.countDocuments({ guestId });
+                if (count >= 20) {
+                    const oldest = await WatchProgress.findOne({ guestId }).sort({ lastWatched: 1 });
+                    if (oldest) {
+                        await WatchProgress.deleteOne({ _id: oldest._id });
+                    }
+                }
             }
 
-            progress = await WatchProgress.create({
-                userId,
-                movieId,
+            const newProgressData = {
                 movieSlug,
+                movieId,
                 movieName,
                 movieThumb,
                 episodeSlug,
@@ -95,7 +110,11 @@ exports.saveProgress = async (req, res) => {
                 duration,
                 completed,
                 lastWatched: new Date()
-            });
+            };
+            if (userId) newProgressData.userId = userId;
+            if (guestId) newProgressData.guestId = guestId;
+
+            progress = await WatchProgress.create(newProgressData);
         }
 
         // VIEW LOGGING LOGIC

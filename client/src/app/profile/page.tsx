@@ -10,7 +10,8 @@ import { toast } from 'react-hot-toast';
 import {
     User, Lock, Save, Loader2, LogOut, Crown,
     ChevronRight, FileText, Shield,
-    Plus, ArrowLeft, Mail, Smartphone, MessageCircle
+    Plus, ArrowLeft, Mail, Smartphone, MessageCircle,
+    Trophy, PlayCircle
 } from 'lucide-react';
 import ProfileChatTab from '@/components/ProfileChatTab';
 import { customFetch } from '@/lib/api';
@@ -236,6 +237,12 @@ function ProfileContent() {
                     <div className="space-y-1">
                         <MobileMenuLink href="/my-lists" icon={Plus} label="Danh sách phim của tôi" />
                         <div className="h-px bg-white/5 my-2 mx-4" />
+                        
+                        {/* New Features Mobile */}
+                        <MobileMenuLink href="/leaderboard" icon={Trophy} label="Bảng Xếp Hạng" />
+                        <MobileMenuLink href="/moments" icon={PlayCircle} label="Khoảnh Khắc PChill" />
+                        <div className="h-px bg-white/5 my-2 mx-4" />
+
                         <button
                             onClick={() => {
                                 setActiveTab('chat');

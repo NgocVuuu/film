@@ -833,3 +833,60 @@ exports.updateProfile = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+// Guest Login (Anonymous Auth)
+exports.guestLogin = async (req, res) => {
+    try {
+        // Generate a random guest number, e.g. PChiller #4912
+        const guestId = Math.floor(10000 + Math.random() * 90000);
+        const displayName = `PChiller #${guestId}`;
+        
+        // Create Guest User without email/password
+        const user = await User.create({
+            displayName,
+            role: 'guest',
+            isVerified: true, // Treat guests as verified so they can comment
+            lastLogin: new Date()
+        });
+
+        // Device Management
+        const sessionId = handleDeviceLimit(user, req);
+        await user.save();
+
+        // Generate JWT
+        const token = generateToken(user._id, sessionId);
+
+        const origin = req.headers.origin || '';
+        const isProduction = process.env.NODE_ENV === 'production' ||
+            (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) ||
+            (origin && !origin.includes('localhost') && origin.startsWith('http'));
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? 'none' : 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
+        res.json({
+            success: true,
+            data: {
+                user: {
+                    id: user._id,
+                    displayName: user.displayName,
+                    avatar: user.avatar,
+                    role: user.role,
+                    subscription: user.subscription,
+                    isPremium: false,
+                    isVip: false
+                },
+                token
+            },
+            message: 'Khởi tạo tài khoản Khách thành công'
+        });
+    } catch (err) {
+        console.error('Guest login error:', err);
+        res.status(500).json({ success: false, message: 'Lỗi khởi tạo tài khoản Khách' });
+    }
+};
+

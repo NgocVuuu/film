@@ -15,6 +15,7 @@ router.post('/resend-verification', authController.resendVerification);
 router.post('/login', validateRequest(schemas.login), authController.login);
 router.post('/forgot-password', validateRequest(schemas.forgotPassword), authController.forgotPassword);
 router.put('/reset-password/:token', validateRequest(schemas.resetPassword), authController.resetPassword);
+router.post('/guest', authController.guestLogin);
 
 // Protected routes
 router.get('/me', authMiddleware, authController.getCurrentUser);

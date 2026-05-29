@@ -75,7 +75,7 @@ const getComments = async (req, res) => {
 // 2. Add Comment (or Reply)
 const addComment = async (req, res) => {
     try {
-        const { movieSlug, content, rating, parentId, episodeName, type } = req.body;
+        const { movieSlug, content, rating, parentId, episodeName, type, timestamp } = req.body;
         const userId = req.user._id;
 
         if (!content && !rating) {
@@ -104,6 +104,8 @@ const addComment = async (req, res) => {
         // Create Comment
         // Nếu có rating → tự động gán type='rating' để hiển thị đúng tab
         const commentType = rating ? 'rating' : (type || 'comment');
+        const isMoment = timestamp !== undefined && timestamp !== null;
+        
         const newComment = new Comment({
             user: userId,
             movieSlug,
@@ -111,7 +113,9 @@ const addComment = async (req, res) => {
             rating: rating || undefined,
             parentId: parentId || null,
             episodeName: episodeName || null,
-            type: commentType
+            type: commentType,
+            timestamp: timestamp || null,
+            isMoment
         });
         await newComment.save();
 
@@ -260,10 +264,54 @@ const getRecentComments = async (req, res) => {
     }
 };
 
+// 6. Get all moments (for global feed)
+const getMoments = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        const moments = await Comment.find({ isMoment: true })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate('user', 'displayName avatar role')
+            .lean();
+
+        // Batch-fetch movie info
+        const slugs = [...new Set(moments.map(c => c.movieSlug))];
+        const movies = await Movie.find({ slug: { $in: slugs } })
+            .select('slug name thumb_url poster_url')
+            .lean();
+        const movieMap = Object.fromEntries(movies.map(m => [m.slug, m]));
+
+        const data = moments.map(c => ({
+            ...c,
+            movie: movieMap[c.movieSlug] || { slug: c.movieSlug, name: c.movieSlug }
+        }));
+        
+        const total = await Comment.countDocuments({ isMoment: true });
+
+        res.json({ 
+            success: true, 
+            data,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getComments,
     addComment,
     deleteComment,
     toggleLike,
-    getRecentComments
+    getRecentComments,
+    getMoments
 };

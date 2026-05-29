@@ -42,6 +42,15 @@ const commentSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isMoment: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    timestamp: {
+        type: Number, // In seconds (e.g. 755 for 12:35)
+        default: null
+    },
     type: {
         type: String,
         enum: ['comment', 'rating', 'drama'],

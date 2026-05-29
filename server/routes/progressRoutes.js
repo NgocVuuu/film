@@ -1,16 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const progressController = require('../controllers/progressController');
-const { authMiddleware } = require('../middleware/authMiddleware');
+const { authMiddleware, optionalAuthMiddleware } = require('../middleware/authMiddleware');
 
 // Public route for tracking views (anonymous allowed)
 router.post('/track-view', progressController.trackView);
 
-// All routes below require authentication
-router.use(authMiddleware);
+// Save/update progress (allows anonymous)
+router.post('/save', optionalAuthMiddleware, progressController.saveProgress);
 
-// Save/update progress
-router.post('/save', progressController.saveProgress);
+// All other routes below require authentication
+router.use(authMiddleware);
 
 // Get progress for specific movie
 router.get('/movie/:movieSlug', progressController.getProgress);

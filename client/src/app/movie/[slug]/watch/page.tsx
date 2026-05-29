@@ -5,6 +5,7 @@ import VideoPlayer from '@/components/VideoPlayer';
 import { Play, ArrowLeft, Crown, Lock, Share2 } from 'lucide-react';
 import { ReportModal } from '@/components/ReportModal';
 import { CommentSection } from '@/components/CommentSection';
+import { ShareMomentModal } from '@/components/ShareMomentModal';
 import { DonateButton } from '@/components/DonateButton';
 import Link from 'next/link';
 import { API_URL } from '@/lib/config';
@@ -70,6 +71,8 @@ export default function WatchPage() {
     const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
     const [startTime, setStartTime] = useState<number>(0);
     const [playerTime, setPlayerTime] = useState<number>(0);
+    const [momentTime, setMomentTime] = useState<number | null>(null);
+    const [refreshComments, setRefreshComments] = useState(0);
 
     // Track if we've already done initial URL-based server selection
     const hasInitialized = useRef(false);
@@ -680,6 +683,7 @@ export default function WatchPage() {
                                     const ep = server?.server_data.find((e: { slug: string }) => e.slug === episodeSlug);
                                     if (ep) handleEpisodeClick(serverName, ep);
                                 }}
+                                onShareMoment={(time) => setMomentTime(time)}
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-surface-900">
@@ -923,10 +927,16 @@ export default function WatchPage() {
                         <div className="px-0 py-3 md:p-6">
                             {showTabs === 'comment' ? (
                                 <CommentSection
+                                    key={`comment-${refreshComments}`}
                                     movieSlug={movie.slug}
                                     episodeName={currentEpisode?.name}
                                     type="comment"
                                     hideRatingForm={true}
+                                    onSeek={(time) => {
+                                        setStartTime(time);
+                                        // Scroll up to player smoothly
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
                                 />
                             ) : (
                                 <CommentSection
@@ -938,6 +948,16 @@ export default function WatchPage() {
                         </div>
                     </div>
                 </div>
+            )}
+            
+            {momentTime !== null && (
+                <ShareMomentModal
+                    movieSlug={movie.slug}
+                    episodeName={currentEpisode?.name}
+                    timestamp={momentTime}
+                    onClose={() => setMomentTime(null)}
+                    onSuccess={() => setRefreshComments(prev => prev + 1)}
+                />
             )}
         </div>
     );

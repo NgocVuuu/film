@@ -369,6 +369,15 @@ exports.getDashboardStats = async (req, res) => {
             memory: process.memoryUsage()
         };
 
+        // Today's views (Total and Anonymous)
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const todayTotalViews = await ViewLog.countDocuments({ createdAt: { $gte: startOfToday } });
+        const todayAnonymousViews = await ViewLog.countDocuments({
+            createdAt: { $gte: startOfToday },
+            userId: null
+        });
+
         res.json({
             success: true,
             data: {
@@ -394,7 +403,9 @@ exports.getDashboardStats = async (req, res) => {
                     pending4kRequests,
                     pendingMovieRequests,
                     pendingUpgradeRequests,
-                    systemTracking
+                    systemTracking,
+                    todayTotalViews,
+                    todayAnonymousViews
                 }
             }
         });

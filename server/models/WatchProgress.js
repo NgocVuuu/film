@@ -4,7 +4,11 @@ const watchProgressSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: false
+    },
+    guestId: {
+        type: String,
+        required: false
     },
     movieId: {
         type: String,
@@ -46,7 +50,8 @@ const watchProgressSchema = new mongoose.Schema({
 });
 
 // Compound index for faster queries
-watchProgressSchema.index({ userId: 1, movieSlug: 1, episodeSlug: 1, serverName: 1 }, { unique: true });
+watchProgressSchema.index({ userId: 1, guestId: 1, movieSlug: 1, episodeSlug: 1, serverName: 1 });
 watchProgressSchema.index({ userId: 1, lastWatched: -1 });
+watchProgressSchema.index({ guestId: 1, lastWatched: -1 });
 
 module.exports = mongoose.model('WatchProgress', watchProgressSchema);

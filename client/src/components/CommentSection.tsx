@@ -23,9 +23,10 @@ interface Comment {
     episodeName?: string;
     user: User;
     createdAt: string;
-    parentId?: string;
     replies?: Comment[];
     likes?: string[];
+    isMoment?: boolean;
+    timestamp?: number;
 }
 
 interface CommentSectionProps {
@@ -36,7 +37,8 @@ interface CommentSectionProps {
     onlyWithRating?: boolean;
     hideForm?: boolean;
     compactInput?: boolean;
-    type?: 'comment' | 'rating';
+    type?: 'comment' | 'rating' | 'moment';
+    onSeek?: (time: number) => void;
 }
 
 export function CommentSection({ 
@@ -47,7 +49,8 @@ export function CommentSection({
     onlyWithRating = false,
     hideForm = false,
     compactInput = false,
-    type = 'comment'
+    type = 'comment',
+    onSeek
 }: CommentSectionProps) {
     const { user } = useAuth();
     const [comments, setComments] = useState<Comment[]>([]);
@@ -288,6 +291,7 @@ export function CommentSection({
                                             setReplyContent={setReplyContent}
                                             handleSubmit={handleSubmit}
                                             submitting={submitting}
+                                            onSeek={onSeek}
                                         />
                                         {comment.replies && comment.replies.map(reply => (
                                             <CommentItem 
@@ -303,6 +307,7 @@ export function CommentSection({
                                                 setReplyContent={setReplyContent}
                                                 handleSubmit={handleSubmit}
                                                 submitting={submitting}
+                                                onSeek={onSeek}
                                             />
                                         ))}
                                     </div>
@@ -378,10 +383,20 @@ const CommentItem = ({
     replyContent: string,
     setReplyContent: (val: string) => void,
     handleSubmit: (e: React.FormEvent, id: string | null) => void,
-    submitting: boolean
+    submitting: boolean,
+    onSeek?: (time: number) => void
 }) => {
     const isLiked = user && comment?.likes?.includes(user._id || user.id || '');
     const likeCount = comment?.likes?.length || 0;
+
+    const formatTime = (seconds: number) => {
+        if (!seconds) return "00:00";
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
 
     return (
         <div className={cn(
@@ -413,6 +428,14 @@ const CommentItem = ({
                                 <MessageCircle className="w-2 h-2 md:w-2.5 md:h-2.5 shrink-0" />
                                 {comment.episodeName}
                             </span>
+                        )}
+                        {comment.isMoment && comment.timestamp !== undefined && (
+                            <button
+                                onClick={() => onSeek?.(comment.timestamp!)}
+                                className="inline-flex items-center gap-1 bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors"
+                            >
+                                🕒 {formatTime(comment.timestamp)}
+                            </button>
                         )}
                         <span className="text-[9px] md:text-xs text-gray-500 font-medium">
                             {new Date(comment.createdAt).toLocaleDateString('vi-VN')}

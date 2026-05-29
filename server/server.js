@@ -20,6 +20,7 @@ const authRoutes = require('./routes/authRoutes');
 const progressRoutes = require('./routes/progressRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const adminUpgradeRoutes = require('./routes/adminUpgradeRoutes');
 const adminDramaRoutes = require('./routes/adminDramaRoutes');
@@ -443,6 +444,9 @@ app.use('/api/search', searchRoutes);
 
 // Subscription Routes
 app.use('/api/subscriptions', subscriptionRoutes);
+
+// User Routes
+app.use('/api/users', userRoutes);
 
 // Admin Routes
 const pipelineRoutes = require('./admin_api');

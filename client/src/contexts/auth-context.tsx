@@ -54,14 +54,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUser(data.data);
                 }
             } else if (response.status === 401) {
-                // Token really invalid or expired
+                // Token really invalid or expired or not present
                 removeAuthToken();
                 setUser(null);
+                await initializeGuestSession();
             }
         } catch (error) {
             console.error('Error fetching user:', error);
+            await initializeGuestSession();
         } finally {
             setLoading(false);
+        }
+    };
+
+    const initializeGuestSession = async () => {
+        try {
+            // Only initialize guest if we are not already on auth pages
+            if (window.location.pathname.includes('/login') || window.location.pathname.includes('/register')) {
+                return;
+            }
+            const response = await customFetch('/api/auth/guest', { method: 'POST' });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data) {
+                    if (data.data.token) setAuthToken(data.data.token);
+                    setUser(data.data.user);
+                }
+            }
+        } catch (error) {
+            console.error('Guest init error:', error);
         }
     };
 

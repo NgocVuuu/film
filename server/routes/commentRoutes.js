@@ -4,6 +4,7 @@ const commentController = require('../controllers/commentController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.get('/recent', commentController.getRecentComments);
+router.get('/moments/all', commentController.getMoments);
 router.get('/:slug', commentController.getComments);
 router.post('/', protect, commentController.addComment);
 router.delete('/:id', protect, commentController.deleteComment);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Bell, User, LogOut, Check, Filter, Crown, Film, List, MessageSquare, Heart, Clock } from 'lucide-react';
+import { Search, Bell, User, LogOut, Check, Filter, Crown, Film, List, MessageSquare, Heart, Clock, Trophy, PlayCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { DonateButton } from './DonateButton';
@@ -216,6 +216,22 @@ export function Navbar() {
                                                 >
                                                     <List className="w-4 h-4 text-green-400" />
                                                     Phim bộ
+                                                </Link>
+                                                <Link
+                                                    href="/moments"
+                                                    onClick={() => setShowBrowseMenu(false)}
+                                                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
+                                                >
+                                                    <PlayCircle className="w-4 h-4 text-pink-400" />
+                                                    Khoảnh khắc
+                                                </Link>
+                                                <Link
+                                                    href="/leaderboard"
+                                                    onClick={() => setShowBrowseMenu(false)}
+                                                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 rounded-lg"
+                                                >
+                                                    <Trophy className="w-4 h-4 text-yellow-400" />
+                                                    Bảng xếp hạng
                                                 </Link>
                                                 <button
                                                     onClick={(e) => {
@@ -465,6 +481,7 @@ export function Navbar() {
                                     <Link
                                         href="/phim-bo"
                                         className="flex items-center gap-3.5 px-4 py-3 text-sm font-semibold text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all active:scale-[0.98]"
+                                        onClick={() => setShowBrowseMenu(false)}
                                     >
                                         <div className="w-9 h-9 rounded-lg bg-green-500/20 flex items-center justify-center shrink-0">
                                             <List className="w-4.5 h-4.5 text-green-400" />
@@ -472,6 +489,32 @@ export function Navbar() {
                                         <div>
                                             <div className="text-white">Phim bộ</div>
                                             <div className="text-[10px] text-gray-400 font-normal leading-tight">Phim truyền hình dài tập</div>
+                                        </div>
+                                    </Link>
+                                    <Link
+                                        href="/moments"
+                                        className="flex items-center gap-3.5 px-4 py-3 text-sm font-semibold text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all active:scale-[0.98]"
+                                        onClick={() => setShowBrowseMenu(false)}
+                                    >
+                                        <div className="w-9 h-9 rounded-lg bg-pink-500/20 flex items-center justify-center shrink-0">
+                                            <PlayCircle className="w-4.5 h-4.5 text-pink-400" />
+                                        </div>
+                                        <div>
+                                            <div className="text-white">Khoảnh khắc</div>
+                                            <div className="text-[10px] text-gray-400 font-normal leading-tight">Cộng đồng chia sẻ</div>
+                                        </div>
+                                    </Link>
+                                    <Link
+                                        href="/leaderboard"
+                                        className="flex items-center gap-3.5 px-4 py-3 text-sm font-semibold text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all active:scale-[0.98]"
+                                        onClick={() => setShowBrowseMenu(false)}
+                                    >
+                                        <div className="w-9 h-9 rounded-lg bg-yellow-500/20 flex items-center justify-center shrink-0">
+                                            <Trophy className="w-4.5 h-4.5 text-yellow-400" />
+                                        </div>
+                                        <div>
+                                            <div className="text-white">Bảng xếp hạng</div>
+                                            <div className="text-[10px] text-gray-400 font-normal leading-tight">Vinh danh PChiller</div>
                                         </div>
                                     </Link>
                                     <button

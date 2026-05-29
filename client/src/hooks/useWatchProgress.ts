@@ -60,7 +60,20 @@ export function useWatchProgress({
             }
         };
 
-        loadProgress();
+        // Guests don't load progress from server yet (handled by local history). We only load from server for logged in users to avoid guest progress bleeding across devices if they share guestId (which they won't). But for simplicity, we load local history or server history.
+        if (user) {
+            loadProgress();
+        } else {
+            // Check local history
+            try {
+                const history = JSON.parse(localStorage.getItem('history') || '[]');
+                const item = history.find((h: any) => h.slug === movieSlug);
+                if (item?.progress?.episodeSlug === episodeSlug && item.progress.currentTime > 10) {
+                    setInitialProgress(item.progress.currentTime);
+                }
+            } catch (e) {}
+            setLoadedEpisode(episodeSlug);
+        }
     }, [user, movieSlug, episodeSlug, loadedEpisode]);
 
     // Save progress function
@@ -117,36 +130,47 @@ export function useWatchProgress({
             console.error('Error saving local history:', e);
         }
 
-        // 2. Save to API (if user logged in)
+        // 2. Save to API (if user logged in OR tracking guests)
         if (serverName) {
             const token = getAuthToken();
+            
+            // Generate or get guestId
+            let guestId = localStorage.getItem('guestId');
+            if (!guestId) {
+                guestId = 'pchiller_' + Math.random().toString(36).substring(2, 10);
+                localStorage.setItem('guestId', guestId);
+            }
+
+            const payload = JSON.stringify({
+                movieSlug,
+                movieName,
+                movieThumb,
+                episodeSlug,
+                episodeName,
+                serverName,
+                currentTime,
+                duration,
+                guestId: token ? undefined : guestId // Only send guestId if not logged in
+            });
+            
+            const headers: any = {
+                'Content-Type': 'application/json'
+            };
             if (token) {
-                const payload = JSON.stringify({
-                    movieSlug,
-                    movieName,
-                    movieThumb,
-                    episodeSlug,
-                    episodeName,
-                    serverName,
-                    currentTime,
-                    duration
-                });
-                
-                try {
-                    // Use standard fetch if unmounting to utilize keepalive
-                    fetch(`${API_URL}/api/progress/save`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: payload,
-                        credentials: 'include',
-                        keepalive: isUnmounting // Ensure request finishes if tab closes
-                    }).catch(() => {});
-                } catch (error) {
-                    console.error('[saveProgress] Network error:', error);
-                }
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            try {
+                // Use standard fetch if unmounting to utilize keepalive
+                fetch(`${API_URL}/api/progress/save`, {
+                    method: 'POST',
+                    headers,
+                    body: payload,
+                    credentials: 'include',
+                    keepalive: isUnmounting // Ensure request finishes if tab closes
+                }).catch(() => {});
+            } catch (error) {
+                console.error('[saveProgress] Network error:', error);
             }
         }
     };

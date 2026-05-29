@@ -54,6 +54,7 @@ interface VideoPlayerProps {
         episodes: { slug: string; name: string }[];
     }[];
     onEpisodeSelect?: (serverName: string, episodeSlug: string) => void;
+    onShareMoment?: (time: number) => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -93,6 +94,7 @@ export default function VideoPlayer({
     episodeServers,
     onEpisodeSelect,
     onError,
+    onShareMoment,
 }: VideoPlayerProps) {
     const { user } = useAuth();
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -1382,7 +1384,7 @@ export default function VideoPlayer({
 
     if (isEmbedPlayer) {
         return (
-            <div className="w-full relative aspect-video bg-black rounded-lg overflow-hidden">
+            <div className="w-full relative aspect-video bg-black rounded-lg overflow-hidden group">
                 <iframe
                     key={embedUrl}
                     id="playerIframeId"
@@ -1393,6 +1395,87 @@ export default function VideoPlayer({
                     allowFullScreen={true}
                     allow="fullscreen"
                 />
+                <div className="absolute top-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none">
+                    {episodeServers && episodeServers.length > 0 && onEpisodeSelect && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (!panelServerName) {
+                                    setPanelServerName(episodeServers[0].server_name);
+                                }
+                                setShowEpisodePanel(v => !v);
+                            }}
+                            className={`bg-black/40 hover:bg-black/60 text-white backdrop-blur-md shadow-xl border border-white/10 transition-all pointer-events-auto ${showEpisodePanel ? 'text-primary' : ''}`}
+                            title="Danh sách tập"
+                        >
+                            <ListVideo className="w-5 h-5" />
+                        </Button>
+                    )}
+                </div>
+
+                {/* In-Player Episode Panel for VIP Player */}
+                {episodeServers && episodeServers.length > 0 && (
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none z-[70]">
+                        <div
+                            className={`absolute inset-y-0 right-0 w-72 bg-black/90 backdrop-blur-md flex flex-col pointer-events-auto transition-transform duration-300 ease-in-out will-change-transform ${showEpisodePanel ? 'translate-x-0' : 'translate-x-full'}`}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Panel Header */}
+                            <div className="flex items-center justify-between p-3 border-b border-white/10 shrink-0">
+                                <span className="text-white font-bold text-sm flex items-center gap-2">
+                                    <ListVideo className="w-4 h-4 text-primary" /> Danh sách tập
+                                </span>
+                                <button
+                                    onClick={() => setShowEpisodePanel(false)}
+                                    className="text-gray-400 hover:text-white text-lg leading-none px-1"
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            {/* Category Tabs */}
+                            {episodeServers.length > 1 && (
+                                <div className="flex gap-1 p-2 border-b border-white/10 overflow-x-auto custom-scrollbar shrink-0">
+                                    {episodeServers.map(s => (
+                                        <button
+                                            key={s.server_name}
+                                            onClick={() => setPanelServerName(s.server_name)}
+                                            className={`px-3 py-1 rounded text-xs font-bold whitespace-nowrap transition-all ${(panelServerName ?? episodeServers[0].server_name) === s.server_name ? 'bg-primary text-black' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
+                                        >
+                                            {s.cleanName}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Episode Grid */}
+                            <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+                                <div className="grid grid-cols-4 gap-1.5">
+                                    {(episodeServers.find(s => s.server_name === (panelServerName ?? episodeServers[0].server_name)) ?? episodeServers[0]).episodes.map(ep => {
+                                        const isActive = ep.slug === episodeSlug;
+                                        return (
+                                            <button
+                                                key={ep.slug}
+                                                onClick={() => {
+                                                    onEpisodeSelect?.(panelServerName ?? episodeServers[0].server_name, ep.slug);
+                                                    setShowEpisodePanel(false);
+                                                }}
+                                                className={`px-1 py-2 text-[10px] font-medium rounded transition-all border relative flex items-center justify-center ${isActive ? 'bg-primary text-black border-primary font-bold' : 'bg-white/10 text-gray-300 border-transparent hover:bg-white/20'}`}
+                                            >
+                                                {ep.name}
+                                                {isActive && (
+                                                    <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-black/30 rounded-full animate-pulse" />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
@@ -1712,6 +1795,20 @@ export default function VideoPlayer({
                     <div className="flex items-center justify-end gap-0.5 sm:gap-2 shrink-0">
                         {/* Settings Button logic */}
                         <div className="relative">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    if (onShareMoment) {
+                                        onShareMoment(currentTime);
+                                    }
+                                }}
+                                className="text-white hover:text-primary hover:bg-transparent transition-all"
+                                title="Chia sẻ khoảnh khắc"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                            </Button>
                             <Button
                                 variant="ghost"
                                 size="icon"
