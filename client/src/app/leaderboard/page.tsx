@@ -70,9 +70,9 @@ export default function LeaderboardPage() {
 
     return (
         <div className="min-h-screen bg-black text-white pt-14 md:pt-20 pb-12 relative overflow-hidden">
-            {/* Background Glowing Blobs */}
-            <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/10 blur-[120px] rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-yellow-500/10 blur-[150px] rounded-full pointer-events-none translate-x-1/3 translate-y-1/3"></div>
+            {/* Background Glowing Blobs (Hidden on mobile to save GPU) */}
+            <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/10 blur-[120px] rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2 hidden md:block"></div>
+            <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-yellow-500/10 blur-[150px] rounded-full pointer-events-none translate-x-1/3 translate-y-1/3 hidden md:block"></div>
 
             {/* Animated Stars Background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">

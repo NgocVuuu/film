@@ -146,7 +146,7 @@ export default function MomentsPage() {
                         </div>
                     ) : (
                         moments.map(moment => (
-                            <div key={moment._id} className="bg-surface-900/60 backdrop-blur-md rounded-xl md:rounded-2xl border border-white/5 shadow-xl hover:bg-surface-900 transition-colors">
+                            <div key={moment._id} className="bg-surface-900/95 md:bg-surface-900/60 md:backdrop-blur-md rounded-xl md:rounded-2xl border border-white/5 shadow-xl hover:bg-surface-900 transition-colors">
                                 {/* Header: User info */}
                                 <div className="p-3 md:p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -197,10 +197,11 @@ export default function MomentsPage() {
                                     <Link href={`/movie/${moment.movie?.slug}/watch?episode=${moment.episodeName || 'tap-1'}&t=${Math.floor(moment.timestamp || 0)}`} className="block">
                                         <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black group shadow-lg ring-1 ring-white/10 hover:ring-primary/50 transition-all">
                                             {/* Blurred background for padding if image isn't perfect 16:9 */}
+                                            <div className="absolute inset-0 bg-surface-900"></div>
                                             <img 
                                                 src={moment.movie?.thumb_url || moment.movie?.poster_url || '/placeholder.png'} 
                                                 alt={moment.movie?.name}
-                                                className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110"
+                                                className="absolute inset-0 w-full h-full object-cover opacity-30 md:blur-xl md:scale-110"
                                             />
                                             {/* Main Image */}
                                             <img 
