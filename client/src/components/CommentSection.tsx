@@ -371,7 +371,8 @@ const CommentItem = ({
     replyContent, 
     setReplyContent, 
     handleSubmit,
-    submitting
+    submitting,
+    onSeek
 }: { 
     comment: Comment, 
     isReply?: boolean,

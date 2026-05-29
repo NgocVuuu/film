@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Trophy, Medal, Crown, Star } from 'lucide-react';
+import { Trophy, Clock, Medal, Crown, Star } from 'lucide-react';
 import { customFetch } from '@/lib/api';
 
 interface LeaderboardUser {

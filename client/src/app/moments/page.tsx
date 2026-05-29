@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { customFetch } from '@/lib/api';
-import { Film, Globe, MoreHorizontal, Crown, Trash2 } from 'lucide-react';
+import { Film, Globe, MoreHorizontal, Crown, Trash2, PlayCircle, Clock, Heart, MessageCircle, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import toast from 'react-hot-toast';
