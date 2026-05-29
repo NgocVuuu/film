@@ -1,27 +1,53 @@
 'use client';
 
-import Script from 'next/script';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { usePathname } from 'next/navigation';
+
+const SMARTLINK_URL = 'https://www.effectivecpmnetwork.com/ymvcj08wdc?key=d13c3bfc1b46a1af5fd851f84b923aec';
+const POPUNDER_COOLDOWN_HOURS = 12; // 12 tiếng mới bị nhảy tab 1 lần
+const STORAGE_KEY = 'ad_popunder_last_shown';
 
 export function GlobalPopunder() {
     const { user, loading } = useAuth();
-    const pathname = usePathname();
-    
-    // Nếu đang tải trạng thái đăng nhập hoặc user là VIP/Premium thì không render
-    if (loading || user?.isPremium || user?.isVip) {
-        return null;
-    }
+    const eventAttached = useRef(false);
 
-    // CHỈ hiển thị popunder ở trang xem phim (URL kết thúc bằng /watch)
-    if (!pathname.endsWith('/watch')) {
-        return null;
-    }
+    useEffect(() => {
+        // Đợi auth load xong. Nếu là VIP/Premium thì không bao giờ dính quảng cáo
+        if (loading || user?.isPremium || user?.isVip) return;
+        if (eventAttached.current) return;
 
-    return (
-        <Script 
-            src="https://pl28880625.profitablecpmratenetwork.com/76/ce/82/76ce828afa458f5b89f1dcae1ea7ccd1.js" 
-            strategy="afterInteractive" 
-        />
-    );
+        const handleFirstClick = () => {
+            const lastShownStr = localStorage.getItem(STORAGE_KEY);
+            let shouldShow = true;
+
+            if (lastShownStr) {
+                const lastShown = parseInt(lastShownStr, 10);
+                const hoursPassed = (Date.now() - lastShown) / (1000 * 60 * 60);
+                if (hoursPassed < POPUNDER_COOLDOWN_HOURS) {
+                    shouldShow = false;
+                }
+            }
+
+            if (shouldShow) {
+                // Mở smartlink sang tab mới
+                const opened = window.open(SMARTLINK_URL, '_blank');
+                // Nếu trình duyệt cho phép mở (không bị chặn popup cứng)
+                if (opened) {
+                    // Lưu lại thời điểm bị dính quảng cáo
+                    localStorage.setItem(STORAGE_KEY, Date.now().toString());
+                }
+            }
+        };
+
+        // Bắt sự kiện click ở mức document, dùng capture: true để chặn ngay lập tức
+        document.addEventListener('click', handleFirstClick, { capture: true });
+        eventAttached.current = true;
+
+        return () => {
+            document.removeEventListener('click', handleFirstClick, { capture: true });
+            eventAttached.current = false;
+        };
+    }, [loading, user]);
+
+    return null;
 }
