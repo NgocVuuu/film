@@ -17,6 +17,25 @@ router.get('/uploads', async (req, res) => {
   res.json(rows);
 });
 
+router.get('/suggestions', async (req, res) => {
+    try {
+        const SuggestedMovie = require('./models/SuggestedMovie');
+        const suggestions = await SuggestedMovie.find().sort({ last_checked: -1 }).populate('pchill_movie_id', 'name slug status episode_current episode_total');
+        
+        const ongoing = suggestions.filter(s => s.in_pchill_db && s.status === 'Ongoing');
+        const completed = suggestions.filter(s => s.in_pchill_db && s.status === 'Completed');
+        const missing = suggestions.filter(s => !s.in_pchill_db);
+        
+        res.status(200).json({
+            success: true,
+            data: { ongoing, completed, missing }
+        });
+    } catch (error) {
+        console.error('Error in getSuggestions:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+
 router.post('/uploads/:id/status-check', async (req, res) => {
   try {
     const id = req.params.id;

@@ -455,6 +455,9 @@ app.use('/api/admin/upgrades', adminUpgradeRoutes);
 app.use('/api/admin/drama', adminDramaRoutes);
 app.use('/api/admin', adminRoutes);
 
+// Cron Routes
+// Removed webhook for cron
+
 // Health Check
 app.get('/', (req, res) => {
     res.send('Server is running...');
