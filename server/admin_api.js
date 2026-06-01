@@ -20,11 +20,52 @@ router.get('/uploads', async (req, res) => {
 router.get('/suggestions', async (req, res) => {
     try {
         const SuggestedMovie = require('./models/SuggestedMovie');
-        const suggestions = await SuggestedMovie.find().sort({ last_checked: -1 }).populate('pchill_movie_id', 'name slug status episode_current episode_total');
+        const suggestions = await SuggestedMovie.find().sort({ last_checked: -1 }).populate('pchill_movie_id', 'name slug status episode_current episode_total episodes');
         
-        const ongoing = suggestions.filter(s => s.in_pchill_db && s.status === 'Ongoing');
-        const completed = suggestions.filter(s => s.in_pchill_db && s.status === 'Completed');
-        const missing = suggestions.filter(s => !s.in_pchill_db);
+        const parseEp = (str) => {
+            if (!str) return 0;
+            const m = str.match(/\d+/);
+            return m ? parseInt(m[0], 10) : 0;
+        };
+
+        const ongoing = [];
+        const completed = [];
+        const missing = [];
+
+        for (const s of suggestions) {
+            if (!s.in_pchill_db) {
+                missing.push(s);
+                continue;
+            }
+
+            let isStrictlyCompleted = false;
+            if (s.status === 'Completed') {
+                const pchill = s.pchill_movie_id;
+                let play4meCount = 0;
+                let seekCount = 0;
+                if (pchill && pchill.episodes) {
+                    const play4me = pchill.episodes.find(e => e.server_name && e.server_name.toLowerCase().includes('play4me'));
+                    const seek = pchill.episodes.find(e => e.server_name && e.server_name.toLowerCase().includes('seek'));
+                    play4meCount = play4me?.server_data?.length || 0;
+                    seekCount = seek?.server_data?.length || 0;
+                }
+                
+                const totalEp = parseEp(pchill?.episode_total) || parseEp(pchill?.episode_current) || 0;
+                
+                if (totalEp > 0) {
+                    isStrictlyCompleted = (play4meCount >= totalEp && seekCount >= totalEp);
+                } else {
+                    // Nếu không parse được số tập tổng, nhưng ít nhất phải có dữ liệu ở cả 2 server
+                    isStrictlyCompleted = (play4meCount > 0 && seekCount > 0);
+                }
+            }
+
+            if (isStrictlyCompleted) {
+                completed.push(s);
+            } else {
+                ongoing.push(s);
+            }
+        }
         
         res.status(200).json({
             success: true,

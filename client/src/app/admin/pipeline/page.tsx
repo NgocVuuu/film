@@ -854,15 +854,36 @@ useEffect(() => {
                                         <p className="text-xs text-gray-400 mb-4">Phim đang chiếu lọt top, đã có trong DB của bạn. Hãy kiểm tra và cào thêm tập mới!</p>
                                         <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
                                             {trendingData.ongoing?.length === 0 && <p className="text-gray-500 text-sm">Chưa có phim nào cần cập nhật.</p>}
-                                            {trendingData.ongoing?.map((m: any) => (
-                                                <div key={m._id} className="bg-white/5 border border-white/10 rounded-lg p-3 flex gap-3 hover:border-red-500/50 transition-colors">
-                                                    {m.thumb_url && <img src={m.thumb_url} alt={m.english_name} className="w-12 h-16 object-cover rounded" />}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="font-bold text-white text-sm truncate">{m.english_name}</div>
-                                                        <div className="text-xs text-gray-400 mt-1">DB: <span className="text-primary font-medium">{m.pchill_movie_id?.name || 'Không rõ'}</span></div>
+                                            {trendingData.ongoing?.map((m: any) => {
+                                                const play4meCount = m.pchill_movie_id?.episodes?.find((e:any) => e.server_name?.toLowerCase().includes('play4me'))?.server_data?.length || 0;
+                                                const seekCount = m.pchill_movie_id?.episodes?.find((e:any) => e.server_name?.toLowerCase().includes('seek'))?.server_data?.length || 0;
+                                                
+                                                const rawTotal = m.pchill_movie_id?.episode_total || m.pchill_movie_id?.episode_current || '';
+                                                const match = String(rawTotal).match(/\d+/);
+                                                const totalStr = match ? `/${match[0]}` : '';
+
+                                                return (
+                                                    <div key={m._id} className="bg-white/5 border border-white/10 rounded-lg p-3 flex gap-3 hover:border-red-500/50 transition-colors">
+                                                        {m.thumb_url && <img src={m.thumb_url} alt={m.english_name} className="w-12 h-16 object-cover rounded" />}
+                                                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                                            <div className="font-bold text-white text-sm truncate">{m.english_name}</div>
+                                                            <div className="text-xs text-gray-400 mt-1 truncate">DB: <span className="text-primary font-medium">{m.pchill_movie_id?.name || 'Không rõ'}</span></div>
+                                                            <div className="flex gap-2 mt-1.5">
+                                                                {play4meCount > 0 ? (
+                                                                    <span className="bg-pink-500/20 text-pink-400 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Play4Me: Tập {play4meCount}{totalStr}</span>
+                                                                ) : (
+                                                                    <span className="bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Play4Me: 0{totalStr}</span>
+                                                                )}
+                                                                {seekCount > 0 ? (
+                                                                    <span className="bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Seek: Tập {seekCount}{totalStr}</span>
+                                                                ) : (
+                                                                    <span className="bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Seek: 0{totalStr}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
@@ -906,15 +927,36 @@ useEffect(() => {
                                         <p className="text-xs text-gray-400 mb-4">Phim đã Full trên MkvDrama và bạn cũng đã có. Tốt lắm!</p>
                                         <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-2 opacity-70">
                                             {trendingData.completed?.length === 0 && <p className="text-gray-500 text-sm">Trống.</p>}
-                                            {trendingData.completed?.map((m: any) => (
-                                                <div key={m._id} className="bg-white/5 border border-white/10 rounded-lg p-3 flex gap-3">
-                                                    {m.thumb_url && <img src={m.thumb_url} alt={m.english_name} className="w-12 h-16 object-cover rounded grayscale" />}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="font-bold text-white text-sm truncate">{m.english_name}</div>
-                                                        <div className="text-xs text-green-500 mt-1">Đã có trong DB</div>
+                                            {trendingData.completed?.map((m: any) => {
+                                                const play4meCount = m.pchill_movie_id?.episodes?.find((e:any) => e.server_name?.toLowerCase().includes('play4me'))?.server_data?.length || 0;
+                                                const seekCount = m.pchill_movie_id?.episodes?.find((e:any) => e.server_name?.toLowerCase().includes('seek'))?.server_data?.length || 0;
+                                                
+                                                const rawTotal = m.pchill_movie_id?.episode_total || m.pchill_movie_id?.episode_current || '';
+                                                const match = String(rawTotal).match(/\d+/);
+                                                const totalStr = match ? `/${match[0]}` : '';
+
+                                                return (
+                                                    <div key={m._id} className="bg-white/5 border border-white/10 rounded-lg p-3 flex gap-3 hover:border-green-500/50 transition-colors">
+                                                        {m.thumb_url && <img src={m.thumb_url} alt={m.english_name} className="w-12 h-16 object-cover rounded grayscale hover:grayscale-0 transition-all" />}
+                                                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                                            <div className="font-bold text-white text-sm truncate">{m.english_name}</div>
+                                                            <div className="text-xs text-green-500 mt-1 truncate">Đã Full DB: <span className="text-white">{m.pchill_movie_id?.name}</span></div>
+                                                            <div className="flex gap-2 mt-1.5 opacity-80">
+                                                                {play4meCount > 0 ? (
+                                                                    <span className="bg-pink-500/20 text-pink-400 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Play4Me: Tập {play4meCount}{totalStr}</span>
+                                                                ) : (
+                                                                    <span className="bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Play4Me: 0{totalStr}</span>
+                                                                )}
+                                                                {seekCount > 0 ? (
+                                                                    <span className="bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Seek: Tập {seekCount}{totalStr}</span>
+                                                                ) : (
+                                                                    <span className="bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Seek: 0{totalStr}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
