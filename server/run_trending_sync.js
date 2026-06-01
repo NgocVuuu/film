@@ -20,13 +20,27 @@ const scrapeMkvdramaTrending = async () => {
         
         let movies = [];
         
-        $('.item, .film-detail, .film-poster').each((i, el) => {
-            const title = $(el).find('h2, h3, .film-name').text().trim() || $(el).attr('title') || $(el).find('a').attr('title');
+        // Tìm Widget chứa các tab Weekly, Monthly, All
+        let widgetEl = null;
+        $('.bixbox, .widget, .series-gen, .ts-w-popular-posts, section').each((i, el) => {
+            const text = $(el).text();
+            if (text.includes('Weekly') && text.includes('Monthly') && text.includes('All')) {
+                widgetEl = el;
+            }
+        });
+
+        // Nếu tìm thấy widget Popular, chỉ quét phim trong đó. Nếu không, fallback quét các thẻ .item chung chung nhưng ưu tiên vùng sidebar/widget
+        const targetElements = widgetEl ? $(widgetEl).find('li, .item, article') : $('.widget .item, .sidebar .item');
+
+        targetElements.each((i, el) => {
+            const title = $(el).find('h2, h3, .title, .film-name').text().trim() || $(el).attr('title') || $(el).find('a').attr('title') || $(el).find('.series, .post-title').text().trim();
             const href = $(el).find('a').attr('href');
             let thumb = $(el).find('img').attr('src') || $(el).find('img').attr('data-src');
             
-            if (title && href && href.includes('mkvdrama.org')) {
-                const mkvdrama_id = href.split('/').filter(Boolean).pop();
+            if (title && href && (href.includes('mkvdrama') || href.startsWith('/'))) {
+                // Phân biệt ID dựa trên href (ví dụ: /my-royal-nemesis hoặc https://mkvdrama.net/my-royal-nemesis)
+                const pathParts = href.replace(/https?:\/\/[^\/]+/, '').split('?')[0].split('/').filter(Boolean);
+                const mkvdrama_id = pathParts.pop();
                 
                 movies.push({
                     english_name: title,

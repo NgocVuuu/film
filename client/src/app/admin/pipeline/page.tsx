@@ -437,7 +437,7 @@ useEffect(() => {
                             : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                 >
-                    <span className="text-lg">🔥</span> Khám phá (Trending)
+                    Khám phá (Trending)
                 </button>
                 <button
                     onClick={() => setActiveTab('uploads')}
@@ -823,7 +823,7 @@ useEffect(() => {
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                    <span className="text-2xl">🔥</span> Gợi ý Phim Trending (từ MkvDrama)
+                                    Gợi ý Phim Trending (từ MkvDrama)
                                 </h2>
                                 <Button 
                                     size="sm" 
@@ -849,7 +849,7 @@ useEffect(() => {
                                     <div className="bg-[#111115] border border-red-500/30 rounded-xl p-5 shadow-lg relative overflow-hidden">
                                         <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
                                         <h3 className="text-lg font-bold text-red-400 mb-4 flex items-center gap-2">
-                                            🚨 Cần cập nhật ({trendingData.ongoing?.length || 0})
+                                            Cần cập nhật ({trendingData.ongoing?.length || 0})
                                         </h3>
                                         <p className="text-xs text-gray-400 mb-4">Phim đang chiếu lọt top, đã có trong DB của bạn. Hãy kiểm tra và cào thêm tập mới!</p>
                                         <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
@@ -870,7 +870,7 @@ useEffect(() => {
                                     <div className="bg-[#111115] border border-yellow-500/30 rounded-xl p-5 shadow-lg relative overflow-hidden">
                                         <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500"></div>
                                         <h3 className="text-lg font-bold text-yellow-500 mb-4 flex items-center gap-2">
-                                            🔥 Đề xuất cào mới ({trendingData.missing?.length || 0})
+                                            Đề xuất cào mới ({trendingData.missing?.length || 0})
                                         </h3>
                                         <p className="text-xs text-gray-400 mb-4">Các phim cực hot nhưng chưa có trong DB. Copy tên sang tab Upload để cào ngay!</p>
                                         <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
@@ -901,7 +901,7 @@ useEffect(() => {
                                     <div className="bg-[#111115] border border-green-500/30 rounded-xl p-5 shadow-lg relative overflow-hidden">
                                         <div className="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
                                         <h3 className="text-lg font-bold text-green-500 mb-4 flex items-center gap-2">
-                                            ✅ Đã hoàn thành ({trendingData.completed?.length || 0})
+                                            Đã hoàn thành ({trendingData.completed?.length || 0})
                                         </h3>
                                         <p className="text-xs text-gray-400 mb-4">Phim đã Full trên MkvDrama và bạn cũng đã có. Tốt lắm!</p>
                                         <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-2 opacity-70">
