@@ -40,6 +40,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     // Do not apply top padding on the Home page so the HeroSlider can sit directly underneath the transparent Navbar.
     const applyTopPadding = showNavbar && !isHome;
+    const pwaSafePadding = !showNavbar && !isHome && !isWatchPage && !isProfile;
 
     return (
         <NotificationProvider>
@@ -48,7 +49,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     <Navbar />
                 </Suspense>
             )}
-            <main className={`flex-1 ${!isAdmin ? `${applyTopPadding ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-16' : 'pt-0'} ${showFooter ? 'pb-32' : 'pb-24'} ${isProfile ? 'lg:pb-0' : 'lg:pb-8'}` : ''}`}>
+            <main className={`flex-1 ${!isAdmin ? `${applyTopPadding ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-16' : pwaSafePadding ? 'pt-[env(safe-area-inset-top)]' : 'pt-0'} ${showFooter ? 'pb-32' : 'pb-24'} ${isProfile ? 'lg:pb-0' : 'lg:pb-8'}` : ''}`}>
                 {children}
             </main>
             {!isAdmin && (

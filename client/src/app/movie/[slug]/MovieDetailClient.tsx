@@ -517,10 +517,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     return (
         <div className="min-h-screen bg-deep-black text-white font-sans">
             {/* ── MOBILE VIEW ──────────────────────────────────────────────────────── */}
-            <div className={cn("block md:hidden", !isPWA ? "-mt-[calc(3.5rem+env(safe-area-inset-top))]" : "-mt-[env(safe-area-inset-top)]")}>
-                {/* Safe area spacer for notch (tai thỏ) */}
-                <div className="h-[env(safe-area-inset-top)] w-full" />
-                
+            <div className={cn("block md:hidden bg-black", !isPWA ? "-mt-[3.5rem]" : "pt-[env(safe-area-inset-top)]")}>
                 {/* 1. Backdrop Image (Landscape) */}
                 <div className="relative w-full aspect-video overflow-hidden">
                     <img

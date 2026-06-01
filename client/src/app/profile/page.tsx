@@ -135,7 +135,7 @@ function ProfileContent() {
     }
 
     return (
-        <div className="bg-deep-black text-foreground h-[calc(100dvh-9.5rem)] md:h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+        <div className="bg-deep-black text-foreground h-[calc(100dvh-9.5rem)] md:h-[calc(100vh-4rem)] overflow-hidden flex flex-col pt-[env(safe-area-inset-top)]">
             <div className={`container mx-auto w-full max-w-full flex-1 flex flex-col min-h-0 overflow-hidden ${activeTab === 'chat' ? 'px-0 md:px-8' : 'px-4'}`}>
 
                 {activeTab !== 'chat' && (
