@@ -236,8 +236,8 @@ async function runAutoUploadPipeline(jobData) {
         // ---- BƯỚC 1: LẤY LINK OUO 2160P ----
         let viewcratePage = null;
 
-        if (movieUrl.includes('viewcrate')) {
-            console.log(`✅ Phát hiện link đích là Viewcrate, bỏ qua bước vượt Ouo...`);
+        if (movieUrl.includes('viewcrate') || movieUrl.includes('filecrypt')) {
+            console.log(`✅ Phát hiện link đích là Viewcrate/Filecrypt, bỏ qua bước vượt Ouo...`);
             await page.goto(movieUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
             viewcratePage = page;
         } else {

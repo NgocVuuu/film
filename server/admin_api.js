@@ -291,6 +291,115 @@ router.post('/extract-links', async (req, res) => {
   }
 });
 
+router.post('/extractor-upload', async (req, res) => {
+    try {
+        const { movieId, links, hosts } = req.body;
+        if (!movieId || !links || !hosts || !Array.isArray(hosts)) {
+            return res.status(400).json({ error: 'Missing movieId, links, or hosts' });
+        }
+
+        const Movie = require('./models/Movie');
+        const targetMovie = await Movie.findById(movieId);
+        if (!targetMovie) return res.status(404).json({ error: 'Movie not found in DB' });
+
+        const preferredMovieTitle = String(targetMovie.origin_name || targetMovie.name || '').replace(/[\\/:*?"<>|]/g, ' ').trim();
+        let inferredSeasonName = 'S01';
+        const mSeason = preferredMovieTitle.match(/season\s*(\d+)/i);
+        if (mSeason) inferredSeasonName = `S${String(mSeason[1]).padStart(2, '0')}`;
+
+        let tasksCreated = 0;
+        const backgroundTasks = [];
+
+        for (const linkItem of links) {
+            const { link, name, episode } = linkItem;
+            // Parse episode (Tập 16 -> E16)
+            let epCode = episode;
+            const m = episode.match(/\d+/);
+            if (m) epCode = `E${m[0].padStart(2, '0')}`;
+
+            for (const hostKey of hosts) {
+                // Check if already queued
+                const q = {
+                    series: preferredMovieTitle,
+                    season: inferredSeasonName,
+                    episode: epCode,
+                    host: hostKey,
+                    movieId: targetMovie._id
+                };
+                const existing = await hostUpload.findOne(q);
+                if (existing && existing.status === 'completed') {
+                    continue; // Already done
+                }
+
+                // If not existing, create a hostUpload record and trigger upload
+                const newUpload = await hostManager.recordUpload({
+                    series: preferredMovieTitle,
+                    season: inferredSeasonName,
+                    episode: epCode,
+                    movieId: targetMovie._id,
+                    sourcePage: 'Extractor Manual Sync',
+                    sourceDirectUrl: link,
+                    filename: name,
+                    host: hostKey,
+                    status: 'pending',
+                    subtitleStatus: 'completed' // Play4Me/Seekstreaming usually don't need subtitling queue
+                });
+
+                backgroundTasks.push({
+                    preferredMovieTitle,
+                    inferredSeasonName,
+                    hostKey,
+                    link,
+                    name,
+                    newUploadId: newUpload._id
+                });
+                
+                tasksCreated++;
+            }
+        }
+
+        res.json({ ok: true, message: `Đã xếp hàng ${tasksCreated} tập. Tiến trình đang chạy ngầm tuần tự!` });
+
+        // Process sequentially in the background to avoid 429 Rate Limit
+        (async () => {
+            for (const task of backgroundTasks) {
+                try {
+                    const { preferredMovieTitle, inferredSeasonName, hostKey, link, name, newUploadId } = task;
+                    
+                    // Delay for Seekstreaming to avoid 429
+                    if (hostKey.toLowerCase().includes('seekstreaming')) {
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
+
+                    const folderName = `${preferredMovieTitle} - ${inferredSeasonName}`.trim();
+                    const folderId = await hostManager.createOrGetFolder(preferredMovieTitle, inferredSeasonName, hostKey, folderName);
+                    
+                    const uploadRes = await hostManager.remoteUploadWithRetry(hostKey, link, name, folderId, newUploadId);
+                    if (!uploadRes.ok) throw new Error(uploadRes.error || 'upload failed');
+
+                    await hostUpload.findByIdAndUpdate(newUploadId, { 
+                        taskId: uploadRes.taskId, 
+                        status: 'pending', 
+                        notes: ''
+                    });
+
+                    const hostApis = require('./utils/videoHostProviders');
+                    const apiToPoll = hostApis[hostKey];
+                    if (apiToPoll) {
+                        hostManager.pollAndSyncStatus(apiToPoll, uploadRes.taskId, newUploadId).catch(()=>{});
+                    }
+                } catch(e) {
+                    await hostUpload.findByIdAndUpdate(task.newUploadId, { status: 'failed', notes: `Lỗi Extractor Sync: ${e.message}` });
+                }
+            }
+        })();
+
+    } catch (e) {
+        console.error('Extractor upload error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 router.get('/host-folders', async (req, res) => {
   const rows = await require('./utils/hostManager').findUploads({}, { limit: 10 }).catch(()=>[]);
   res.json({ ok: true, info: 'Use hostManager API for folder listing' });

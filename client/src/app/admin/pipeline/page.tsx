@@ -172,7 +172,33 @@ export default function AdminPipelinePage() {
         }
     };
 
-
+    const handleExtractorUpload = async (links: any[], hosts: string[]) => {
+        if (!selectedMovie) {
+            toast.error('Vui lòng tìm và chọn Phim ở ô trên cùng trước!');
+            return;
+        }
+        try {
+            const res = await customFetch('/api/admin/pipeline/extractor-upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    movieId: selectedMovie._id,
+                    links,
+                    hosts
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.ok) {
+                toast.success(data.message || 'Đã gửi lệnh upload thành công!');
+                setActiveTab('uploads');
+                fetchData();
+            } else {
+                toast.error(data.error || 'Lỗi khi đồng bộ!');
+            }
+        } catch (e) {
+            toast.error('Lỗi kết nối tới Server!');
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -527,7 +553,7 @@ useEffect(() => {
                                                         {!groupByMovie && <th className="px-6 py-3 font-medium text-gray-400">Series</th>}
                                                         <th className="px-6 py-3 font-medium text-gray-400">Host</th>
                                                         <th className="px-6 py-3 font-medium text-gray-400">Status</th>
-                                                        <th className="px-6 py-3 font-medium text-gray-400">Subtitle</th>
+
                                                         <th className="px-6 py-3 font-medium text-gray-400">Actions</th>
                                                     </tr>
                                                 </thead>
@@ -563,27 +589,7 @@ useEffect(() => {
                                                                     <p className="text-[10px] text-red-400 mt-0.5 truncate max-w-[180px]" title={u.notes}>{u.notes}</p>
                                                                 )}
                                                             </td>
-                                                            <td className="px-6 py-3">
-                                                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                                                    u.subtitleStatus === 'completed' ? 'bg-green-500/20 text-green-500' :
-                                                                    u.subtitleStatus === 'error' ? 'bg-red-500/20 text-red-400' :
-                                                                    u.subtitleStatus === 'processing' ? 'bg-yellow-500/20 text-yellow-500' :
-                                                                    'bg-gray-500/20 text-gray-400'
-                                                                }`}>
-                                                                    {u.subtitleStatus === 'error' && <AlertTriangle className="w-3 h-3 mr-1" />}
-                                                                    {u.subtitleStatus ? u.subtitleStatus.toUpperCase() : 'PENDING'}
-                                                                </span>
-                                                                {u.subtitleLog && (
-                                                                    <div className="mt-0.5 flex flex-col gap-1">
-                                                                        <p className="text-[10px] text-gray-400 truncate max-w-[180px]" title={u.subtitleLog}>{u.subtitleLog}</p>
-                                                                        {u.subtitleLog.includes('http') && (
-                                                                            <a href={u.subtitleLog.match(new RegExp('https?://[^\\\\s]+'))?.[0]} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline inline-flex items-center gap-1">
-                                                                                <ExternalLink className="w-3 h-3" /> Tải/Mở Link Phụ đề
-                                                                            </a>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </td>
+
                                                             <td className="px-6 py-3 flex items-center space-x-2">
                                                                 {u.status === 'failed' && (
                                                                     <input
@@ -708,17 +714,21 @@ useEffect(() => {
                                                         <span className="w-2 h-2 rounded-full bg-primary"></span>
                                                         {host} <span className="text-gray-400 text-xs font-normal">({links.length} links)</span>
                                                     </div>
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            const text = links.map((l: any) => l.link).join('\n');
-                                                            navigator.clipboard.writeText(text);
-                                                            toast.success(`Đã copy ${links.length} link ${host}!`);
-                                                        }}
-                                                        className="bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 text-xs h-8"
-                                                    >
-                                                        Copy Tất Cả ({host})
-                                                    </Button>
+                                                    <div className="flex gap-2">
+                                                        <Button size="sm" onClick={() => handleExtractorUpload(links, ['Play4Me'])} className="bg-pink-500/20 text-pink-400 hover:bg-pink-500/30 border border-pink-500/30 text-[10px] h-7 px-2">Đồng bộ Play4Me</Button>
+                                                        <Button size="sm" onClick={() => handleExtractorUpload(links, ['Seekstreaming'])} className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30 text-[10px] h-7 px-2">Đồng bộ Seek</Button>
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                const text = links.map((l: any) => l.link).join('\n');
+                                                                navigator.clipboard.writeText(text);
+                                                                toast.success(`Đã copy ${links.length} link ${host}!`);
+                                                            }}
+                                                            className="bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 text-xs h-7 px-2"
+                                                        >
+                                                            Copy Tất Cả ({host})
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                                 <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
                                                     {links.map((link: any, idx: number) => (
@@ -736,17 +746,21 @@ useEffect(() => {
                                                                     {link.link}
                                                                 </div>
                                                             </div>
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="outline"
-                                                                onClick={() => {
-                                                                    navigator.clipboard.writeText(link.link);
-                                                                    toast.success('Đã copy link!');
-                                                                }}
-                                                                className="border-white/10 text-gray-300 hover:text-white hover:bg-white/5 whitespace-nowrap"
-                                                            >
-                                                                Copy
-                                                            </Button>
+                                                            <div className="flex gap-2">
+                                                                <Button size="sm" variant="outline" onClick={() => handleExtractorUpload([link], ['Play4Me'])} className="border-pink-500/30 text-pink-400 hover:bg-pink-500/20 text-[10px] h-7 px-2">Up Play4Me</Button>
+                                                                <Button size="sm" variant="outline" onClick={() => handleExtractorUpload([link], ['Seekstreaming'])} className="border-blue-500/30 text-blue-400 hover:bg-blue-500/20 text-[10px] h-7 px-2">Up Seek</Button>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="outline"
+                                                                    onClick={() => {
+                                                                        navigator.clipboard.writeText(link.link);
+                                                                        toast.success('Đã copy link!');
+                                                                    }}
+                                                                    className="border-white/10 text-gray-300 hover:text-white hover:bg-white/5 whitespace-nowrap h-7 text-[10px] px-2"
+                                                                >
+                                                                    Copy
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>

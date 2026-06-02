@@ -20,6 +20,10 @@ interface Movie {
     isActive: boolean;
     year: number;
     episode_current: string;
+    diagnostics?: {
+        free: { total: number; missing: number[]; duplicate: number[]; incomplete: boolean };
+        vip: { total: number; missing: number[]; duplicate: number[]; incomplete: boolean };
+    };
 }
 
 export default function AdminMoviesPage() {
@@ -31,6 +35,7 @@ export default function AdminMoviesPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [isActiveFilter, setIsActiveFilter] = useState<string>('true');
+    const [currentTab, setCurrentTab] = useState<'all' | 'errors'>('all');
 
     const fetchMovies = useCallback(async () => {
         try {
@@ -42,6 +47,9 @@ export default function AdminMoviesPage() {
             if (debouncedSearch) queryParams.append('search', debouncedSearch);
             if (isActiveFilter !== 'all') {
                 queryParams.append('isActive', isActiveFilter);
+            }
+            if (currentTab === 'errors') {
+                queryParams.append('errorOnly', 'true');
             }
 
             const res = await customFetch(`/api/admin/movies?${queryParams}`, {
@@ -61,7 +69,7 @@ export default function AdminMoviesPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, debouncedSearch, isActiveFilter]);
+    }, [page, debouncedSearch, isActiveFilter, currentTab]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -158,7 +166,7 @@ export default function AdminMoviesPage() {
 
     return (
         <div className="p-4 md:p-6">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-6">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-6">
                 <div className="flex flex-col gap-1 shrink-0">
                     <h1 className="text-2xl font-bold text-white">Quản lý Phim</h1>
                     <p className="text-sm text-gray-400">Quản lý kho phim, nổi bật, ẩn/hiện và quét TMDB.</p>
@@ -246,6 +254,22 @@ export default function AdminMoviesPage() {
                 </div>
             </div>
 
+            {/* Tabs */}
+            <div className="flex gap-4 mb-6 border-b border-white/10">
+                <button
+                    onClick={() => { setCurrentTab('all'); setPage(1); }}
+                    className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${currentTab === 'all' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-white'}`}
+                >
+                    Tất cả Phim
+                </button>
+                <button
+                    onClick={() => { setCurrentTab('errors'); setPage(1); }}
+                    className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 ${currentTab === 'errors' ? 'border-red-500 text-red-500' : 'border-transparent text-gray-500 hover:text-red-400'}`}
+                >
+                    Phim bị lỗi (Thiếu/Trùng)
+                </button>
+            </div>
+
             <div className="bg-surface-900 rounded-xl border border-white/5 overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/10">
                     <table className="w-full min-w-[1000px]">
@@ -255,6 +279,7 @@ export default function AdminMoviesPage() {
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Tên phim</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Loại</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Trạng thái</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Tình trạng tập</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Lượt xem</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Nổi bật</th>
                                 <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Hành động</th>
@@ -288,6 +313,30 @@ export default function AdminMoviesPage() {
                                                 <span className="text-[10px] px-1.5 py-0.5 rounded border border-red-500/20 text-red-500 bg-red-500/5 uppercase font-bold">Đã ẩn</span>
                                             )}
                                         </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {movie.type !== 'single' && movie.diagnostics ? (
+                                            <div className="flex flex-col gap-3">
+                                                {/* Free Server */}
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">FREE ({movie.diagnostics.free.total}/{movie.episode_current.match(/\d+/) || '?'})</span>
+                                                    {movie.diagnostics.free.missing.length > 0 && <span className="text-[10px] text-red-400">Thiếu: {movie.diagnostics.free.missing.slice(0, 3).join(', ')}{movie.diagnostics.free.missing.length > 3 ? '...' : ''}</span>}
+                                                    {movie.diagnostics.free.duplicate.length > 0 && <span className="text-[10px] text-yellow-500">Trùng: {movie.diagnostics.free.duplicate.slice(0, 3).join(', ')}{movie.diagnostics.free.duplicate.length > 3 ? '...' : ''}</span>}
+                                                    {movie.diagnostics.free.missing.length === 0 && movie.diagnostics.free.duplicate.length === 0 && movie.diagnostics.free.incomplete && <span className="text-[10px] text-orange-400">Chưa đủ tập</span>}
+                                                    {movie.diagnostics.free.missing.length === 0 && movie.diagnostics.free.duplicate.length === 0 && !movie.diagnostics.free.incomplete && <span className="text-[10px] text-green-500">Đầy đủ</span>}
+                                                </div>
+                                                {/* VIP Server */}
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">VIP ({movie.diagnostics.vip.total}/{movie.episode_current.match(/\d+/) || '?'})</span>
+                                                    {movie.diagnostics.vip.missing.length > 0 && <span className="text-[10px] text-red-400">Thiếu: {movie.diagnostics.vip.missing.slice(0, 3).join(', ')}{movie.diagnostics.vip.missing.length > 3 ? '...' : ''}</span>}
+                                                    {movie.diagnostics.vip.duplicate.length > 0 && <span className="text-[10px] text-yellow-500">Trùng: {movie.diagnostics.vip.duplicate.slice(0, 3).join(', ')}{movie.diagnostics.vip.duplicate.length > 3 ? '...' : ''}</span>}
+                                                    {movie.diagnostics.vip.missing.length === 0 && movie.diagnostics.vip.duplicate.length === 0 && movie.diagnostics.vip.incomplete && <span className="text-[10px] text-orange-400">Chưa đủ tập</span>}
+                                                    {movie.diagnostics.vip.missing.length === 0 && movie.diagnostics.vip.duplicate.length === 0 && !movie.diagnostics.vip.incomplete && <span className="text-[10px] text-green-500">Đầy đủ</span>}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <span className="text-[10px] text-gray-500 border border-gray-500/20 bg-gray-500/10 px-1.5 py-0.5 rounded font-medium uppercase tracking-wider">Phim lẻ</span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 text-sm font-mono text-gray-400">{movie.view.toLocaleString()}</td>
                                     <td className="px-6 py-4">

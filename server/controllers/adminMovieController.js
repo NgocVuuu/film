@@ -41,17 +41,158 @@ exports.getAllMovies = async (req, res) => {
             query.isActive = { $ne: false };
         }
 
+        // Check if errorOnly flag is requested
+        if (req.query.errorOnly === 'true') {
+            const allMovies = await Movie.find(query)
+                .sort({ updatedAt: -1 })
+                .select('name slug thumb_url type status view isFeatured isActive year episode_current episodes');
+
+            let processedMovies = allMovies.map(doc => {
+                const movie = doc.toObject();
+                if (movie.type !== 'single' && movie.episodes) {
+                    let maxEp = 0;
+                    const match = (movie.episode_current || '').match(/\d+/);
+                    if (match) maxEp = parseInt(match[0], 10);
+
+                    const data = {
+                        free: { eps: new Set(), duplicates: new Set() },
+                        vip: { eps: new Set(), duplicates: new Set() }
+                    };
+
+                    movie.episodes.forEach(server => {
+                        const sName = server.server_name.toLowerCase();
+                        const isVip = sName.includes('play4me') || sName.includes('seekstreaming') || sName.includes('vip');
+                        const target = isVip ? data.vip : data.free;
+                        
+                        if (server.server_data && Array.isArray(server.server_data)) {
+                            server.server_data.forEach(ep => {
+                                const epNumMatch = ep.name.match(/\d+/);
+                                if (epNumMatch) {
+                                    const epNum = parseInt(epNumMatch[0], 10);
+                                    if (target.eps.has(epNum)) {
+                                        target.duplicates.add(epNum);
+                                    } else {
+                                        target.eps.add(epNum);
+                                    }
+                                }
+                            });
+                        }
+                    });
+
+                    const buildAnalysis = (target) => {
+                        const missing = [];
+                        if (maxEp > 0) {
+                            for (let i = 1; i <= maxEp; i++) {
+                                if (!target.eps.has(i)) missing.push(i);
+                            }
+                        }
+                        return {
+                            total: target.eps.size,
+                            missing: missing,
+                            duplicate: Array.from(target.duplicates),
+                            incomplete: maxEp > 0 && target.eps.size < maxEp
+                        };
+                    };
+
+                    movie.diagnostics = {
+                        free: buildAnalysis(data.free),
+                        vip: buildAnalysis(data.vip)
+                    };
+                }
+                delete movie.episodes;
+                return movie;
+            });
+
+            // Filter only errored movies
+            processedMovies = processedMovies.filter(m => {
+                if (!m.diagnostics) return false;
+                const d = m.diagnostics;
+                return d.free.missing.length > 0 || d.free.duplicate.length > 0 ||
+                       d.vip.missing.length > 0 || d.vip.duplicate.length > 0;
+            });
+
+            const total = processedMovies.length;
+            const paginated = processedMovies.slice(skip, skip + limit);
+
+            return res.json({
+                success: true,
+                data: paginated,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                }
+            });
+        }
+
         const movies = await Movie.find(query)
             .sort({ updatedAt: -1 })
             .skip(skip)
             .limit(limit)
-            .select('name slug thumb_url type status view isFeatured isActive year episode_current');
+            .select('name slug thumb_url type status view isFeatured isActive year episode_current episodes');
 
         const total = await Movie.countDocuments(query);
 
+        const processedMovies = movies.map(doc => {
+            const movie = doc.toObject();
+            if (movie.type !== 'single' && movie.episodes) {
+                let maxEp = 0;
+                const match = (movie.episode_current || '').match(/\d+/);
+                if (match) maxEp = parseInt(match[0], 10);
+
+                const data = {
+                    free: { eps: new Set(), duplicates: new Set() },
+                    vip: { eps: new Set(), duplicates: new Set() }
+                };
+
+                movie.episodes.forEach(server => {
+                    const sName = server.server_name.toLowerCase();
+                    const isVip = sName.includes('play4me') || sName.includes('seekstreaming') || sName.includes('vip');
+                    const target = isVip ? data.vip : data.free;
+                    
+                    if (server.server_data && Array.isArray(server.server_data)) {
+                        server.server_data.forEach(ep => {
+                            const epNumMatch = ep.name.match(/\d+/);
+                            if (epNumMatch) {
+                                const epNum = parseInt(epNumMatch[0], 10);
+                                if (target.eps.has(epNum)) {
+                                    target.duplicates.add(epNum);
+                                } else {
+                                    target.eps.add(epNum);
+                                }
+                            }
+                        });
+                    }
+                });
+
+                const buildAnalysis = (target) => {
+                    const missing = [];
+                    if (maxEp > 0) {
+                        for (let i = 1; i <= maxEp; i++) {
+                            if (!target.eps.has(i)) missing.push(i);
+                        }
+                    }
+                    return {
+                        total: target.eps.size,
+                        missing: missing,
+                        duplicate: Array.from(target.duplicates),
+                        incomplete: maxEp > 0 && target.eps.size < maxEp
+                    };
+                };
+
+                movie.diagnostics = {
+                    free: buildAnalysis(data.free),
+                    vip: buildAnalysis(data.vip)
+                };
+            }
+            delete movie.episodes; // Remove heavy array before sending
+            return movie;
+        });
+
         res.json({
             success: true,
-            data: movies,
+            data: processedMovies,
             pagination: {
                 page,
                 limit,

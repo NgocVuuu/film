@@ -30,9 +30,9 @@ async function connectIfNeeded() {
   await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/pchill');
 }
 
-async function recordUpload({ series, season, episode, tmdbId, movieId, sourcePage, sourceDirectUrl, filename, host, taskId, status, notes, contentHash, contentLength, duration, retries, sourceMetadata }) {
+async function recordUpload({ series, season, episode, tmdbId, movieId, sourcePage, sourceDirectUrl, filename, host, taskId, status, notes, contentHash, contentLength, duration, retries, sourceMetadata, subtitleStatus, subtitleLog }) {
   await connectIfNeeded();
-  const doc = new HostUpload({ series, season, episode, tmdbId, movieId, sourcePage, sourceDirectUrl, filename, host, taskId, status, notes, contentHash, contentLength, duration, retries, sourceMetadata });
+  const doc = new HostUpload({ series, season, episode, tmdbId, movieId, sourcePage, sourceDirectUrl, filename, host, taskId, status, notes, contentHash, contentLength, duration, retries, sourceMetadata, subtitleStatus, subtitleLog });
   await doc.save();
   return doc;
 }
@@ -132,7 +132,8 @@ async function pollAndSyncStatus(hostService, taskId, docId) {
     let mapped = 'pending';
     
     if (status.status === 'completed') {
-        if (doc.subtitleStatus === 'pending' || doc.subtitleStatus === 'processing') {
+        const noSubtitleHosts = ['Play4Me', 'Seekstreaming', 'SeekStreaming'];
+        if (!noSubtitleHosts.includes(doc.host) && (doc.subtitleStatus === 'pending' || doc.subtitleStatus === 'processing')) {
             console.log(`[SYNC] Video ${doc.episode} đã xử lý xong trên Host, nhưng phụ đề đang bóc tách. Đợi chu kỳ sau...`);
             mapped = 'processing';
         } else {
