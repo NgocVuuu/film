@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Play, Calendar, Star, Clock, Info, ListPlus, Share2, Download, FolderOpen, Server, MessageCircle, ChevronDown, User, Heart, Users } from 'lucide-react';
+import { Play, Calendar, Star, Clock, Info, ListPlus, Share2, Download, FolderOpen, Server, MessageCircle, ChevronDown, User, Heart, Users, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommentSection } from '@/components/CommentSection';
 import { AddToListModal } from '@/components/AddToListModal';
@@ -143,6 +143,160 @@ function DownloadSection({ slug, links }: { slug: string; links: DLGroup[] }) {
     );
 }
 
+// ── Episode Selector Component ───────────────────────────────────────────────
+function EpisodeSelector({ movie, router, isMobile = false }: { movie: MovieDetail, router: any, isMobile?: boolean }) {
+    const [selectedServer, setSelectedServer] = useState(0);
+
+    if (!movie.episodes || movie.episodes.length === 0) return null;
+    
+    const visibleServers = movie.episodes.filter(s => !s.isHidden && s.server_data && s.server_data.length > 0);
+    if (visibleServers.length === 0) return null;
+
+    const getCleanServerName = (rawName: string) => {
+        if (!rawName) return '';
+        const lowerName = rawName.toLowerCase();
+        if (lowerName.includes('abyss') || lowerName.includes('seekstreaming')) return 'VIP 1';
+        if (lowerName.includes('play4me')) return 'VIP 2';
+
+        let name = '';
+        if (lowerName.startsWith('kk') || lowerName.includes('server 1')) name = 'Server 1';
+        else if (lowerName.startsWith('op') || lowerName.includes('server 2')) name = 'Server 2';
+        else name = 'Server Dự Phòng';
+
+        if (lowerName.includes('vietsub')) name += ' - Vietsub';
+        else if (lowerName.includes('thuyết minh') || lowerName.includes('thuyet minh')) name += ' - Thuyết Minh';
+        else if (lowerName.includes('lồng tiếng') || lowerName.includes('long tieng')) name += ' - Lồng Tiếng';
+        else if (lowerName.includes('engsub')) name += ' - Engsub';
+
+        return name;
+    };
+
+    // Sắp xếp server: Server 1 -> Server 2 -> VIP 1 -> VIP 2 -> Khác
+    const sortedServers = [...visibleServers].sort((a, b) => {
+        const nameA = getCleanServerName(a.server_name);
+        const nameB = getCleanServerName(b.server_name);
+        
+        const getPriority = (name: string) => {
+            if (name.includes('Server 1')) return 1;
+            if (name.includes('Server 2')) return 2;
+            if (name.includes('VIP 1')) return 3;
+            if (name.includes('VIP 2')) return 4;
+            return 5;
+        };
+
+        const prioA = getPriority(nameA);
+        const prioB = getPriority(nameB);
+
+        if (prioA !== prioB) return prioA - prioB;
+        return nameA.localeCompare(nameB);
+    });
+
+    const currentServer = sortedServers[selectedServer] || sortedServers[0];
+
+    const handleEpisodeClick = (epSlug: string) => {
+        const serverQuery = `&server=${encodeServerForUrl(currentServer.server_name)}`;
+        router.push(`/movie/${movie.slug}/watch?episode=${epSlug}${serverQuery}`);
+    };
+
+    return (
+        <div className="mt-4 mb-2 space-y-3 w-full">
+            {sortedServers.length > 1 && (
+                <div className={cn("gap-2.5", isMobile ? "grid grid-cols-3" : "flex flex-wrap")}>
+                    {sortedServers.map((s, idx) => {
+                        const cleanName = getCleanServerName(s.server_name);
+                        const isVip = cleanName.includes('VIP');
+                        const parts = cleanName.split(' - ');
+                        const mainName = parts[0];
+                        const subName = parts[1] || '';
+                        
+                        let quality = movie.quality || 'HD';
+                        if (mainName === 'VIP 1') quality = 'FHD';
+                        else if (mainName === 'VIP 2') quality = 'FHD';
+                        
+                        const isSelected = selectedServer === idx;
+
+                        return (
+                            <button
+                                key={idx}
+                                onClick={() => setSelectedServer(idx)}
+                                className={cn(
+                                    "relative overflow-hidden rounded-xl transition-all duration-300 text-left group border",
+                                    isMobile ? "w-full aspect-[4/3] sm:aspect-[16/10]" : "w-[130px] md:w-[150px] aspect-[16/10]",
+                                    isSelected 
+                                        ? (isVip ? "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)] scale-[1.03]" : "border-primary shadow-[0_0_15px_rgba(var(--primary),0.3)] scale-[1.03]") 
+                                        : "border-white/10 hover:border-white/30 hover:scale-[1.03]"
+                                )}
+                            >
+                                <div className="absolute inset-0">
+                                    <img src={movie.thumb_url || movie.poster_url} alt="" className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity" />
+                                    <div className={cn(
+                                        "absolute inset-0",
+                                        isSelected 
+                                            ? (isVip ? "bg-gradient-to-t from-yellow-900/90 to-black/20" : "bg-gradient-to-t from-primary/80 via-primary/20 to-black/20")
+                                            : "bg-gradient-to-t from-black/90 via-black/50 to-black/10"
+                                    )} />
+                                </div>
+                                
+                                <div className="absolute inset-0 p-2.5 flex flex-col justify-between">
+                                    <div className="flex items-center justify-between">
+                                        <span className="px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-[9px] font-bold text-white border border-white/10">
+                                            {quality}
+                                        </span>
+                                        {isVip && <Crown className={cn("w-3.5 h-3.5 drop-shadow-md", isSelected ? "text-yellow-400" : "text-yellow-500")} />}
+                                    </div>
+                                    
+                                    <div>
+                                        <div className={cn("text-xs md:text-sm font-black truncate drop-shadow-md", isSelected ? (isVip ? "text-yellow-400" : "text-white") : "text-gray-200")}>
+                                            {mainName}
+                                        </div>
+                                        {subName && (
+                                            <div className={cn("text-[9px] md:text-[10px] font-bold truncate uppercase mt-0.5 drop-shadow-md", isSelected ? "text-gray-200" : "text-gray-400")}>
+                                                {subName}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+            
+            <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-white/5 p-3 md:p-4 text-left">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Play className="w-4 h-4 text-primary" />
+                        Chọn tập phim
+                    </h3>
+                    <span className="text-xs text-gray-400">{currentServer.server_data.length} tập</span>
+                </div>
+                
+                {movie.type === 'single' ? (
+                    <button 
+                        onClick={() => handleEpisodeClick(currentServer.server_data[0]?.slug || '')}
+                        className="w-full md:w-auto px-8 py-3 bg-white/10 hover:bg-primary hover:text-black text-white font-bold rounded-lg transition-all"
+                    >
+                        TẬP FULL
+                    </button>
+                ) : (
+                    <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                        {currentServer.server_data.map((ep, i) => (
+                            <button
+                                key={i}
+                                onClick={() => handleEpisodeClick(ep.slug)}
+                                className="aspect-square flex items-center justify-center text-[13px] font-bold bg-white/5 hover:bg-primary hover:text-black text-gray-300 rounded-lg transition-all border border-white/5"
+                                title={ep.name}
+                            >
+                                {ep.name.replace(/Tập\s*/i, '').replace(/Tap\s*/i, '').trim() || (i + 1)}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Types
@@ -180,6 +334,12 @@ interface MovieDetail {
     status: string;
     type: string;
     actor?: string[];
+    cast?: {
+        tmdb_id: number;
+        name: string;
+        character: string;
+        profile_path: string;
+    }[];
     director?: string[];
     category?: { id: string; name: string }[];
     country?: { id: string; name: string }[];
@@ -227,7 +387,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     const [isRateOpen, setIsRateOpen] = useState(false);
     const [isCommentOpen, setIsCommentOpen] = useState(false);
     const [commentSubTab, setCommentSubTab] = useState<'comment' | 'rating'>('comment');
-    const [activeTab, setActiveTab] = useState<'actors' | 'recommendations'>('actors');
+    const [activeTab, setActiveTab] = useState<'servers' | 'actors' | 'recommendations'>('servers');
     const [userRating, setUserRating] = useState(0);
     const [ratingHover, setRatingHover] = useState(0);
     const [ratingComment, setRatingComment] = useState('');
@@ -687,19 +847,28 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                         <span className="text-sm drop-shadow-md">🔥</span> Vào Góc Drama
                     </Link>
 
-                    {/* 7. Tabs (Actors & Recommendations) */}
+                    {/* Removed EpisodeSelector from here since it's now in tabs */}
+
+                    {/* 7. Tabs (Servers, Actors & Recommendations) */}
                     <div className="pt-4 space-y-6">
-                        <div className="flex items-center gap-8 border-b border-white/5 px-2">
+                        <div className="flex items-center gap-6 border-b border-white/5 px-2 overflow-x-auto hide-scrollbar">
+                            <button 
+                                onClick={() => setActiveTab('servers')}
+                                className={cn("pb-3 text-sm font-bold tracking-tight transition-all relative whitespace-nowrap", activeTab === 'servers' ? "text-primary" : "text-gray-500")}
+                            >
+                                CHỌN TẬP
+                                {activeTab === 'servers' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
+                            </button>
                             <button 
                                 onClick={() => setActiveTab('actors')}
-                                className={cn("pb-3 text-sm font-bold tracking-tight transition-all relative", activeTab === 'actors' ? "text-primary" : "text-gray-500")}
+                                className={cn("pb-3 text-sm font-bold tracking-tight transition-all relative whitespace-nowrap", activeTab === 'actors' ? "text-primary" : "text-gray-500")}
                             >
                                 DIỄN VIÊN
                                 {activeTab === 'actors' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
                             </button>
                             <button 
                                 onClick={() => setActiveTab('recommendations')}
-                                className={cn("pb-3 text-sm font-bold tracking-tight transition-all relative", activeTab === 'recommendations' ? "text-primary" : "text-gray-500")}
+                                className={cn("pb-3 text-sm font-bold tracking-tight transition-all relative whitespace-nowrap", activeTab === 'recommendations' ? "text-primary" : "text-gray-500")}
                             >
                                 ĐỀ XUẤT PHIM
                                 {activeTab === 'recommendations' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
@@ -708,9 +877,36 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
 
                         {/* Tab Content */}
                         <div className="pb-20">
-                            {activeTab === 'actors' ? (
-                                <div className="space-y-4">
-                                    {movie.actor?.length ? (
+                            {activeTab === 'servers' ? (
+                                <div className="px-2">
+                                    <EpisodeSelector movie={movie} router={router} isMobile={true} />
+                                </div>
+                            ) : activeTab === 'actors' ? (
+                                <div className="space-y-4 px-2">
+                                    {movie.cast?.length ? (
+                                        movie.cast.map((actor, idx) => (
+                                            <Link 
+                                                key={idx} 
+                                                href={`/actor/${encodeURIComponent(actor.name)}`}
+                                                className="flex items-center gap-4 bg-surface-900/40 p-3 rounded-2xl border border-white/5 active:bg-white/5 transition-colors"
+                                            >
+                                                <div className="w-14 h-14 rounded-full bg-gold-gradient p-[1px] shrink-0">
+                                                    <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
+                                                        {actor.profile_path ? (
+                                                            <img src={`https://image.tmdb.org/t/p/w200${actor.profile_path}`} alt={actor.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <User className="w-6 h-6 text-gray-500" />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h3 className="text-sm font-bold text-white">{actor.name}</h3>
+                                                    <p className="text-[11px] text-gray-500 font-medium">{actor.character || 'Diễn viên'}</p>
+                                                </div>
+                                                <ChevronDown className="w-4 h-4 text-gray-600 -rotate-90" />
+                                            </Link>
+                                        ))
+                                    ) : movie.actor?.length ? (
                                         movie.actor.map((actor, idx) => (
                                             <Link 
                                                 key={idx} 
@@ -946,12 +1142,17 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                 </div>
 
                 {/* ADDITIONAL DETAILS SECTION (Below Fold) */}
-                <div className="bg-[#0a0a0a] py-16 border-t border-white/5">
+                <div className="bg-[#0a0a0a] pt-28 pb-16 lg:pt-40 lg:pb-24 border-t border-white/5">
                     <div className="container mx-auto px-4 md:px-8">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
 
                             {/* Film Synopsis Full */}
                             <div className="lg:col-span-2 space-y-8">
+                                {/* Episodes Selector Desktop */}
+                                <div className="hidden md:block">
+                                    <EpisodeSelector movie={movie} router={router} />
+                                </div>
+
                                 {/* Ad — dưới tiêu đề chi tiết */}
                                 <PWAAds variant="inline" />
                                 <div>
@@ -1118,8 +1319,30 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                         Diễn viên
                                     </h3>
                                     <div className="grid grid-cols-4 gap-3">
-                                        {movie.actor?.length ? (
-                                            movie.actor.map((actor, idx) => (
+                                        {movie.cast?.length ? (
+                                            movie.cast.slice(0, 12).map((actor, idx) => (
+                                                <Link
+                                                    key={idx}
+                                                    href={`/actor/${encodeURIComponent(actor.name)}`}
+                                                    className="group flex flex-col items-center p-1 rounded-xl hover:bg-white/5 transition-all duration-300"
+                                                    title={actor.character ? `${actor.name} - Vai: ${actor.character}` : actor.name}
+                                                >
+                                                    <div className="relative w-11 h-11 mb-2 bg-gold-gradient rounded-full p-[1px] shadow-lg shadow-yellow-500/10 group-hover:shadow-primary/30 transition-all">
+                                                        <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
+                                                            {actor.profile_path ? (
+                                                                <img src={`https://image.tmdb.org/t/p/w200${actor.profile_path}`} alt={actor.name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <User className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-[11px] font-semibold text-gray-400 text-center line-clamp-2 group-hover:text-primary transition-colors w-full px-0.5 min-h-[2.2em] flex items-center justify-center">
+                                                        {actor.name}
+                                                    </span>
+                                                </Link>
+                                            ))
+                                        ) : movie.actor?.length ? (
+                                            movie.actor.slice(0, 12).map((actor, idx) => (
                                                 <Link
                                                     key={idx}
                                                     href={`/actor/${encodeURIComponent(actor)}`}

@@ -70,6 +70,13 @@ router.patch('/movies/:slug/active', adminMovieController.toggleActive);
 router.delete('/movies/:slug', adminMovieController.deleteMovie);
 router.patch('/movies/:slug/featured', adminMovieController.toggleFeatured);
 
+// Sync all TMDB
+router.post('/movies/sync-tmdb-all', adminMovieController.syncAllTmdb);
+router.get('/movies/sync-tmdb-all/status', adminMovieController.getSyncAllStatus);
+
+// Sync TMDB cho 1 phim
+router.post('/movies/:slug/sync-tmdb', adminMovieController.syncTmdb);
+
 // Notification management
 router.post('/notifications/broadcast', adminNotificationController.broadcastNotification);
 router.post('/notifications/user/:userId', adminNotificationController.sendToUser);

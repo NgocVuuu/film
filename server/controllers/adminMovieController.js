@@ -407,3 +407,113 @@ exports.toggleFeatured = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// Sync TMDB cho 1 phim
+exports.syncTmdb = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const movie = await Movie.findOne({ slug });
+
+        if (!movie) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
+        }
+
+        const { syncMovieCast, mergeActors } = require('../utils/tmdb');
+        const tmdbData = await syncMovieCast(movie.name, movie.origin_name, movie.type, movie.year);
+
+        if (!tmdbData) {
+            return res.status(400).json({ success: false, message: 'Không tìm thấy thông tin trên TMDB' });
+        }
+
+        // Ưu tiên dùng tên thuần Việt có sẵn từ crawler
+        const mergedCast = mergeActors(movie.actor, tmdbData.cast);
+
+        movie.tmdb_id = tmdbData.tmdb_id;
+        movie.tmdb_type = tmdbData.tmdb_type;
+        movie.cast = mergedCast;
+        await movie.save();
+
+        // Clear cache so frontend sees the update immediately
+        const { cache } = require('../middleware/cacheMiddleware');
+        const keys = cache.keys();
+        keys.forEach(k => {
+            if (k.startsWith(`/api/movie/${slug}`)) {
+                cache.del(k);
+            }
+        });
+
+        res.json({
+            success: true,
+            message: 'Đã đồng bộ thông tin diễn viên thành công',
+            data: movie
+        });
+    } catch (error) {
+        console.error('Sync TMDB error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+let syncStatus = { isRunning: false, total: 0, current: 0, currentSlug: '' };
+
+exports.syncAllTmdb = async (req, res) => {
+    try {
+        if (syncStatus.isRunning) {
+            return res.json({ success: false, message: 'Đang có tiến trình đồng bộ chạy ngầm rồi.' });
+        }
+
+        // Tìm các phim chưa có dữ liệu cast
+        const moviesToSync = await Movie.find({
+            $or: [
+                { tmdb_id: { $exists: false } },
+                { tmdb_id: null },
+                { cast: { $exists: false } },
+                { cast: { $size: 0 } }
+            ]
+        }).select('slug name origin_name type year actor');
+
+        if (moviesToSync.length === 0) {
+            return res.json({ success: true, message: 'Tất cả phim đã được đồng bộ TMDB.' });
+        }
+
+        syncStatus = { isRunning: true, total: moviesToSync.length, current: 0, currentSlug: '' };
+        res.json({ success: true, message: `Bắt đầu đồng bộ ${moviesToSync.length} phim.` });
+
+        // Chạy ngầm
+        (async () => {
+            const { syncMovieCast, mergeActors } = require('../utils/tmdb');
+            for (const movie of moviesToSync) {
+                syncStatus.current++;
+                syncStatus.currentSlug = movie.slug;
+                try {
+                    const tmdbData = await syncMovieCast(movie.name, movie.origin_name, movie.type, movie.year);
+                    if (tmdbData) {
+                        const mergedCast = mergeActors(movie.actor, tmdbData.cast);
+                        await Movie.updateOne({ slug: movie.slug }, {
+                            $set: {
+                                tmdb_id: tmdbData.tmdb_id,
+                                tmdb_type: tmdbData.tmdb_type,
+                                cast: mergedCast
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error(`Sync TMDB failed for ${movie.slug}:`, err.message);
+                }
+                // Dừng 300ms tránh rate limit TMDB
+                await new Promise(r => setTimeout(r, 300));
+            }
+            syncStatus.isRunning = false;
+            
+            // Xóa cache khi xong
+            const { cache } = require('../middleware/cacheMiddleware');
+            cache.flushAll(); 
+        })();
+    } catch (error) {
+        console.error('Sync All TMDB error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.getSyncAllStatus = (req, res) => {
+    res.json({ success: true, data: syncStatus });
+};

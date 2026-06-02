@@ -42,6 +42,9 @@ router.get('/movies/updated-today', cacheMiddleware(300), movieController.getUpd
 router.post('/movies/:slug/react', authMiddleware, movieController.reactToMovie);
 router.get('/movies/:slug/reaction', authMiddleware, movieController.getUserReaction);
 
+// Actor Detail
+router.get('/actor/:name', cacheMiddleware(3600), movieController.getActorDetails);
+
 // Request 4K Version
 router.post('/movies/:slug/request-4k', authMiddleware, movieController.request4k);
 

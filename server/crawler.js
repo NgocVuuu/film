@@ -5,6 +5,7 @@ const Favorite = require('./models/Favorite');
 const Notification = require('./models/Notification');
 const WatchProgress = require('./models/WatchProgress');
 const { sendToMultiple } = require('./utils/notificationService');
+const { syncMovieCast, mergeActors } = require('./utils/tmdb');
 
 const OPHIM_API_HOME = 'https://ophim1.com/v1/api/home';
 const OPHIM_API_DETAIL = 'https://ophim1.com/v1/api/phim';
@@ -326,6 +327,18 @@ async function processMovie(adapter, slug, retryCount = 0) {
 
         if (availableLangs.size > 0) {
             coreData.lang = Array.from(availableLangs).join(' + ');
+        }
+
+        // Lấy thông tin diễn viên từ TMDB
+        try {
+            const tmdbData = await syncMovieCast(coreData.name, coreData.origin_name, coreData.type, coreData.year);
+            if (tmdbData) {
+                coreData.tmdb_id = tmdbData.tmdb_id;
+                coreData.tmdb_type = tmdbData.tmdb_type;
+                coreData.cast = mergeActors(coreData.actor, tmdbData.cast);
+            }
+        } catch (e) {
+            console.error('Lỗi lấy thông tin TMDB trong crawler:', e.message);
         }
 
         const updatePayload = {

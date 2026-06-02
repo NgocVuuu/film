@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { customFetch } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Trash2, Star, StarOff, Edit, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Trash2, Star, StarOff, Edit, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 
@@ -36,6 +36,9 @@ export default function AdminMoviesPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [isActiveFilter, setIsActiveFilter] = useState<string>('true');
     const [currentTab, setCurrentTab] = useState<'all' | 'errors'>('all');
+    const [syncingSlugs, setSyncingSlugs] = useState<Set<string>>(new Set());
+    const [isSyncingAll, setIsSyncingAll] = useState(false);
+    const [syncAllStatus, setSyncAllStatus] = useState({ total: 0, current: 0 });
 
     const fetchMovies = useCallback(async () => {
         try {
@@ -84,9 +87,77 @@ export default function AdminMoviesPage() {
         fetchMovies();
     }, [fetchMovies]);
 
+    // Polling trạng thái sync all
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isSyncingAll) {
+            interval = setInterval(async () => {
+                try {
+                    const res = await customFetch('/api/admin/movies/sync-tmdb-all/status', { credentials: 'include' });
+                    const data = await res.json();
+                    if (data.success) {
+                        setSyncAllStatus({ total: data.data.total, current: data.data.current });
+                        if (!data.data.isRunning) {
+                            setIsSyncingAll(false);
+                            toast.success('Hoàn tất đồng bộ toàn bộ TMDB!');
+                            fetchMovies();
+                        }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }, 2000);
+        }
+        return () => clearInterval(interval);
+    }, [isSyncingAll, fetchMovies]);
+
     const handleSearch = () => {
         setPage(1);
         fetchMovies();
+    };
+
+    const handleSyncTmdb = async (slug: string) => {
+        try {
+            setSyncingSlugs(prev => new Set(prev).add(slug));
+            toast.loading('Đang đồng bộ TMDB...', { id: `sync-${slug}` });
+            const res = await customFetch(`/api/admin/movies/${slug}/sync-tmdb`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success(data.message, { id: `sync-${slug}` });
+            } else {
+                toast.error(data.message, { id: `sync-${slug}` });
+            }
+        } catch (error) {
+            toast.error('Lỗi khi đồng bộ TMDB', { id: `sync-${slug}` });
+        } finally {
+            setSyncingSlugs(prev => {
+                const next = new Set(prev);
+                next.delete(slug);
+                return next;
+            });
+        }
+    };
+
+    const handleSyncAllTmdb = async () => {
+        if (!confirm('Hệ thống sẽ quét ngầm toàn bộ DB để đồng bộ phim chưa có ảnh diễn viên. Tiếp tục?')) return;
+        try {
+            const res = await customFetch('/api/admin/movies/sync-tmdb-all', {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success(data.message);
+                setIsSyncingAll(true);
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            toast.error('Lỗi yêu cầu đồng bộ.');
+        }
     };
 
     const handleToggleFeatured = async (slug: string) => {
@@ -240,16 +311,35 @@ export default function AdminMoviesPage() {
                         </Button>
                     </div>
 
-                    {/* Search */}
-                    <div className="flex gap-2 w-full sm:w-auto shrink-0 flex-1 sm:flex-none">
-                        <Input
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                            placeholder="Tìm phim..."
-                            className="bg-surface-800 border-white/10 text-white w-full sm:w-64 h-10"
-                        />
-                        <Button onClick={handleSearch} className="h-10 px-6 shrink-0">Tìm</Button>
+                    <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                        <div className="flex gap-2 w-full">
+                            <Input
+                                placeholder="Tên, diễn viên, năm..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                className="bg-surface-900 border-white/10 text-white min-w-[200px]"
+                            />
+                            <Button onClick={handleSearch} className="h-10 px-6 shrink-0">Tìm</Button>
+                        </div>
+                        <Button 
+                            onClick={handleSyncAllTmdb} 
+                            disabled={isSyncingAll}
+                            variant="outline" 
+                            className="border-primary/50 text-primary hover:bg-primary/10 whitespace-nowrap"
+                        >
+                            {isSyncingAll ? (
+                                <>
+                                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                    Đang quét: {syncAllStatus.current}/{syncAllStatus.total}
+                                </>
+                            ) : (
+                                <>
+                                    <RefreshCw className="w-4 h-4 mr-2" />
+                                    Quét toàn bộ TMDB
+                                </>
+                            )}
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -364,6 +454,17 @@ export default function AdminMoviesPage() {
                                                 title={movie.isFeatured ? 'Bỏ nổi bật' : 'Thêm nổi bật'}
                                             >
                                                 {movie.isFeatured ? <Star className="w-4 h-4 fill-current" /> : <Star className="w-4 h-4" />}
+                                            </Button>
+
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-9 w-9 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 transition-all"
+                                                onClick={() => handleSyncTmdb(movie.slug)}
+                                                title="Đồng bộ TMDB (Lấy diễn viên)"
+                                                disabled={syncingSlugs.has(movie.slug)}
+                                            >
+                                                <RefreshCw className={`w-4 h-4 ${syncingSlugs.has(movie.slug) ? 'animate-spin opacity-50' : ''}`} />
                                             </Button>
 
                                             {movie.isActive ? (

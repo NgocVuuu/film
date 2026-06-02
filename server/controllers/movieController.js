@@ -521,6 +521,7 @@ const getMovies = async (req, res) => {
                 { name: { $regex: q, $options: 'i' } },
                 { origin_name: { $regex: q, $options: 'i' } },
                 { actor: { $regex: q, $options: 'i' } },
+                { 'cast.name': { $regex: q, $options: 'i' } },
                 { slug: { $regex: q, $options: 'i' } }
             ];
         }
@@ -549,7 +550,17 @@ const getMovies = async (req, res) => {
         if (type) query.type = type; // 'series' | 'single' | 'hoathinh' | 'tvshows'
         if (excludeType) query.type = { $ne: excludeType }; // Exclude a specific type
         if (chieurap === 'true') query.chieurap = true;
-        if (actor) query.actor = actor; // Filter by actor name
+        if (actor) {
+            const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const exactRegex = new RegExp('^' + escapeRegex(actor) + '$', 'i');
+            query.$and = query.$and || [];
+            query.$and.push({
+                $or: [
+                    { actor: exactRegex },
+                    { 'cast.name': exactRegex }
+                ]
+            });
+        }
 
         // Sorting
         let sortOption = { updatedAt: -1 }; // Default: Mới cập nhật
@@ -1427,6 +1438,68 @@ const getDramaRanking = async (req, res) => {
     }
 };
 
+const getActorDetails = async (req, res) => {
+    try {
+        const { name } = req.params;
+        const actorName = decodeURIComponent(name);
+        
+        const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const exactRegex = new RegExp('^' + escapeRegex(actorName) + '$', 'i');
+        
+        // Find movies featuring this actor, include cast to extract tmdb_id
+        const movies = await Movie.find({
+            isActive: { $ne: false },
+            $or: [
+                { actor: exactRegex },
+                { 'cast.name': exactRegex }
+            ]
+        })
+        .select('name origin_name slug thumb_url year episode_current quality type cast')
+        .sort({ year: -1, updatedAt: -1 })
+        .lean();
+        
+        let actorInfo = null;
+        let tmdbId = null;
+        let profilePath = null;
+        
+        // Tìm tmdb_id của diễn viên này từ mảng cast trong các bộ phim đã lấy
+        for (const movie of movies) {
+            if (movie.cast && movie.cast.length > 0) {
+                const castMember = movie.cast.find(c => c.name.toLowerCase() === actorName.toLowerCase());
+                if (castMember && castMember.tmdb_id) {
+                    tmdbId = castMember.tmdb_id;
+                    profilePath = castMember.profile_path;
+                    break;
+                }
+            }
+        }
+        
+        if (tmdbId) {
+            const { getPersonDetails } = require('../utils/tmdb');
+            actorInfo = await getPersonDetails(tmdbId);
+        } else {
+            // Fallback tìm bằng tên nếu không có tmdb_id
+            const { searchPerson } = require('../utils/tmdb');
+            actorInfo = await searchPerson(actorName);
+        }
+        
+        // Gán ảnh từ DB nếu TMDB trả về rỗng nhưng trong DB lại có
+        if (actorInfo && !actorInfo.profile_path && profilePath) {
+            actorInfo.profile_path = profilePath;
+        } else if (!actorInfo && profilePath) {
+            actorInfo = {
+                name: actorName,
+                profile_path: profilePath
+            };
+        }
+        
+        res.json({ success: true, actor: actorInfo, movies });
+    } catch (error) {
+        console.error('Error getting actor details:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+};
+
 module.exports = {
     getHomeData,
     getMovies,
@@ -1447,4 +1520,5 @@ module.exports = {
     getUserReaction,
     request4k,
     getDramaRanking,
+    getActorDetails,
 };

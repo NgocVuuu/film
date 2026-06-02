@@ -184,38 +184,48 @@ async function pollAndSyncStatus(hostService, taskId, docId) {
 }
 
 async function createOrGetFolder(series, season, host, displayName) {
-  await connectIfNeeded();
-  const normalizedSeries = normalizeMovieFolderName(series || displayName || 'unknown');
-  const seasonName = String(season || '').trim() || null;
-  const resolvedDisplayName = displayName || buildFolderName(normalizedSeries, seasonName || 'S01');
+    await connectIfNeeded();
+    const normalizedSeries = normalizeMovieFolderName(series || displayName || 'unknown');
+    const seasonName = String(season || '').trim() || null;
+    const resolvedDisplayName = displayName || buildFolderName(normalizedSeries, seasonName || 'S01');
 
-  const keyQuery = { host, series: normalizedSeries || null, season: seasonName || 'S01' };
-  let found = await HostFolder.findOne(keyQuery);
-  if (found) return found.folderId;
+    const keyQuery = { host, series: normalizedSeries || null, season: seasonName || 'S01' };
+    let found = await HostFolder.findOne(keyQuery);
+    // Nếu tìm thấy mà folderId là string rác (do lỗi cũ), ta bỏ qua và tạo lại
+    if (found && !found.folderId.startsWith('local-')) return found.folderId;
 
-  const api = hostApis[host];
-  let folderId = null;
-  if (api) {
-    try {
-      folderId = await api.createFolder(resolvedDisplayName);
-    } catch (e) {
-      folderId = null;
+    const api = hostApis[host];
+    let folderId = null;
+    if (api) {
+        try {
+            folderId = await api.createFolder(resolvedDisplayName);
+        } catch (e) {
+            console.error(`[${host}] Failed to create folder ${resolvedDisplayName}`, e.message);
+            folderId = null;
+        }
     }
-  }
 
-  if (!folderId) {
-    folderId = `local-${host}-${normalizedSeries || 'unknown'}-${seasonName || 'S01'}-${Date.now()}`;
-  }
+    if (!folderId) {
+        // Return resolvedDisplayName (the real display name) as a fallback so remoteUploadWithRetry can try to create it!
+        return resolvedDisplayName; 
+    }
 
-  const doc = new HostFolder({
-    host,
-    series: normalizedSeries,
-    season: seasonName || 'S01',
-    folderId,
-    metadata: { displayName: resolvedDisplayName }
-  });
-  await doc.save();
-  return folderId;
+    // Cập nhật DB
+    if (found) {
+        found.folderId = folderId;
+        found.metadata = { displayName: resolvedDisplayName };
+        await found.save();
+    } else {
+        const doc = new HostFolder({
+            host,
+            series: normalizedSeries,
+            season: seasonName || 'S01',
+            folderId,
+            metadata: { displayName: resolvedDisplayName }
+        });
+        await doc.save();
+    }
+    return folderId;
 }
 
 async function assignUploadToFolder(host, videoId, series, season, folderName) {
@@ -287,15 +297,26 @@ return { ok: false, playerId: null, errors: [e.message || String(e)] };
 }
 
 // Remote upload with robust retry/backoff wrapper
-async function remoteUploadWithRetry(hostKey, videoUrl, title, folderId = null, uploadId = null, attempts = 3, backoffs = [5000, 15000, 45000]) {
+async function remoteUploadWithRetry(hostKey, videoUrl, title, folderName = null, uploadId = null, attempts = 3, backoffs = [5000, 15000, 45000]) {
   const api = hostApis[hostKey];
   if (!api) throw new Error(`No API configured for host ${hostKey}`);
+
+  // Create folder and get actual ID before uploading
+  let actualFolderId = null;
+  if (folderName) {
+    try {
+      const createdId = await api.createFolder(folderName);
+      if (createdId) actualFolderId = createdId;
+    } catch (e) {
+      console.log(`[${hostKey}] Failed to resolve folder ID for ${folderName}`, e.message);
+    }
+  }
 
   let lastErr = null;
   for (let i = 0; i < attempts; i++) {
     try {
-      const taskId = await api.remoteUpload(videoUrl, title, folderId, uploadId);
-      return { ok: true, taskId, attempts: i + 1 };
+      const taskId = await api.remoteUpload(videoUrl, title, actualFolderId, uploadId);
+      return { ok: true, taskId, attempts: i + 1, actualFolderId };
     } catch (e) {
       lastErr = e;
       const status = e.response?.status;

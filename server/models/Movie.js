@@ -43,6 +43,16 @@ const movieSchema = new mongoose.Schema({
     slug: String
   }],
 
+  // TMDB Data
+  tmdb_id: { type: Number },
+  tmdb_type: { type: String },
+  cast: [{
+    tmdb_id: Number,
+    name: String,
+    character: String,
+    profile_path: String
+  }],
+
   // Episodes
   episodes: [
     {
@@ -85,5 +95,6 @@ movieSchema.index({ type: 1, updatedAt: -1 });
 movieSchema.index({ status: 1, updatedAt: -1 });
 movieSchema.index({ chieurap: 1, updatedAt: -1 });
 movieSchema.index({ view: -1 }); // Trending
+movieSchema.index({ 'cast.tmdb_id': 1 });
 
 module.exports = mongoose.model('Movie', movieSchema);
