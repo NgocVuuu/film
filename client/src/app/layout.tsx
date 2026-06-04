@@ -110,7 +110,7 @@ export default function RootLayout({
         </Script>
         <Script
           src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
       
       </head>
