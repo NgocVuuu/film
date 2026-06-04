@@ -20,7 +20,6 @@
     "disable-devtool": "^0.3.9",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
-    "firebase": "^12.9.0",
     "hls.js": "^1.6.15",
     "lucide-react": "^0.563.0",
     "next": "^15.1.3",
@@ -30,13 +29,7 @@
     "react-hot-toast": "^2.6.0",
     "recharts": "^3.7.0",
     "socket.io-client": "^4.8.3",
-    "swiper": "^12.1.2",
-    "tailwind-merge": "^3.4.0",
-    "workbox-core": "^7.3.0",
-    "workbox-precaching": "^7.3.0",
-    "workbox-routing": "^7.3.0",
-    "workbox-strategies": "^7.3.0",
-    "zustand": "^5.0.11"
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",

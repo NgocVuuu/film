@@ -18,7 +18,8 @@ import {
     Bell,
     MessageCircle,
     Flame,
-    Crown
+    Crown,
+    Languages
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
@@ -33,6 +34,7 @@ const navigation = [
     { name: 'Subscriptions', href: '/admin/subscriptions', icon: CreditCard },
     { name: 'Upgrade Requests', href: '/admin/upgrades', icon: Crown },
     { name: 'Movie Requests', href: '/admin/requests', icon: Film },
+    { name: 'Subtitles', href: '/admin/subtitles', icon: Languages },
     { name: 'Notifications', href: '/admin/notifications', icon: Bell },
     { name: 'Chat', href: '/admin/chat', icon: MessageCircle },
     { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
