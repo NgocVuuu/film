@@ -78,7 +78,7 @@ export default function AdminMoviesPage() {
         const timer = setTimeout(() => {
             setDebouncedSearch(search);
             setPage(1);
-        }, 500);
+        }, 1000); // Tăng thời gian chờ gõ lên 1 giây
 
         return () => clearTimeout(timer);
     }, [search]);
@@ -409,7 +409,7 @@ export default function AdminMoviesPage() {
                                             <div className="flex flex-col gap-3">
                                                 {/* Free Server */}
                                                 <div className="flex flex-col gap-0.5">
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">FREE ({movie.diagnostics.free.total}/{movie.episode_current?.match(/\d+/) || '?'})</span>
+                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">FREE ({movie.diagnostics.free.total}/{movie.episode_current ? String(movie.episode_current).match(/\d+/)?.[0] : '?'})</span>
                                                     {movie.diagnostics.free.missing.length > 0 && <span className="text-[10px] text-red-400">Thiếu: {movie.diagnostics.free.missing.slice(0, 3).join(', ')}{movie.diagnostics.free.missing.length > 3 ? '...' : ''}</span>}
                                                     {movie.diagnostics.free.duplicate.length > 0 && <span className="text-[10px] text-yellow-500">Trùng: {movie.diagnostics.free.duplicate.slice(0, 3).join(', ')}{movie.diagnostics.free.duplicate.length > 3 ? '...' : ''}</span>}
                                                     {movie.diagnostics.free.missing.length === 0 && movie.diagnostics.free.duplicate.length === 0 && movie.diagnostics.free.incomplete && <span className="text-[10px] text-orange-400">Chưa đủ tập</span>}
@@ -417,7 +417,7 @@ export default function AdminMoviesPage() {
                                                 </div>
                                                 {/* VIP Server */}
                                                 <div className="flex flex-col gap-0.5">
-                                                    <span className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">VIP ({movie.diagnostics.vip.total}/{movie.episode_current?.match(/\d+/) || '?'})</span>
+                                                    <span className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">VIP ({movie.diagnostics.vip.total}/{movie.episode_current ? String(movie.episode_current).match(/\d+/)?.[0] : '?'})</span>
                                                     {movie.diagnostics.vip.missing.length > 0 && <span className="text-[10px] text-red-400">Thiếu: {movie.diagnostics.vip.missing.slice(0, 3).join(', ')}{movie.diagnostics.vip.missing.length > 3 ? '...' : ''}</span>}
                                                     {movie.diagnostics.vip.duplicate.length > 0 && <span className="text-[10px] text-yellow-500">Trùng: {movie.diagnostics.vip.duplicate.slice(0, 3).join(', ')}{movie.diagnostics.vip.duplicate.length > 3 ? '...' : ''}</span>}
                                                     {movie.diagnostics.vip.missing.length === 0 && movie.diagnostics.vip.duplicate.length === 0 && movie.diagnostics.vip.incomplete && <span className="text-[10px] text-orange-400">Chưa đủ tập</span>}

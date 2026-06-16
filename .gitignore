@@ -4,3 +4,6 @@ node_modules/
 dist-sale/
 film-source-sale.zip
 git-export-temp.zip
+
+# Server Backups
+server/backups/
