@@ -79,6 +79,7 @@ const movieSchema = new mongoose.Schema({
   ],
 
   isFeatured: { type: Boolean, default: false },
+  hasVip: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   lastNotifiedEpisode: { type: String }, // Tránh spam thông báo cho cùng một tập
   mkvUrl: { type: String }, // Đường dẫn trực tiếp nguồn cào 4K (mkvdrama)
@@ -96,5 +97,17 @@ movieSchema.index({ status: 1, updatedAt: -1 });
 movieSchema.index({ chieurap: 1, updatedAt: -1 });
 movieSchema.index({ view: -1 }); // Trending
 movieSchema.index({ 'cast.tmdb_id': 1 });
+
+// Pre-save middleware to automatically compute hasVip based on episodes
+movieSchema.pre('save', function () {
+  if (this.episodes && this.episodes.length > 0) {
+    this.hasVip = this.episodes.some(server => {
+      const sName = server.server_name ? server.server_name.toLowerCase() : '';
+      return sName.includes('play4me') || sName.includes('seekstreaming') || sName.includes('vip');
+    });
+  } else {
+    this.hasVip = false;
+  }
+});
 
 module.exports = mongoose.model('Movie', movieSchema);

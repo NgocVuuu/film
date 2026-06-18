@@ -113,6 +113,7 @@ io.on('connection', (socket) => {
     // User joins their conversation room
     socket.on('join_conversation', async (conversationId) => {
         try {
+            if (user.role === 'guest') return;
             const conv = await ChatConversation.findById(conversationId);
             if (!conv) return;
             if (user.role !== 'admin' && conv.userId.toString() !== user._id.toString()) return;
@@ -125,6 +126,7 @@ io.on('connection', (socket) => {
     // Send message
     socket.on('send_message', async ({ conversationId, content }) => {
         try {
+            if (user.role === 'guest') return;
             if (!content || !content.trim()) return;
 
             const conv = await ChatConversation.findById(conversationId);

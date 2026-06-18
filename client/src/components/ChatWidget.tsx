@@ -103,9 +103,9 @@ export default function ChatWidget() {
 
     const isChatOpen = pathname === '/profile' && searchParams.get('tab') === 'chat';
 
-    // Only show for logged-in non-admin users, and hide if chat tab is already open or dismissed
+    // Only show for logged-in non-admin and non-guest users, and hide if chat tab is already open or dismissed
     // Also wait for mount to prevent hydration mismatch
-    if (!mounted || !user || user.role === 'admin' || isChatOpen || isHidden) return null;
+    if (!mounted || !user || user.role === 'admin' || user.role === 'guest' || isChatOpen || isHidden) return null;
 
     return (
         <div

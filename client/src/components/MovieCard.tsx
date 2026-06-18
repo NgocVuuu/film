@@ -14,6 +14,7 @@ interface MovieCardProps {
         episode_current?: string;
         quality?: string;
         lang?: string;
+        hasVip?: boolean;
         progress?: {
             currentTime: number;
             duration: number;
@@ -121,14 +122,19 @@ export function MovieCard({ movie, isEditing }: MovieCardProps) {
                     </div>
                 )}
 
-                {/* Quality Badge (Top Left) */}
-                {qualityLabel && (
-                    <div className="absolute top-1 left-1 z-20 pointer-events-none">
+                {/* Quality Badges (Top Left) */}
+                <div className="absolute top-1 left-1 z-20 pointer-events-none flex gap-1">
+                    {qualityLabel && (
                         <div className="backdrop-blur-md text-center text-[6.5px] font-bold px-1.5 py-0.5 rounded-[2px] border shadow-sm bg-stone-900/85 text-amber-400 border-stone-600/60 flex justify-center items-center tracking-wide">
                             {qualityLabel}
                         </div>
-                    </div>
-                )}
+                    )}
+                    {movie.hasVip && (
+                        <div className="backdrop-blur-md text-center text-[6.5px] font-bold px-1.5 py-0.5 rounded-[2px] border shadow-sm bg-pink-900/85 text-pink-300 border-pink-500/50 flex justify-center items-center tracking-wider shadow-pink-500/20">
+                            VIP
+                        </div>
+                    )}
+                </div>
 
                 {/* Unified Badges (Bottom Right) */}
                 <div className="absolute bottom-1 right-1 z-20 pointer-events-none flex flex-col items-end gap-0.5 max-w-[90%]">

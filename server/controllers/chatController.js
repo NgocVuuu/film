@@ -4,6 +4,10 @@ const ChatMessage = require('../models/ChatMessage');
 // User: Get or create their conversation with admin
 const getMyConversation = async (req, res) => {
     try {
+        if (req.user.role === 'guest') {
+            return res.status(403).json({ success: false, message: 'Vui lòng đăng nhập để sử dụng tính năng chat' });
+        }
+
         let conversation = await ChatConversation.findOne({ userId: req.user._id })
             .populate('userId', 'displayName avatar email');
 
@@ -23,6 +27,10 @@ const getMyConversation = async (req, res) => {
 // Get messages for a conversation (paginated)
 const getMessages = async (req, res) => {
     try {
+        if (req.user.role === 'guest') {
+            return res.status(403).json({ success: false, message: 'Vui lòng đăng nhập để sử dụng tính năng chat' });
+        }
+
         const { id } = req.params;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;
@@ -60,6 +68,10 @@ const getMessages = async (req, res) => {
 // Send a message (REST fallback - main send via socket)
 const sendMessage = async (req, res) => {
     try {
+        if (req.user.role === 'guest') {
+            return res.status(403).json({ success: false, message: 'Vui lòng đăng nhập để sử dụng tính năng chat' });
+        }
+
         const { id } = req.params;
         const { content } = req.body;
 
@@ -106,10 +118,16 @@ const sendMessage = async (req, res) => {
 const getAllConversations = async (req, res) => {
     try {
         const conversations = await ChatConversation.find()
-            .populate('userId', 'displayName avatar email')
+            .populate({
+                path: 'userId',
+                select: 'displayName avatar email role',
+                match: { role: { $ne: 'guest' } }
+            })
             .sort({ lastMessageAt: -1 });
 
-        res.json({ success: true, data: conversations });
+        const validConversations = conversations.filter(c => c.userId);
+
+        res.json({ success: true, data: validConversations });
     } catch (error) {
         console.error('getAllConversations error:', error);
         res.status(500).json({ success: false, message: 'Lỗi server' });

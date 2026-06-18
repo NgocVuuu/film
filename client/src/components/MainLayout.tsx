@@ -60,7 +60,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     {showFooter && <Footer />}
                     
                     {/* Desktop Floating Features */}
-                    <div className="hidden md:flex fixed top-1/2 right-4 -translate-y-1/2 flex-col gap-4 z-50">
+                    <div className="hidden lg:flex fixed top-1/2 right-4 -translate-y-1/2 flex-col gap-4 z-50">
                         <Link 
                             href="/leaderboard" 
                             title="Bảng Xếp Hạng"

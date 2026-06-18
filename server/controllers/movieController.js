@@ -467,7 +467,7 @@ const getHomeData = async (req, res) => {
                 if (recentProgress.length > 0) {
                     const slugs = recentProgress.map(p => p.movieSlug);
                     const movies = await Movie.find({ slug: { $in: slugs }, isActive: { $ne: false } })
-                        .select('name slug thumb_url year episode_current type poster_url')
+                        .select('name slug thumb_url year episode_current type poster_url hasVip')
                         .lean();
 
                     responseData.continueWatching = recentProgress.map(p => {
@@ -573,7 +573,7 @@ const getMovies = async (req, res) => {
             .sort(sortOption)
             .skip(skip)
             .limit(limit)
-            .select('name slug thumb_url origin_name year type quality lang episode_current view rating_average');
+            .select('name slug thumb_url origin_name year type quality lang episode_current view rating_average hasVip');
 
         let total = await Movie.countDocuments(query);
 
@@ -586,7 +586,7 @@ const getMovies = async (req, res) => {
                     // Filter out external movies that are already in our DB and marked as hidden
                     const activeExternalMovies = [];
                     for (const extMovie of externalMovies) {
-                        const localMovie = await Movie.findOne({ slug: extMovie.slug }).select('isActive');
+                        const localMovie = await Movie.findOne({ slug: extMovie.slug }).select('isActive hasVip');
                         if (!localMovie || localMovie.isActive !== false) {
                             activeExternalMovies.push(extMovie);
                         }
@@ -692,7 +692,7 @@ const getMovieDetail = async (req, res) => {
         }
 
         if (sisterQuery.$or.length > 0) {
-            const sisterMovies = await Movie.find(sisterQuery).select('episodes lang quality');
+            const sisterMovies = await Movie.find(sisterQuery).select('episodes lang quality hasVip');
 
             if (sisterMovies.length > 0) {
                 // Prepare the main server list
@@ -745,7 +745,7 @@ const getMovieDetail = async (req, res) => {
             ? await Movie.find({ ...baseRelatedQuery, 'country.slug': { $in: movieCountries } })
                 .sort({ year: -1, updatedAt: -1 })
                 .limit(9)
-                .select('name origin_name slug thumb_url year episode_current lang')
+                .select('name origin_name slug thumb_url year episode_current lang hasVip')
             : [];
 
         // Fallback: fill remaining slots with same category + same type (any country)
@@ -757,7 +757,7 @@ const getMovieDetail = async (req, res) => {
             })
                 .sort({ updatedAt: -1 })
                 .limit(9 - related.length)
-                .select('name origin_name slug thumb_url year episode_current lang');
+                .select('name origin_name slug thumb_url year episode_current lang hasVip');
             related = [...related, ...extra];
         }
 
@@ -783,7 +783,7 @@ const getMovieDetail = async (req, res) => {
 const getMoviesForSitemap = async (req, res) => {
     try {
         const movies = await Movie.find({ isActive: { $ne: false } })
-            .select('slug updatedAt createdAt')
+            .select('slug updatedAt createdAt hasVip')
             .sort({ updatedAt: -1 })
             .lean();
         res.json({ success: true, data: movies });
@@ -844,7 +844,7 @@ const getMarvelMovies = async (req, res) => {
                 isActive: { $ne: false },
                 origin_name: { $regex: `^${escaped}$`, $options: 'i' }
             })
-                .select('name slug thumb_url origin_name year type quality lang episode_current view')
+                .select('name slug thumb_url origin_name year type quality lang episode_current view hasVip')
                 .lean();
 
             if (candidates.length === 0) continue;
@@ -901,7 +901,7 @@ const getDCUMovies = async (req, res) => {
                     { name: { $regex: escaped, $options: 'i' } }
                 ]
             })
-                .select('name slug thumb_url origin_name year type quality lang episode_current view')
+                .select('name slug thumb_url origin_name year type quality lang episode_current view hasVip')
                 .lean();
 
             if (candidates.length === 0) continue;
@@ -993,7 +993,7 @@ const getStephenChowMovies = async (req, res) => {
                     { origin_name: { $regex: titleObj.en, $options: 'i' } },
                     { actor: { $regex: 'Châu Tinh Trì', $options: 'i' } } // Bonus hook
                 ]
-            }).select('name slug thumb_url origin_name year type quality episode_current view actor').lean();
+            }).select('name slug thumb_url origin_name year type quality episode_current view actor hasVip').lean();
 
             if (candidates.length === 0) continue;
 
@@ -1041,7 +1041,7 @@ const getStephenChowMovies = async (req, res) => {
         const extraMovies = await Movie.find({
             isActive: { $ne: false },
             actor: { $regex: /châu tinh trì/i }
-        }).select('name slug thumb_url origin_name year type quality episode_current view actor').lean();
+        }).select('name slug thumb_url origin_name year type quality episode_current view actor hasVip').lean();
 
         for (const extra of extraMovies) {
             if (!results.find(r => r.slug === extra.slug)) {
@@ -1082,7 +1082,7 @@ const getKoreanDrama2016Movies = async (req, res) => {
 
             if (drama.slug) {
                 movie = await Movie.findOne({ slug: drama.slug, isActive: { $ne: false } })
-                    .select('name slug thumb_url poster_url origin_name year type quality episode_current view')
+                    .select('name slug thumb_url poster_url origin_name year type quality episode_current view hasVip')
                     .lean();
 
                 // If slug provided but not found, we still allow regex fallback as a safety measure
@@ -1102,7 +1102,7 @@ const getKoreanDrama2016Movies = async (req, res) => {
                     isActive: { $ne: false },
                     $or: orClauses,
                 })
-                    .select('name slug thumb_url poster_url origin_name year type quality episode_current view')
+                    .select('name slug thumb_url poster_url origin_name year type quality episode_current view hasVip')
                     .lean();
 
                 if (candidates.length > 0) {
@@ -1164,7 +1164,7 @@ const getSadMovies = async (req, res) => {
         ];
 
         const movies = await Movie.find({ slug: { $in: confirmedSlugs }, isActive: { $ne: false } })
-            .select('name slug thumb_url origin_name year type quality episode_current view')
+            .select('name slug thumb_url origin_name year type quality episode_current view hasVip')
             .lean();
 
         // Sort by year desc
@@ -1211,7 +1211,7 @@ const debugTmdb = async (req, res) => {
                 isActive: { $ne: false },
                 year: { $gte: minYear },
                 $or: [{ name: { $in: allTitles } }, { origin_name: { $in: allOriginals } }]
-            }).select('name origin_name year').lean();
+            }).select('name origin_name year hasVip').lean();
             info.dbMatches = matches.length;
             info.dbMatchTitles = matches.map(m => `${m.name} (${m.year})`);
         } catch (err) {
@@ -1254,7 +1254,7 @@ const getRandomMovieByMood = async (req, res) => {
         }
         
         const randomIndex = Math.floor(Math.random() * count);
-        const randomMovie = await Movie.findOne(query).skip(randomIndex).select('slug name').lean();
+        const randomMovie = await Movie.findOne(query).skip(randomIndex).select('slug name hasVip').lean();
 
         res.json({ success: true, data: randomMovie });
     } catch (error) {
@@ -1274,7 +1274,7 @@ const getUpdatedTodayMovies = async (req, res) => {
         })
         .sort({ updatedAt: -1 })
         .limit(20)
-        .select('name origin_name slug thumb_url quality episode_current updatedAt year lang')
+        .select('name origin_name slug thumb_url quality episode_current updatedAt year lang hasVip')
         .lean();
 
         res.json({ success: true, data: movies });
@@ -1428,7 +1428,7 @@ const getDramaRanking = async (req, res) => {
         const movies = await Movie.find({ [sortField]: { $gt: 0 } })
             .sort({ [sortField]: -1 })
             .limit(20)
-            .select('name origin_name slug thumb_url fire_count trash_count content year quality')
+            .select('name origin_name slug thumb_url fire_count trash_count content year quality hasVip')
             .lean();
             
         res.json({ success: true, data: movies });
@@ -1454,7 +1454,7 @@ const getActorDetails = async (req, res) => {
                 { 'cast.name': exactRegex }
             ]
         })
-        .select('name origin_name slug thumb_url year episode_current quality type cast')
+        .select('name origin_name slug thumb_url year episode_current quality type cast hasVip')
         .sort({ year: -1, updatedAt: -1 })
         .lean();
         

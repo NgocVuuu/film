@@ -65,7 +65,7 @@ export default function ProfileChatTab({ onBack }: { onBack?: () => void }) {
     }, []);
 
     useEffect(() => {
-        if (!user || user.role === 'admin') {
+        if (!user || user.role === 'admin' || user.role === 'guest') {
             setLoading(false);
             return;
         }
@@ -168,11 +168,11 @@ export default function ProfileChatTab({ onBack }: { onBack?: () => void }) {
         }
     };
 
-    if (!user || user.role === 'admin') {
+    if (!user || user.role === 'admin' || user.role === 'guest') {
         return (
             <div className="flex flex-col items-center justify-center h-[500px] text-gray-500 bg-surface-900/30 rounded-xl border border-white/10">
                 <MessageCircle className="w-12 h-12 mb-4 opacity-50" />
-                <p>Không khả dụng cho admin hoặc khách.</p>
+                <p>{user?.role === 'guest' ? 'Vui lòng đăng nhập để sử dụng tính năng chat.' : 'Không khả dụng cho admin hoặc khách.'}</p>
             </div>
         );
     }

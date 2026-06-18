@@ -4,7 +4,7 @@ import Hls from 'hls.js';
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize,
     Settings, Loader2, FastForward, Rewind, PictureInPicture,
-    SkipBack, SkipForward, ListVideo, MessageSquare
+    SkipBack, SkipForward, ListVideo, MessageSquare, ShieldAlert
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
@@ -142,6 +142,10 @@ export default function VideoPlayer({
     const [showEpisodePanel, setShowEpisodePanel] = useState(false);
     const [panelServerName, setPanelServerName] = useState<string | null>(null);
 
+    // Adblock Warning State
+    const [showAdblockWarning, setShowAdblockWarning] = useState(false);
+    const watchSessionSeconds = useRef(0);
+
     // Watch Party Chat
     const [showChat, setShowChat] = useState(false);
     const [roomState, setRoomState] = useState<any>(null);
@@ -164,6 +168,49 @@ export default function VideoPlayer({
         episodeName,
         serverName
     });
+
+    // Detect Adblock function
+    const detectAdBlock = async () => {
+        try {
+            await fetch('https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', {
+                method: 'HEAD',
+                mode: 'no-cors',
+                cache: 'no-store'
+            });
+            return false;
+        } catch {
+            return true;
+        }
+    };
+
+    // Adblock Check Effect (every 1 second when playing, trigger at 20 min)
+    useEffect(() => {
+        if (!isPlaying || user?.isPremium || showAdblockWarning) return;
+        
+        const interval = setInterval(() => {
+            watchSessionSeconds.current += 1;
+            
+            // 1200 seconds = 20 minutes
+            if (watchSessionSeconds.current > 0 && watchSessionSeconds.current % 1200 === 0) {
+                detectAdBlock().then(isBlocked => {
+                    if (isBlocked) {
+                        toast.error('Bạn vẫn chưa tắt chặn quảng cáo kìa!');
+                    } else {
+                        if (videoRef.current) {
+                            videoRef.current.pause();
+                        } else if (iframeRef.current) {
+                            const origin = new URL(iframeRef.current.src).origin;
+                            iframeRef.current.contentWindow?.postMessage({ command: 'pause' }, origin);
+                        }
+                        setIsPlaying(false);
+                        setShowAdblockWarning(true);
+                    }
+                });
+            }
+        }, 1000);
+        
+        return () => clearInterval(interval);
+    }, [isPlaying, user?.isPremium, showAdblockWarning]);
 
     // Sử dụng refs để tránh vòng lặp re-render khi dependencies thay đổi
     const episodeDataRef = useRef({ serverName, episodeSlug, onEpisodeSelect });
@@ -1489,7 +1536,7 @@ export default function VideoPlayer({
                     : 'w-full h-full rounded-lg'
                 }`}
             onMouseMove={handleMouseMove}
-            onMouseLeave={() => setShowControls(false)}
+            onMouseLeave={() => isPlaying && setShowControls(false)}
             onClick={handleContainerClick}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -1499,6 +1546,45 @@ export default function VideoPlayer({
                 touchAction: 'none' // Important for gestures
             }}
         >
+            {/* Adblock Warning Modal */}
+            {showAdblockWarning && (
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+                    <div className="bg-surface-900 border border-white/10 p-6 md:p-8 rounded-2xl max-w-md text-center shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
+                        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <ShieldAlert className="w-8 h-8 text-red-500" />
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-bold text-white mb-2">Ê khoan, dừng khoảng chừng là 2 giây!</h3>
+                        <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-6">
+                            Hình như bạn đang bật Tiện ích Chặn Quảng Cáo đúng không? <br/><br/>
+                            Bạn hãy tắt chặn quảng cáo để ủng hộ team duy trì web phim nhé! Cảm ơn bạn siêu nhiều!
+                        </p>
+                        <div className="flex flex-col gap-3">
+                            <Button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    detectAdBlock().then(isBlocked => {
+                                        if (isBlocked) {
+                                            toast.error('Bạn vẫn chưa tắt chặn quảng cáo kìa!');
+                                        } else {
+                                            setShowAdblockWarning(false);
+                                            toast.success('Cảm ơn bạn yêu! Tiếp tục xem phim thôi! 🍿');
+                                            togglePlay(); // resume
+                                        }
+                                    });
+                                }}
+                                className="w-full bg-primary text-black font-bold hover:bg-primary/90"
+                            >
+                                Mình đã tắt chặn quảng cáo rồi!
+                            </Button>
+                            <div className="text-xs text-gray-500 mt-2">
+                                Hoặc nâng cấp VIP/Premium để không bao giờ thấy thông báo này nữa nhé! 👑
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Main Player Area Wrapper */}
             <div className="relative flex-1 h-full min-w-0">
                 <video
