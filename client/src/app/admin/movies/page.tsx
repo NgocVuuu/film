@@ -379,14 +379,16 @@ export default function AdminMoviesPage() {
                             {movies.map((movie) => (
                                 <tr key={movie._id} className="hover:bg-white/[0.02] transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="relative w-12 h-16 group-hover:scale-110 transition-transform duration-300">
-                                            <Image
-                                                src={movie.thumb_url}
-                                                alt={movie.name}
-                                                fill
-                                                sizes="48px"
-                                                className="object-cover rounded-md shadow-lg"
-                                            />
+                                        <div className="relative w-12 h-16 group-hover:scale-110 transition-transform duration-300 bg-surface-800 rounded-md">
+                                            {movie.thumb_url ? (
+                                                <Image
+                                                    src={movie.thumb_url}
+                                                    alt={movie.name}
+                                                    fill
+                                                    sizes="48px"
+                                                    className="object-cover rounded-md shadow-lg"
+                                                />
+                                            ) : null}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
