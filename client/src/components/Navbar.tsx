@@ -416,9 +416,11 @@ export function Navbar() {
                                             <DonateButton />
                                         </div>
 
-                                        <Link href="/feedback" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
-                                            <MessageSquare className="w-4 h-4" /> Góp ý & Báo lỗi
-                                        </Link>
+                                        {user.role !== 'guest' && (
+                                            <Link href="/feedback" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors border-b border-white/5">
+                                                <MessageSquare className="w-4 h-4" /> Góp ý & Báo lỗi
+                                            </Link>
+                                        )}
 
                                         <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-white/10 transition-colors">
                                             <LogOut className="w-4 h-4" /> Đăng xuất

@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { customFetch } from '@/lib/api';
+import { useAuth } from '@/contexts/auth-context';
 
 interface ReportModalProps {
     movieSlug: string;
@@ -31,6 +32,11 @@ export function ReportModal({ movieSlug, movieName, episodeSlug, episodeName, se
     const [content, setContent] = useState('');
     const [loading, setLoading] = useState(false);
     const [issueType, setIssueType] = useState('error-loading');
+    const { user } = useAuth();
+
+    if (!user || user.role === 'guest') {
+        return null;
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

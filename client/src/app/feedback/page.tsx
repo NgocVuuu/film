@@ -7,6 +7,9 @@ import { Send, Loader2, CheckCircle } from 'lucide-react';
 
 import { toast } from 'react-hot-toast';
 import { getAuthToken } from '@/lib/api';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function FeedbackPage() {
     const [loading, setLoading] = useState(false);
@@ -17,6 +20,16 @@ export default function FeedbackPage() {
         type: 'feature' as 'bug' | 'feature' | 'content' | 'other',
         email: ''
     });
+
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!authLoading && (!user || user.role === 'guest')) {
+            toast.error('Tính năng này không dành cho khách. Vui lòng đăng ký tài khoản!');
+            router.push('/');
+        }
+    }, [user, authLoading, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,6 +61,10 @@ export default function FeedbackPage() {
             setLoading(false);
         }
     };
+
+    if (authLoading || !user || user.role === 'guest') {
+        return null; // Or a loading spinner
+    }
 
     if (success) {
         return (
