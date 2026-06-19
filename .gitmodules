@@ -1,0 +1,3 @@
+[submodule "sub-translator"]
+	path = sub-translator
+	url = https://github.com/NgocVuuu/subtitle-translator.git
