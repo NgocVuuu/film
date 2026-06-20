@@ -341,8 +341,14 @@ async function processMovie(adapter, slug, retryCount = 0) {
             console.error('Lỗi lấy thông tin TMDB trong crawler:', e.message);
         }
 
+        const hasVip = finalEpisodes && finalEpisodes.length > 0 ? finalEpisodes.some(server => {
+            const sName = server.server_name ? server.server_name.toLowerCase() : '';
+            return sName.includes('play4me') || sName.includes('seekstreaming') || sName.includes('vip');
+        }) : false;
+
         const updatePayload = {
             ...coreData,
+            hasVip: hasVip,
             episodes: finalEpisodes
         };
 

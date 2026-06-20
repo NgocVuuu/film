@@ -12,6 +12,7 @@ const PLANS = [
         duration: 1,
         price: 25000,
         features: [
+            'Bỏ quảng cáo trang',
             'Xem được Server VIP 1, 2'
         ]
     },
@@ -23,6 +24,7 @@ const PLANS = [
         price: 69000, 
         originalPrice: 75000,
         features: [
+            'Bỏ quảng cáo trang',
             'Xem được Server VIP 1, 2',
             'Giảm ~8% so với 1 tháng'
         ]
@@ -36,6 +38,7 @@ const PLANS = [
         originalPrice: 150000,
         badge: 'Phổ biến',
         features: [
+            'Bỏ quảng cáo trang',
             'Xem được Server VIP 1, 2',
             'Giảm ~14% so với 1 tháng'
         ]
@@ -48,6 +51,7 @@ const PLANS = [
         price: 249000,
         originalPrice: 300000,
         features: [
+            'Bỏ quảng cáo trang',
             'Xem được Server VIP 1, 2',
             'Giảm ~17% so với 1 tháng'
         ]
@@ -320,18 +324,7 @@ exports.handleSepayWebhook = async (req, res) => {
         };
         await user.save();
 
-        // Send notification to user
-        try {
-            const { sendNotification } = require('../utils/notificationService');
-            await sendNotification(user._id, {
-                title: `Thanh toán thành công`,
-                content: `Gói ${payment.subscriptionTier === 'vip' ? 'PChill VIP' : 'Premium'} của bạn đã được kích hoạt (+${payment.subscriptionDuration} tháng). Hạn dùng mới: ${endDate.toLocaleDateString('vi-VN')}.`,
-                type: 'system',
-                link: '/profile'
-            });
-        } catch (e) {
-            console.error('Lỗi gửi thông báo thanh toán:', e);
-        }
+        // Thông báo đã bị loại bỏ theo yêu cầu
 
         // Update payment status
         payment.status = 'completed';

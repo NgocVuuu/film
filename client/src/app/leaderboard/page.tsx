@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Trophy, Clock, Medal, Crown, Star } from 'lucide-react';
 import { customFetch } from '@/lib/api';
 
@@ -17,7 +17,23 @@ export default function LeaderboardPage() {
     const [period, setPeriod] = useState<'week' | 'month' | 'all'>('week');
     const [users, setUsers] = useState<LeaderboardUser[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [stars, setStars] = useState<{ top: string, left: string, size: string, delay: string, duration: string }[]>([]);
+
+    const observer = useRef<IntersectionObserver | null>(null);
+    const lastUserElementRef = useCallback((node: HTMLDivElement | null) => {
+        if (observer.current) observer.current.disconnect();
+        if (loading || loadingMore || !hasMore) return;
+        
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) {
+                setPage(prev => prev + 1);
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [loading, loadingMore, hasMore]);
 
     useEffect(() => {
         setStars(Array.from({ length: 25 }).map(() => ({
@@ -29,23 +45,44 @@ export default function LeaderboardPage() {
         })));
     }, []);
 
+    // Reset when period changes
+    useEffect(() => {
+        setUsers([]);
+        setPage(1);
+        setHasMore(true);
+    }, [period]);
+
     useEffect(() => {
         const fetchLeaderboard = async () => {
-            setLoading(true);
+            if (page === 1) setLoading(true);
+            else setLoadingMore(true);
+
             try {
-                const res = await customFetch(`/api/users/leaderboard?limit=50&period=${period}`);
+                const res = await customFetch(`/api/users/leaderboard?limit=20&page=${page}&period=${period}`);
                 const data = await res.json();
                 if (data.success) {
-                    setUsers(data.data);
+                    if (data.data.length === 0) {
+                        setHasMore(false);
+                    }
+                    if (page === 1) {
+                        setUsers(data.data);
+                    } else {
+                        setUsers(prev => {
+                            // Filter out duplicates just in case
+                            const newUsers = data.data.filter((newU: any) => !prev.some((oldU: any) => oldU._id === newU._id));
+                            return [...prev, ...newUsers];
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('Failed to fetch leaderboard:', error);
             } finally {
                 setLoading(false);
+                setLoadingMore(false);
             }
         };
         fetchLeaderboard();
-    }, [period]);
+    }, [period, page]);
 
     const formatTime = (seconds: number) => {
         const hours = Math.floor(seconds / 3600);
@@ -147,39 +184,50 @@ export default function LeaderboardPage() {
                                 <p className="text-gray-600 text-sm mt-1">Hãy là người đầu tiên lọt top nhé!</p>
                             </div>
                         ) : (
-                            users.map((user, index) => (
-                                <div
-                                    key={user._id}
-                                    className={`relative p-3 md:p-4 rounded-xl md:rounded-2xl border transition-all duration-300 flex items-center justify-between ${getRankColor(index)}`}
-                                >
-                                    <div className="flex items-center gap-2 md:gap-3">
-                                        <div className="w-6 md:w-8 flex justify-center">{getRankIcon(index)}</div>
-                                        <img
-                                            src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user._id}&backgroundColor=b6e3f4`}
-                                            alt={user.displayName}
-                                            className={`w-10 h-10 md:w-12 md:h-12 rounded-full border-2 bg-surface-800 object-cover shadow-inner ${index === 0 ? 'border-yellow-400' : index === 1 ? 'border-gray-300' : index === 2 ? 'border-amber-600' : 'border-white/10'}`}
-                                        />
-                                    </div>
+                            <>
+                                {users.map((user, index) => {
+                                    const isLast = index === users.length - 1;
+                                    return (
+                                        <div
+                                            key={user._id}
+                                            ref={isLast ? lastUserElementRef : null}
+                                            className={`relative p-3 md:p-4 rounded-xl md:rounded-2xl border transition-all duration-300 flex items-center justify-between ${getRankColor(index)}`}
+                                        >
+                                            <div className="flex items-center gap-2 md:gap-3">
+                                                <div className="w-6 md:w-8 flex justify-center">{getRankIcon(index)}</div>
+                                                <img
+                                                    src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user._id}&backgroundColor=b6e3f4`}
+                                                    alt={user.displayName}
+                                                    className={`w-10 h-10 md:w-12 md:h-12 rounded-full border-2 bg-surface-800 object-cover shadow-inner ${index === 0 ? 'border-yellow-400' : index === 1 ? 'border-gray-300' : index === 2 ? 'border-amber-600' : 'border-white/10'}`}
+                                                />
+                                            </div>
 
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className={`font-bold text-base truncate ${index < 3 ? 'text-white' : 'text-gray-200'}`}>
-                                                {user.displayName}
-                                            </h3>
-                                            {user.isGuest && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-gray-400 shrink-0 border border-white/5 font-medium tracking-wide">Ẩn danh</span>
-                                            )}
-                                            {user.role === 'admin' && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 shrink-0 font-medium tracking-wide">Admin</span>
-                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className={`font-bold text-base truncate ${index < 3 ? 'text-white' : 'text-gray-200'}`}>
+                                                        {user.displayName}
+                                                    </h3>
+                                                    {user.isGuest && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-gray-400 shrink-0 border border-white/5 font-medium tracking-wide">Ẩn danh</span>
+                                                    )}
+                                                    {user.role === 'admin' && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 shrink-0 font-medium tracking-wide">Admin</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-xs mt-1.5 opacity-80">
+                                                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                                    <span className="text-gray-400 font-medium tracking-wide">Đã cày phim <span className="text-white">{formatTime(user.totalWatchTimeSeconds)}</span></span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-1.5 text-xs mt-1.5 opacity-80">
-                                            <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                            <span className="text-gray-400 font-medium tracking-wide">Đã cày phim <span className="text-white">{formatTime(user.totalWatchTimeSeconds)}</span></span>
-                                        </div>
+                                    );
+                                })}
+                                {loadingMore && (
+                                    <div className="flex justify-center py-4">
+                                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                                     </div>
-                                </div>
-                            ))
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

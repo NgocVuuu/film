@@ -4,6 +4,8 @@ const WatchProgress = require('../models/WatchProgress');
 exports.getLeaderboard = async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 50;
+        const page = parseInt(req.query.page) || 1;
+        const skip = (page - 1) * limit;
         const period = req.query.period || 'all';
 
         const matchStage = {};
@@ -34,6 +36,9 @@ exports.getLeaderboard = async (req, res) => {
             },
             {
                 $sort: { totalWatchTimeSeconds: -1 }
+            },
+            {
+                $skip: skip
             },
             {
                 $limit: limit
