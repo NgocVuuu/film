@@ -185,6 +185,9 @@ export default function VideoPlayer({
 
     // Adblock Check Effect (every 1 second when playing, trigger at 20 min)
     useEffect(() => {
+        // TẠM ẨN: Bỏ qua check Adblock theo yêu cầu
+        return;
+        
         if (!isPlaying || user?.isPremium || showAdblockWarning) return;
         
         const interval = setInterval(() => {
