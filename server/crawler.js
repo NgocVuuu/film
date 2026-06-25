@@ -288,8 +288,12 @@ async function processMovie(adapter, slug, retryCount = 0) {
 
                 // Combine and de-duplicate user IDs
                 const userIds = new Set();
-                favorites.forEach(f => userIds.add(f.user.toString()));
-                viewers.forEach(v => userIds.add(v.userId.toString()));
+                favorites.forEach(f => {
+                    if (f.user) userIds.add(f.user.toString());
+                });
+                viewers.forEach(v => {
+                    if (v.userId) userIds.add(v.userId.toString());
+                });
 
                 if (userIds.size > 0) {
                     const uniqueUserIds = Array.from(userIds);
