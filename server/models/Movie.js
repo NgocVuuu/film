@@ -13,6 +13,7 @@ const movieSchema = new mongoose.Schema({
   sub_docquyen: { type: Boolean, default: false },
   chieurap: { type: Boolean, default: false },
   trailer_url: { type: String },
+  trailer_urls: [{ type: String }],
   time: { type: String },
   episode_current: { type: String },
   episode_total: { type: String },

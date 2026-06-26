@@ -709,11 +709,12 @@ const getMovieDetail = async (req, res) => {
                     needSave = true;
                 }
 
-                // Get better trailer from TMDB if local is missing
-                if (!movie.trailer_url) {
-                    const trailerUrl = await getMovieTrailers(movie.tmdb_id, movie.tmdb_type || 'movie');
-                    if (trailerUrl) {
-                        movie.trailer_url = trailerUrl;
+                // Get better trailers from TMDB if local is missing
+                if (!movie.trailer_url && (!movie.trailer_urls || movie.trailer_urls.length === 0)) {
+                    const trailerUrls = await getMovieTrailers(movie.tmdb_id, movie.tmdb_type || 'movie');
+                    if (trailerUrls && trailerUrls.length > 0) {
+                        movie.trailer_urls = trailerUrls;
+                        movie.trailer_url = trailerUrls[0]; // Giữ tương thích ngược cho Admin panel
                         needSave = true;
                     }
                 }
@@ -751,6 +752,7 @@ const getMovieDetail = async (req, res) => {
                         tmdb_type: movie.tmdb_type,
                         tmdb_images: movie.tmdb_images,
                         trailer_url: movie.trailer_url,
+                        trailer_urls: movie.trailer_urls,
                         ost_id: movie.ost_id,
                         ost_source: movie.ost_source,
                         ost_checked: movie.ost_checked

@@ -180,22 +180,21 @@ async function getMovieTrailers(tmdb_id, type = 'movie') {
     }
 
     if (response.data && response.data.results && response.data.results.length > 0) {
-      // Ưu tiên tìm Trailer từ YouTube
-      const trailers = response.data.results.filter(v => v.site === 'YouTube' && v.type === 'Trailer');
-      if (trailers.length > 0) {
-        return `https://www.youtube.com/watch?v=${trailers[0].key}`;
+      // Ưu tiên Official Trailer
+      const ytVideos = response.data.results.filter(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
+      if (ytVideos.length > 0) {
+        return ytVideos.slice(0, 3).map(v => `https://www.youtube.com/watch?v=${v.key}`);
       }
       
-      // Nếu không có Trailer, lấy đại một video Youtube đầu tiên (có thể là Teaser)
-      const ytVideos = response.data.results.filter(v => v.site === 'YouTube');
-      if (ytVideos.length > 0) {
-        return `https://www.youtube.com/watch?v=${ytVideos[0].key}`;
+      const allYtVideos = response.data.results.filter(v => v.site === 'YouTube');
+      if (allYtVideos.length > 0) {
+        return allYtVideos.slice(0, 3).map(v => `https://www.youtube.com/watch?v=${v.key}`);
       }
     }
-    return null;
+    return [];
   } catch (error) {
     console.error(`Lỗi getMovieTrailers (${tmdb_id}):`, error.message);
-    return null;
+    return [];
   }
 }
 

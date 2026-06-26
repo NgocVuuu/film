@@ -347,8 +347,10 @@ interface MovieDetail {
     country?: { id: string; name: string }[];
     quality?: string;
     lang?: string;
-    time?: string;
+    chieurap?: boolean;
     trailer_url?: string;
+    trailer_urls?: string[];
+    time?: string;
     ost_id?: string;
     ost_source?: string;
     tmdb_images?: string[];
@@ -392,6 +394,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     const { user } = useAuth();
     const { isPWA } = usePWA();
     const [movie, setMovie] = useState<MovieDetail | null>(initialMovie);
+    const [selectedTrailerIdx, setSelectedTrailerIdx] = useState(0);
     const [loading, setLoading] = useState(!initialMovie);
     const [isFavorite, setIsFavorite] = useState(false);
     const [showListModal, setShowListModal] = useState(false);
@@ -412,6 +415,10 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
     const [userRating, setUserRating] = useState(0);
     const [ratingHover, setRatingHover] = useState(0);
     const [ratingComment, setRatingComment] = useState('');
+
+    const trailersToDisplay = movie?.trailer_urls?.length 
+        ? movie.trailer_urls 
+        : (movie?.trailer_url ? [movie.trailer_url] : []);
 
     useEffect(() => {
         // If we have initial data (from server), we only need to sync favorites and history
@@ -700,18 +707,33 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
             {/* ── MOBILE VIEW ──────────────────────────────────────────────────────── */}
             <div className={cn("block md:hidden bg-black", !isPWA ? "-mt-[3.5rem]" : "pt-[env(safe-area-inset-top)]")}>
                 {/* 1. Backdrop Image / Trailer (Landscape) */}
-                {movie.trailer_url ? (
-                    <div className="relative w-full aspect-video overflow-hidden bg-black">
-                        <iframe 
-                            src={getEmbedUrl(movie.trailer_url)} 
-                            className="w-full h-full object-cover border-0" 
-                            allowFullScreen 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            loading="lazy"
-                        ></iframe>
+                {trailersToDisplay.length > 0 ? (
+                    <div className="w-full bg-black flex flex-col">
+                        <div className="relative w-full aspect-video overflow-hidden bg-black flex flex-col">
+                            <iframe 
+                                src={getEmbedUrl(trailersToDisplay[selectedTrailerIdx])} 
+                                className="w-full h-full object-cover border-0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen 
+                                loading="lazy"
+                            ></iframe>
+                        </div>
+                        {trailersToDisplay.length > 1 && (
+                            <div className="flex gap-2 p-2 overflow-x-auto hide-scrollbar bg-black border-b border-white/5">
+                                {trailersToDisplay.map((t, i) => (
+                                    <button 
+                                        key={i}
+                                        onClick={() => setSelectedTrailerIdx(i)}
+                                        className={cn("px-3 py-1 text-[10px] rounded border whitespace-nowrap transition-colors", selectedTrailerIdx === i ? "border-primary text-primary bg-primary/10" : "border-white/10 text-gray-400 hover:text-white")}
+                                    >
+                                        {i === 0 ? "Trailer 1" : `Dự phòng ${i}`}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    <div className="relative w-full aspect-video overflow-hidden">
+                    <div className="relative w-full aspect-video overflow-hidden bg-black flex items-center justify-center">
                         <img
                             src={movie.thumb_url}
                             alt={movie.name}
@@ -879,8 +901,6 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                     <Link href="/drama" className="flex items-center justify-center gap-2 py-2.5 mt-3 rounded-xl bg-gradient-to-r from-orange-500/10 to-rose-500/10 border border-orange-500/20 hover:from-orange-500/20 hover:to-rose-500/20 transition-all duration-300 text-xs font-bold text-orange-400 active:scale-95 shadow-sm hover:shadow-[0_0_15px_rgba(249,115,22,0.15)]">
                         <span className="text-sm drop-shadow-md">🔥</span> Vào Góc Drama
                     </Link>
-
-                    {/* Removed EpisodeSelector from here since it's now in tabs */}
 
                     {/* 7. Tabs (Servers, Actors & Recommendations) */}
                     <div className="pt-4 space-y-6">
@@ -1324,7 +1344,7 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                             {/* Sidebar Info */}
                             <div className="space-y-4">
                                 {/* Desktop Trailer (Sidebar) */}
-                                {movie.trailer_url && (
+                                {trailersToDisplay.length > 0 && (
                                     <div className="hidden md:block mb-6">
                                         <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
                                             <Play className="w-4 h-4 text-primary fill-current" />
@@ -1332,13 +1352,26 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                         </h3>
                                         <div className="w-full aspect-video rounded-xl overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/10 bg-black">
                                             <iframe 
-                                                src={getEmbedUrl(movie.trailer_url)} 
-                                                className="w-full h-full border-0" 
-                                                allowFullScreen 
+                                                src={getEmbedUrl(trailersToDisplay[selectedTrailerIdx])} 
+                                                className="w-full h-full object-cover border-0" 
                                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen 
                                                 loading="lazy"
                                             ></iframe>
                                         </div>
+                                        {trailersToDisplay.length > 1 && (
+                                            <div className="flex gap-2 mt-3 flex-wrap">
+                                                {trailersToDisplay.map((t, i) => (
+                                                    <button 
+                                                        key={i}
+                                                        onClick={() => setSelectedTrailerIdx(i)}
+                                                        className={cn("px-3 py-1.5 text-xs rounded border transition-colors", selectedTrailerIdx === i ? "border-primary text-primary bg-primary/10" : "border-white/10 text-gray-400 hover:text-white hover:bg-white/5")}
+                                                    >
+                                                        {i === 0 ? "Trailer Chính" : `Dự phòng ${i}`}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
