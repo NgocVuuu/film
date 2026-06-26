@@ -83,6 +83,13 @@ const movieSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   lastNotifiedEpisode: { type: String }, // Tránh spam thông báo cho cùng một tập
   mkvUrl: { type: String }, // Đường dẫn trực tiếp nguồn cào 4K (mkvdrama)
+  
+  // Mở rộng thêm thông tin phụ trợ (Gallery, OST)
+  tmdb_images: [{ type: String }],
+  ost_id: { type: String },
+  ost_source: { type: String, enum: ['spotify', 'youtube'] },
+  ost_checked: { type: Boolean, default: false },
+  
   updatedAt: { type: Date, default: Date.now },
 });
 

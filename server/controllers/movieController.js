@@ -668,6 +668,100 @@ const getMovieDetail = async (req, res) => {
 
         if (!movie) return res.status(404).json({ success: false, message: 'Không tìm thấy phim' });
 
+        // --- Lazy Load TMDB Images, Trailer & Spotify OST ---
+        let needSave = false;
+
+        // 1. Fetch TMDB ID if missing
+        if (!movie.tmdb_id) {
+            const { searchTMDB } = require('../utils/tmdb');
+            try {
+                const searchType = (movie.type === 'series' || movie.type === 'tvshows') ? 'tv' : 'movie';
+                const searchName = movie.origin_name || movie.name;
+                let tmdbResult = await searchTMDB(searchName, searchType, movie.year);
+                
+                // Fallback to name only (without year) if origin_name doesn't work
+                if (!tmdbResult && movie.origin_name && movie.year) {
+                    tmdbResult = await searchTMDB(movie.origin_name, searchType, null);
+                }
+                if (!tmdbResult && movie.name) {
+                    tmdbResult = await searchTMDB(movie.name, searchType, null);
+                }
+
+                if (tmdbResult) {
+                    movie.tmdb_id = tmdbResult.id;
+                    movie.tmdb_type = searchType;
+                    needSave = true;
+                }
+            } catch (err) {
+                console.error('[LAZY LOAD] Lỗi tìm TMDB ID:', err.message);
+            }
+        }
+
+        // 2. Fetch TMDB Images & Trailer if missing
+        if (movie.tmdb_id && (!movie.tmdb_images || movie.tmdb_images.length === 0)) {
+            const { getMovieImages, getMovieTrailers } = require('../utils/tmdb');
+            
+            try {
+                // Get images
+                const images = await getMovieImages(movie.tmdb_id, movie.tmdb_type || 'movie');
+                if (images && images.length > 0) {
+                    movie.tmdb_images = images;
+                    needSave = true;
+                }
+
+                // Get better trailer from TMDB if local is missing
+                if (!movie.trailer_url) {
+                    const trailerUrl = await getMovieTrailers(movie.tmdb_id, movie.tmdb_type || 'movie');
+                    if (trailerUrl) {
+                        movie.trailer_url = trailerUrl;
+                        needSave = true;
+                    }
+                }
+            } catch (err) {
+                console.error('[LAZY LOAD] Lỗi tải TMDB:', err.message);
+            }
+        }
+
+        // 2. Fetch Spotify OST if not checked yet
+        if (movie.ost_checked !== true) {
+            const { searchOST } = require('../utils/spotify');
+            try {
+                // Prefer origin_name for better accuracy
+                const searchName = movie.origin_name || movie.name;
+                const ost = await searchOST(searchName);
+                if (ost) {
+                    movie.ost_id = ost.id;
+                    movie.ost_source = 'spotify';
+                }
+                movie.ost_checked = true;
+                needSave = true;
+            } catch (err) {
+                console.error('[LAZY LOAD] Lỗi tải OST:', err.message);
+            }
+        }
+
+        // Save if any lazy loaded data changed
+        if (needSave) {
+            try {
+                if (typeof movie.save === 'function') {
+                    await movie.save();
+                } else {
+                    await Movie.updateOne({ _id: movie._id }, {
+                        tmdb_id: movie.tmdb_id,
+                        tmdb_type: movie.tmdb_type,
+                        tmdb_images: movie.tmdb_images,
+                        trailer_url: movie.trailer_url,
+                        ost_id: movie.ost_id,
+                        ost_source: movie.ost_source,
+                        ost_checked: movie.ost_checked
+                    });
+                }
+            } catch (e) {
+                console.error('[LAZY LOAD] Lỗi lưu DB:', e.message);
+            }
+        }
+        // --- End Lazy Load ---
+
         // 3.1. Advanced Merging: Find all other versions of this movie to aggregate servers
         const titleKey = (movie.origin_name || movie.name || '').toLowerCase().trim();
         const slugKey = (movie.slug || '').toLowerCase()

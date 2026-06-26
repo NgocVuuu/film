@@ -4,6 +4,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Play, Calendar, Star, Clock, Info, ListPlus, Share2, Download, FolderOpen, Server, MessageCircle, ChevronDown, User, Heart, Users, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { MovieGallery } from '@/components/movie/MovieGallery';
+import { MovieOst } from '@/components/movie/MovieOst';
 import { CommentSection } from '@/components/CommentSection';
 import { AddToListModal } from '@/components/AddToListModal';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -346,6 +348,10 @@ interface MovieDetail {
     quality?: string;
     lang?: string;
     time?: string;
+    trailer_url?: string;
+    ost_id?: string;
+    ost_source?: string;
+    tmdb_images?: string[];
     rating_average?: number;
     rating_count?: number;
     fire_count?: number;
@@ -364,6 +370,21 @@ interface MovieDetail {
         serverName?: string;
     };
 }
+
+const getEmbedUrl = (url?: string) => {
+    if (!url) return '';
+    // Xử lý link youtube dạng /watch?v=
+    if (url.includes('youtube.com/watch?v=')) {
+        const videoId = new URL(url).searchParams.get('v');
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    }
+    // Xử lý link youtu.be
+    if (url.includes('youtu.be/')) {
+        const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    }
+    return url;
+};
 
 export default function MovieDetailClient({ initialMovie }: { initialMovie: MovieDetail | null }) {
     const { slug } = useParams();
@@ -678,15 +699,27 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
         <div className="min-h-screen bg-deep-black text-white font-sans">
             {/* ── MOBILE VIEW ──────────────────────────────────────────────────────── */}
             <div className={cn("block md:hidden bg-black", !isPWA ? "-mt-[3.5rem]" : "pt-[env(safe-area-inset-top)]")}>
-                {/* 1. Backdrop Image (Landscape) */}
-                <div className="relative w-full aspect-video overflow-hidden">
-                    <img
-                        src={movie.thumb_url}
-                        alt={movie.name}
-                        className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-linear-to-t from-deep-black via-transparent to-transparent" />
-                </div>
+                {/* 1. Backdrop Image / Trailer (Landscape) */}
+                {movie.trailer_url ? (
+                    <div className="relative w-full aspect-video overflow-hidden bg-black">
+                        <iframe 
+                            src={getEmbedUrl(movie.trailer_url)} 
+                            className="w-full h-full object-cover border-0" 
+                            allowFullScreen 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            loading="lazy"
+                        ></iframe>
+                    </div>
+                ) : (
+                    <div className="relative w-full aspect-video overflow-hidden">
+                        <img
+                            src={movie.thumb_url}
+                            alt={movie.name}
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-linear-to-t from-deep-black via-transparent to-transparent" />
+                    </div>
+                )}
 
                 <div className="px-4 space-y-5 relative z-10">
                     {/* 2. Slim Watch Button */}
@@ -942,6 +975,12 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                     )}
                                 </div>
                             )}
+
+                            {/* Mobile Gallery & OST */}
+                            <div className="px-2 pb-6 border-t border-white/10 mt-6 pt-6">
+                                <MovieGallery images={Array.from(new Set([...(movie.tmdb_images || []), movie.thumb_url, movie.poster_url].filter(Boolean) as string[]))} />
+                                <MovieOst ostId={movie.ost_id} source={movie.ost_source} />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1166,9 +1205,17 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
                                     />
                                 </div>
 
+                                {/* Desktop Gallery */}
+                                <MovieGallery images={Array.from(new Set([...(movie.tmdb_images || []), movie.thumb_url, movie.poster_url].filter(Boolean) as string[]))} />
+
+                                {/* Desktop OST */}
+                                <MovieOst ostId={movie.ost_id} source={movie.ost_source} />
+
                                 {/* ── DOWNLOAD SECTION ── */}
                                 {movie.download_links && movie.download_links.length > 0 && (
-                                    <DownloadSection slug={movie.slug} links={movie.download_links} />
+                                    <div className="mt-8">
+                                        <DownloadSection slug={movie.slug} links={movie.download_links} />
+                                    </div>
                                 )}
 
                                 {/* Tags / Keywords placeholder */}
@@ -1276,6 +1323,25 @@ export default function MovieDetailClient({ initialMovie }: { initialMovie: Movi
 
                             {/* Sidebar Info */}
                             <div className="space-y-4">
+                                {/* Desktop Trailer (Sidebar) */}
+                                {movie.trailer_url && (
+                                    <div className="hidden md:block mb-6">
+                                        <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
+                                            <Play className="w-4 h-4 text-primary fill-current" />
+                                            Trailer
+                                        </h3>
+                                        <div className="w-full aspect-video rounded-xl overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/10 bg-black">
+                                            <iframe 
+                                                src={getEmbedUrl(movie.trailer_url)} 
+                                                className="w-full h-full border-0" 
+                                                allowFullScreen 
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                loading="lazy"
+                                            ></iframe>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="bg-white/5 p-4 rounded-xl border border-white/5 backdrop-blur-sm">
                                     <h3 className="text-base font-bold text-white mb-3">Thông tin phim</h3>
                                     <dl className="space-y-2 text-sm">

@@ -140,11 +140,72 @@ async function searchPerson(name) {
   }
 }
 
+// 6. Lấy danh sách ảnh của một phim (Backdrops & Posters)
+async function getMovieImages(tmdb_id, type = 'movie') {
+  try {
+    if (!TMDB_API_KEY) return [];
+    // Ngôn ngữ mặc định không truyền để lấy ảnh gốc (chất lượng cao và không text/text tiếng anh)
+    const url = `${TMDB_BASE_URL}/${type}/${tmdb_id}/images?api_key=${TMDB_API_KEY}`;
+    const response = await axios.get(url);
+    if (response.data) {
+      // Ưu tiên lấy backdrops trước, sau đó là posters
+      const backdrops = (response.data.backdrops || []).map(img => img.file_path);
+      const posters = (response.data.posters || []).map(img => img.file_path);
+      
+      // Lấy tối đa 10 backdrops và 5 posters để không làm nặng payload
+      const topBackdrops = backdrops.slice(0, 10);
+      const topPosters = posters.slice(0, 5);
+      
+      // Nối mảng lại, backdrops trước
+      return [...topBackdrops, ...topPosters];
+    }
+    return [];
+  } catch (error) {
+    console.error(`Lỗi getMovieImages (${tmdb_id}):`, error.message);
+    return [];
+  }
+}
+
+// 7. Lấy danh sách trailer của một phim
+async function getMovieTrailers(tmdb_id, type = 'movie') {
+  try {
+    if (!TMDB_API_KEY) return null;
+    const url = `${TMDB_BASE_URL}/${type}/${tmdb_id}/videos?api_key=${TMDB_API_KEY}&language=vi-VN`;
+    let response = await axios.get(url);
+    
+    // Nếu vi-VN không có trailer, fallback về tiếng Anh (en-US)
+    if (!response.data || !response.data.results || response.data.results.length === 0) {
+      const urlEn = `${TMDB_BASE_URL}/${type}/${tmdb_id}/videos?api_key=${TMDB_API_KEY}`;
+      response = await axios.get(urlEn);
+    }
+
+    if (response.data && response.data.results && response.data.results.length > 0) {
+      // Ưu tiên tìm Trailer từ YouTube
+      const trailers = response.data.results.filter(v => v.site === 'YouTube' && v.type === 'Trailer');
+      if (trailers.length > 0) {
+        return `https://www.youtube.com/watch?v=${trailers[0].key}`;
+      }
+      
+      // Nếu không có Trailer, lấy đại một video Youtube đầu tiên (có thể là Teaser)
+      const ytVideos = response.data.results.filter(v => v.site === 'YouTube');
+      if (ytVideos.length > 0) {
+        return `https://www.youtube.com/watch?v=${ytVideos[0].key}`;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error(`Lỗi getMovieTrailers (${tmdb_id}):`, error.message);
+    return null;
+  }
+}
+
 module.exports = {
   searchTMDB,
   getMovieCredits,
   syncMovieCast,
   getPersonDetails,
   searchPerson,
-  mergeActors
+  mergeActors,
+  getMovieImages,
+  getMovieTrailers
 };
